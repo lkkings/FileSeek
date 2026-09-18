@@ -27,8 +27,13 @@ dev = [
     "mypy==1.18.2",
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
+    # Drives the FastAPI TestClient.
+    "httpx==0.28.1",
     "types-pyyaml==6.0.12.20250915",
 ]
+
+[project.scripts]
+fileseek = "fileseek.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -38,9 +43,6 @@ build-backend = "hatchling.build"
 packages = ["src/fileseek"]
 
 [tool.uv]
-# Keep the package cache on the same volume as the venv: C: is nearly full, and
-# a same-volume cache lets uv hardlink instead of copying.
-cache-dir = "D:/FileSeek/.uv-cache"
 
 [tool.ruff]
 line-length = 100
@@ -67,12 +69,13 @@ select = [
 ignore = ["TRY003"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "ARG"]
+# Tests assert, take unused fixtures, and hardcode stand-in tokens.
+"tests/**" = ["S101", "S105", "S106", "ARG"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fileseek"]
 # Test helper modules, imported by name from the tests directory.
-known-local-folder = ["doc_fixtures", "fake_encoders"]
+known-local-folder = ["doc_fixtures", "fake_encoders", "video_fixtures"]
 
 [[tool.mypy.overrides]]
 # Ships no stubs or py.typed marker; calls into it are wrapped at one boundary.
@@ -91,7 +94,10 @@ no_implicit_reexport = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-q --strict-markers --strict-config"
+addopts = "-q --strict-markers --strict-config -W ignore::Warning"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
 markers = [
     "slow: loads real model weights; skipped when they are not on disk",
 ]
