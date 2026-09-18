@@ -1,0 +1,116 @@
+[project]
+name = "fileseek"
+version = "0.1.0"
+description = "Local-first semantic file search backend"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+    "faiss-cpu==1.15.1",
+    "torch==2.14.0",
+    "transformers==5.17.0",
+    "sentence-transformers==6.0.1",
+    "rapidocr-onnxruntime==1.4.4",
+    "av==18.1.0",
+    "zeroconf==0.151.3",
+    "keyring==25.7.0",
+    "pyyaml==6.0.3",
+    "pypdf==6.19.0",
+    "pypdfium2==5.13.0",
+    "python-docx==1.2.0",
+    "pillow==12.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.14.2",
+    "mypy==1.18.2",
+    "pytest==8.4.2",
+    "pytest-cov==7.0.0",
+    "types-pyyaml==6.0.12.20250915",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fileseek"]
+
+[tool.uv]
+# Keep the package cache on the same volume as the venv: C: is nearly full, and
+# a same-volume cache lets uv hardlink instead of copying.
+cache-dir = "D:/FileSeek/.uv-cache"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "PTH",
+    "RET",
+    "ARG",
+    "TRY",
+    "S",
+]
+ignore = ["TRY003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ARG"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fileseek"]
+# Test helper modules, imported by name from the tests directory.
+known-local-folder = ["doc_fixtures", "fake_encoders"]
+
+[[tool.mypy.overrides]]
+# Ships no stubs or py.typed marker; calls into it are wrapped at one boundary.
+module = ["rapidocr_onnxruntime.*", "pypdfium2.*"]
+ignore_missing_imports = true
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["fileseek"]
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+no_implicit_reexport = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "slow: loads real model weights; skipped when they are not on disk",
+]
+
+[tool.coverage.run]
+source = ["fileseek"]
+branch = true
+# The model worker runs in a spawned child process; without these its lines look
+# uncovered even though the round-trip tests exercise them.
+concurrency = ["multiprocessing"]
+parallel = true
+sigterm = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
