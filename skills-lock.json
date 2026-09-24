@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-to-backend-requirements": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-to-backend-requirements/SKILL.md",
+      "computedHash": "77cacde5178740272b622df1aaafb388821a555c7b591ca194084091195a73c4"
+    }
+  }
+}

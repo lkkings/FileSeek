@@ -1,0 +1,417 @@
+
+> desktop@0.1.0 dev
+> vite
+
+
+  VITE v8.3.0  ready in 70 ms
+
+  ➜  Local:   http://localhost:1420/
+  ➜  press h + enter to show help
+23:00:10 [vite] (client) [console.warn] Autoplay was prevented or playback failed: AbortError: The play() request was interrupted because the media was removed from the document. https://goo.gl/LdLk22
+23:00:10 [vite] (client) [console.warn] Autoplay was prevented or playback failed: AbortError: The play() request was interrupted because the media was removed from the document. https://goo.gl/LdLk22
+23:18:08 [vite] (client) hmr update /src/App.tsx
+23:18:08 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh (new export)
+23:18:08 [vite] (client) page reload src/App.tsx
+23:19:00 [vite] (client) hmr update /src/features/library/FileLibrary.tsx
+23:19:18 [vite] (client) hmr update /src/App.css
+23:23:02 [vite] (client) hmr update /src/App.tsx
+23:23:02 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:23:02 [vite] (client) page reload src/App.tsx
+23:31:29 [vite] (client) hmr update /src/features/search/SearchBar.tsx
+23:31:55 [vite] (client) hmr update /src/features/library/RecentAccess.tsx
+23:32:18 [vite] (client) hmr update /src/features/library/FileLibrary.tsx
+23:32:56 [vite] (client) hmr update /src/App.tsx
+23:32:56 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:32:56 [vite] (client) page reload src/App.tsx
+23:34:32 [vite] (client) hmr update /src/i18n/i18nContext.tsx
+23:34:32 [vite] (client) hmr invalidate /src/i18n/i18nContext.tsx Could not Fast Refresh ("I18nContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:34:32 [vite] (client) hmr update /src/App.tsx, /src/features/search/LoadMore.tsx, /src/features/search/SearchBar.tsx, /src/features/search/SearchResults.tsx, /src/features/library/FileLibrary.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/library/RecentAccess.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx, /src/components/ui/VideoPlayer.tsx
+23:34:32 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:34:32 [vite] (client) page reload src/App.tsx
+23:38:59 [vite] (client) hmr update /src/App.tsx
+23:38:59 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:38:59 [vite] (client) page reload src/App.tsx
+23:40:48 [vite] (client) hmr update /src/App.css
+23:45:58 [vite] (client) hmr update /src/App.css
+23:48:09 [vite] (client) hmr update /src/App.css
+23:54:38 [vite] (client) hmr update /src/App.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx
+23:54:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:54:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:54:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:54:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:54:38 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+23:54:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/ingest/IngestPanel.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/tasks/TaskQueueView.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/settings/SettingsPanel.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/ingest/IngestPanel.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/tasks/TaskQueueView.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:54:38 [vite] (client) [console.error] [vite] Failed to reload /src/features/settings/SettingsPanel.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:55:23 [vite] (client) hmr update /src/App.tsx
+23:55:23 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:55:23 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:55:23 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:55:23 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:57:02 [vite] (client) hmr update /src/App.tsx
+23:57:02 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:57:02 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:57:02 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:57:02 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:57:37 [vite] (client) hmr update /src/App.tsx
+23:57:37 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:57:37 [vite] (client) [console.error] [vite] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+23:57:37 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:58:04 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:58:31 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:58:38 [vite] (client) hmr update /src/App.css
+23:58:38 [vite] (client) Pre-transform error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+23:58:38 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:59:42 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:59:43 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit semicolon after a statement, but found none
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/api/client.ts:598:24 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m598 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m_[0m[38;5;249mm[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m_[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                        │ 
+ [38;5;240m    │[0m                        ╰─ 
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: Try inserting a semicolon here
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/api/client.ts
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+      at async viteTransformMiddleware (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19853:20)
+23:59:46 [vite] (client) hmr update /src/App.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx
+23:59:47 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:59:47 [vite] (client) page reload src/App.tsx
+00:08:53 [vite] (client) hmr update /src/i18n/i18nContext.tsx
+00:08:53 [vite] (client) hmr invalidate /src/i18n/i18nContext.tsx Could not Fast Refresh ("I18nContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:08:53 [vite] (client) hmr update /src/App.tsx, /src/features/search/LoadMore.tsx, /src/features/search/SearchBar.tsx, /src/features/search/SearchResults.tsx, /src/features/library/FileLibrary.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/library/RecentAccess.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx, /src/components/ui/VideoPlayer.tsx
+00:08:53 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:08:53 [vite] (client) page reload src/App.tsx
+00:09:28 [vite] (client) hmr update /src/i18n/i18nContext.tsx
+00:09:29 [vite] (client) hmr invalidate /src/i18n/i18nContext.tsx Could not Fast Refresh ("I18nContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:09:29 [vite] (client) hmr update /src/App.tsx, /src/features/search/LoadMore.tsx, /src/features/search/SearchBar.tsx, /src/features/search/SearchResults.tsx, /src/features/library/FileLibrary.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/library/RecentAccess.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx, /src/components/ui/VideoPlayer.tsx
+00:09:29 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:09:29 [vite] (client) page reload src/App.tsx
+00:10:04 [vite] (client) hmr update /src/i18n/i18nContext.tsx
+00:10:04 [vite] (client) hmr invalidate /src/i18n/i18nContext.tsx Could not Fast Refresh ("I18nContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:10:04 [vite] (client) hmr update /src/App.tsx, /src/features/search/LoadMore.tsx, /src/features/search/SearchBar.tsx, /src/features/search/SearchResults.tsx, /src/features/library/FileLibrary.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/library/RecentAccess.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx, /src/components/ui/VideoPlayer.tsx
+00:10:04 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:10:04 [vite] (client) page reload src/App.tsx
+00:10:30 [vite] (client) hmr update /src/i18n/i18nContext.tsx
+00:10:30 [vite] (client) hmr invalidate /src/i18n/i18nContext.tsx Could not Fast Refresh ("I18nContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:10:30 [vite] (client) hmr update /src/App.tsx, /src/features/search/LoadMore.tsx, /src/features/search/SearchBar.tsx, /src/features/search/SearchResults.tsx, /src/features/library/FileLibrary.tsx, /src/features/ingest/IngestPanel.tsx, /src/features/library/RecentAccess.tsx, /src/features/tasks/TaskQueueView.tsx, /src/features/settings/SettingsPanel.tsx, /src/components/ui/VideoPlayer.tsx
+00:10:30 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:10:30 [vite] (client) page reload src/App.tsx
+00:11:44 [vite] (client) hmr update /src/App.tsx
+00:11:44 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:11:44 [vite] (client) page reload src/App.tsx
+00:12:40 [vite] (client) hmr update /src/features/library/FileLibrary.tsx
+00:12:40 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/features/library/FileLibrary.tsx:562:34 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m555 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249my[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m{[0m{
+ [38;5;240m    │[0m                                ┬  
+ [38;5;240m    │[0m                                ╰── Opened here
+ [38;5;240m    │[0m 
+ [38;5;246m562 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mj[0m[38;5;249mu[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249my[0m-[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249m"[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                                  ┬  
+ [38;5;240m    │[0m                                  ╰── `,` or `}` expected
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/features/library/FileLibrary.tsx
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+00:12:40 [vite] Internal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/features/library/FileLibrary.tsx:562:34 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m555 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249my[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m{[0m{
+ [38;5;240m    │[0m                                ┬  
+ [38;5;240m    │[0m                                ╰── Opened here
+ [38;5;240m    │[0m 
+ [38;5;246m562 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mj[0m[38;5;249mu[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249my[0m-[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249m"[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m,[0m
+ [38;5;240m    │[0m                                  ┬  
+ [38;5;240m    │[0m                                  ╰── `,` or `}` expected
+[38;5;246m─────╯[0m
+
+  Plugin: vite:oxc
+  File: /Users/lkkings/Projects/FileSeek/desktop/src/features/library/FileLibrary.tsx
+      at transformWithOxc (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7208:19)
+      at TransformPluginContext.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:7280:26)
+      at EnvironmentPluginContainer.transform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:8172:51)
+      at async loadAndTransform (file:///Users/lkkings/Projects/FileSeek/desktop/node_modules/vite/dist/node/chunks/node.js:19634:26)
+00:12:40 [vite] (client) [console.error] [vite] Failed to reload /src/features/library/FileLibrary.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+00:12:40 [vite] (client) [console.error] [vite] Failed to reload /src/features/library/FileLibrary.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+00:13:56 [vite] (client) hmr update /src/features/library/FileLibrary.tsx
+00:15:36 [vite] (client) hmr update /src/App.tsx
+00:15:36 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:15:36 [vite] (client) page reload src/App.tsx
+00:15:55 [vite] (client) hmr update /src/App.tsx
+00:15:55 [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh ("describeStatus" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+00:15:55 [vite] (client) page reload src/App.tsx

@@ -1,0 +1,89 @@
+/* Design Tokens for FileSeek */
+
+:root {
+  /* Color Palette - Dark (Default) — matched to design.png (deep navy + bright blue accent) */
+  --bg-primary: #061127;
+  --bg-secondary: #0b1d40;
+  --bg-tertiary: #142e63;
+  --bg-active: #16336a;
+
+  --border-color: #18396f;
+  --border-focus: #2f7dfe;
+
+  --text-primary: #f3f6fc;
+  --text-secondary: #9fb0d4;
+  --text-muted: #6a7ba3;
+
+  --accent-primary: #2f7dfe;
+  --accent-secondary: #1257e0;
+  --accent-hover: #5b9dff;
+  --accent-light: rgba(47, 125, 254, 0.14);
+  --accent-gradient: linear-gradient(135deg, #3a8bfe, #1257e0);
+
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.1);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --error: #ef4444;
+  --error-light: rgba(239, 68, 68, 0.1);
+
+  /* Dimensions & Spacing */
+  --sidebar-width: 276px;
+  --header-height: 70px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 8px 24px -4px rgba(47, 125, 254, 0.4);
+}
+
+/* Light Theme overrides */
+:root[data-theme="light"] {
+  --bg-primary: #f9fafb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3f4f6;
+  --bg-active: #e5e7eb;
+  
+  --border-color: #e5e7eb;
+  --border-focus: #3b82f6;
+  
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  
+  --accent-primary: #3b82f6;
+  --accent-secondary: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: rgba(59, 130, 246, 0.08);
+  
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.08);
+  --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.08);
+  --error: #dc2626;
+  --error-light: rgba(220, 38, 38, 0.08);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
