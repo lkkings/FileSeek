@@ -1,11 +1,10 @@
-from fileseek.features.library.domain.entities import File
+from fileseek.features.library.application.dto import FileDTO
+from fileseek.features.library.application.mappers import file_to_dto
+from fileseek.features.library.application.queries import ListFilesQuery
 from fileseek.features.library.domain.repositories import (
     FileRepository,
     FolderRepository,
 )
-from fileseek.features.library.application.queries import ListFilesQuery
-from fileseek.features.library.application.dto import FileDTO
-from fileseek.features.library.application.mappers import file_to_dto
 
 
 class ListFilesUseCase:

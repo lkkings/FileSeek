@@ -4,14 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from fileseek.features.library.application.use_cases import (
+from fileseek.features.recent.application.use_cases import (
     ListRecentAccessUseCase,
 )
-from fileseek.features.library.interfaces.http.dependencies import (
+from fileseek.features.recent.interfaces.http.dependencies import (
     get_list_recent_access_use_case,
 )
-from fileseek.features.library.interfaces.http.mappers import list_recent_query
-from fileseek.features.library.interfaces.http.schemas import RecentAccessResponse
+from fileseek.features.recent.interfaces.http.mappers import list_recent_query
+from fileseek.features.recent.interfaces.http.schemas import RecentAccessResponse
 from fileseek.shared.envelope import success_response
 
 router = APIRouter(

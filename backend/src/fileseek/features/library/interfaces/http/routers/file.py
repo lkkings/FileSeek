@@ -7,8 +7,8 @@ from fastapi.responses import Response
 
 from fileseek.features.library.application.commands import RecordAccessCommand
 from fileseek.features.library.application.use_cases import (
-    AddFileUseCase,
     AddFiles2RecycleUseCase,
+    AddFileUseCase,
     GetFileUseCase,
     ListFilesUseCase,
     RecordAccessUseCase,
@@ -25,14 +25,14 @@ from fileseek.features.library.interfaces.http.mappers import (
     delete_files_command,
     file_to_schema,
     get_file_query,
-    list_files_query
+    list_files_query,
 )
+from fileseek.features.library.interfaces.http.responses import stream_file
 from fileseek.features.library.interfaces.http.schemas import (
     FileBatchDeleteRequest,
     FileImportRequest,
     FileImportResponse,
 )
-from fileseek.features.library.interfaces.http.responses import stream_file
 from fileseek.shared.envelope import success_response
 
 router = APIRouter(

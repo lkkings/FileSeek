@@ -3,8 +3,7 @@ from __future__ import annotations
 from fastapi.responses import Response, StreamingResponse
 
 from fileseek.infrastructure.fs import VirtualPath
-from fileseek.shared.utils.file_types import detect_file_type
-
+from fileseek.shared.utils.file_utils import detect_file_type_from_bytes
 
 _CHUNK_SIZE = 64 * 1024
 _FILE_TYPE_HEADER_SIZE = 4096
@@ -109,7 +108,7 @@ def _detect_content_type(
                 _FILE_TYPE_HEADER_SIZE
             )
 
-        return detect_file_type(header)
+        return detect_file_type_from_bytes(header).value
 
     except (OSError, ValueError):
         return "application/octet-stream"

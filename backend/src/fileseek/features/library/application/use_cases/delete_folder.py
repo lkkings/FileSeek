@@ -1,6 +1,6 @@
+from fileseek.features.library.application.commands import DeleteFolderCommand
 from fileseek.features.library.domain.exceptions import FolderNotFoundError
 from fileseek.features.library.domain.repositories import FolderRepository
-from fileseek.features.library.application.commands import DeleteFolderCommand
 
 
 class DeleteFolderUseCase:

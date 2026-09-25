@@ -7,7 +7,6 @@ from dataclasses import dataclass
 class ListFoldersQuery:
     pass
 
-
 @dataclass(frozen=True)
 class ListFilesQuery:
     folder_name: str | None
@@ -15,19 +14,6 @@ class ListFilesQuery:
     page: int
     page_size: int
 
-
-@dataclass(frozen=True)
-class ListRecycleItemsQuery:
-    page: int
-    page_size: int
-
-
-@dataclass(frozen=True)
-class ListRecentAccessQuery:
-    limit: int = 20
-
-
 @dataclass(frozen=True)
 class GetFileQuery:
     file_id: str
-

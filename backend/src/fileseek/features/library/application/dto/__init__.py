@@ -12,7 +12,6 @@ class FolderDTO:
     modified: str
     file_count: int
 
-
 @dataclass(frozen=True)
 class FileDTO:
     id: str
@@ -22,20 +21,4 @@ class FileDTO:
     modified: str
     path: str
     parent_folder: str | None
-
-
-@dataclass(frozen=True)
-class RecycleItemDTO:
-    id: str
-    original_file_id: str
-    original_name: str
-    original_path: str
-    deleted_at: str
-    file_type: str
-    size: int
-
-
-@dataclass(frozen=True)
-class RecentAccessDTO:
-    file_id: str
-    accessed_at: str
+    tags: list[str]

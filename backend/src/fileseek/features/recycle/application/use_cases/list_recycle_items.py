@@ -1,8 +1,7 @@
-from fileseek.features.library.domain.entities import RecycleItem
-from fileseek.features.library.domain.repositories import RecycleRepository
-from fileseek.features.library.application.queries import ListRecycleItemsQuery
-from fileseek.features.library.application.dto import RecycleItemDTO
-from fileseek.features.library.application.mappers import recycle_item_to_dto
+from fileseek.features.recycle.application.dto import RecycleItemDTO
+from fileseek.features.recycle.application.mappers import recycle_item_to_dto
+from fileseek.features.recycle.application.queries import ListRecycleItemsQuery
+from fileseek.features.recycle.domain.repositories import RecycleRepository
 
 
 class ListRecycleItemsUseCase:

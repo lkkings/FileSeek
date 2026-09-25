@@ -1,8 +1,7 @@
-from fileseek.features.library.domain.entities import Folder
-from fileseek.features.library.domain.repositories import FolderRepository
 from fileseek.features.library.application.dto import FolderDTO
 from fileseek.features.library.application.mappers import folder_to_dto
 from fileseek.features.library.application.queries import ListFoldersQuery
+from fileseek.features.library.domain.repositories import FolderRepository
 
 
 class ListFoldersUseCase:

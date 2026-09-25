@@ -34,8 +34,7 @@ class FileAddRequest(BaseModel):
 class FileImportRequest(BaseModel):
     """单文件入库请求。"""
 
-    folder_id: str | None = Field(None, alias="folder_id")
-    filename: str = Field(alias="filename")
+    folder_id: str  = Field(..., alias="folder_id")
     path: str = Field(alias="path")
 
 

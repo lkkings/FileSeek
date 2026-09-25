@@ -14,18 +14,21 @@ import logging
 from dataclasses import dataclass
 
 from fileseek.config.settings import Settings
-from fileseek.features.tasks.application.scheduler import TaskScheduler
+from fileseek.features.library.infrastructure.repositories import FileRepositoryImpl
 from fileseek.features.tasks.application.processor import TaskProcessor
+from fileseek.features.tasks.application.scheduler import TaskScheduler
+from fileseek.features.tasks.infrastructure.classifier import get_classifier
+from fileseek.features.tasks.infrastructure.embedding import get_embedding_service
+from fileseek.features.tasks.infrastructure.file_processor import (
+    DocumentParser,
+    OCRService,
+    VideoSampler,
+)
 from fileseek.features.tasks.infrastructure.repositories import TaskRepositoryImpl
-from fileseek.features.tasks.infrastructure.file_processor import DocumentParser
-from fileseek.features.tasks.infrastructure.file_processor import OCRService
-from fileseek.features.tasks.infrastructure.file_processor import VideoSampler
 from fileseek.features.tasks.infrastructure.vector_store import (
     get_vector_store,
 )
-from fileseek.features.tasks.infrastructure.embedding import (
-    get_embedding_service
-)
+from fileseek.shared.utils.cache import get_search_results_cache
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,10 @@ def build_task_scheduler(settings: Settings) -> TaskScheduler:
 
     调度器持有自己的仓储实例：它在后台线程里跑，和请求作用域的连接互不相干。
     """
+    embedder = get_embedding_service()
+    vector_store = get_vector_store()
+    classifier = get_classifier()
+    cache = get_search_results_cache()
     processor = TaskProcessor(
         document_parser=DocumentParser(),
         ocr_service=OCRService(),
@@ -42,15 +49,20 @@ def build_task_scheduler(settings: Settings) -> TaskScheduler:
             sample_every_n_frames=settings.video_sample_every_n_frames,
             hash_threshold=settings.video_perceptual_hash_threshold,
         ),
-        embedding_service=get_embedding_service(),
-        vector_index=get_vector_store()
+        embedding_service=embedder,
+        vector_index=vector_store,
+        classifier=classifier,
     )
+
+    file_repo = FileRepositoryImpl()
 
     return TaskScheduler(
         task_repo=TaskRepositoryImpl(),
         processor=processor,
         poll_interval=settings.task_poll_interval,
         max_workers=settings.task_max_workers,
+        file_repository=file_repo,
+        cache=cache,
     )
 
 

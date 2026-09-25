@@ -27,11 +27,11 @@ from fileseek.features.library.interfaces.http.schemas import (
     FolderCreateRequest,
     FolderUpdateRequest,
 )
+from fileseek.shared.application.exceptions import ApplicationError
 from fileseek.shared.envelope import (
     error_response,
     success_response,
 )
-from fileseek.shared.application.exceptions import ApplicationError
 
 router = APIRouter(
     prefix="/library/folders",

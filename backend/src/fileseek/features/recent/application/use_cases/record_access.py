@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from fileseek.features.library.domain.repositories import RecentAccessRepository
-from fileseek.features.library.application.commands import RecordAccessCommand
+from fileseek.features.recent.application.commands import RecordAccessCommand
+from fileseek.features.recent.domain.repositories import RecentAccessRepository
 
 
 class RecordAccessUseCase:

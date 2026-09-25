@@ -22,6 +22,7 @@ def _to_entity(model: FileModel) -> File:
     return File(
         id=model.id, name=model.name, file_type=FileType(model.file_type), size=model.size,
         modified=_as_iso(model.modified), parent_folder=model.parent_folder_id, path=model.path,
+        tags=list(model.tags or []),
     )
 
 
@@ -39,7 +40,7 @@ class FileRepositoryImpl(FileRepository):
 
     async def _list_by_folder(self, folder_id: str | None, file_type: str | None, page: int,
                               page_size: int) -> tuple[list[File], int]:
-        query = FileModel.all()
+        query = FileModel.filter(recycle_item__isnull=True)
         if folder_id is not None:
             query = query.filter(parent_folder_id=folder_id)
         if file_type is not None:
@@ -55,6 +56,7 @@ class FileRepositoryImpl(FileRepository):
         await FileModel.update_or_create(id=file.id, defaults={
             "name": file.name, "file_type": file.file_type.value, "size": file.size,
             "modified": file.modified, "parent_folder_id": file.parent_folder, "path": file.path,
+            "tags": file.tags,
         })
 
     async def delete(self, file_id: str) -> None:
@@ -93,7 +95,7 @@ class FileRepositoryImpl(FileRepository):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> list[File]:
-        query = FileModel.all()
+        query = FileModel.filter(recycle_item__isnull=True)
 
         if name_query:
             query = query.filter(name__icontains=name_query)

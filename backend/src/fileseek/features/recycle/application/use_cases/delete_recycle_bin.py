@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from fileseek.features.library.application.commands import DeletePermanentlyCommand
-from fileseek.features.library.domain.exceptions import (
+from fileseek.features.recycle.application.commands import DeletePermanentlyCommand
+from fileseek.features.recycle.domain.exceptions import (
     RecycleItemNotFoundError,
 )
-from fileseek.features.library.domain.repositories import (
+from fileseek.features.recycle.domain.repositories import (
+    FileRepository,
     RecycleRepository,
 )
 from fileseek.features.tasks.domain.ports import VectorIndexPort
@@ -19,9 +20,11 @@ class DeleteRecycleUseCase:
     def __init__(
         self,
         recycle_repo: RecycleRepository,
+        file_repo: FileRepository,
         vector_index: VectorIndexPort,
     ) -> None:
         self.recycle_repo = recycle_repo
+        self.file_repo = file_repo
         self.vector_index = vector_index
 
     async def execute(self, command: DeletePermanentlyCommand) -> None:
@@ -40,6 +43,7 @@ class DeleteRecycleUseCase:
         self._delete_vectors(item.original_file_id)
 
         await self.recycle_repo.delete(item.id)
+        await self.file_repo.delete(item.original_file_id)
 
     def _delete_vectors(self, file_id: str) -> None:
         """删掉该文件的全部向量。失败只记日志，不中断删除。

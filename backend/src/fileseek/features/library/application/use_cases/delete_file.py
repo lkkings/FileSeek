@@ -1,6 +1,5 @@
 from fileseek.features.library.application.commands import DeleteFileCommand
 from fileseek.features.library.domain.repositories import FileRepository
-
 from fileseek.infrastructure.fs import VirtualPath
 
 

@@ -23,6 +23,7 @@ from fileseek.bootstrap import connection
 from fileseek.bootstrap.container import Container, build_task_scheduler
 from fileseek.config.paths import AppPaths, LibraryPaths
 from fileseek.infrastructure.database.connection import close_db, init_db
+
 if TYPE_CHECKING:
     from fastapi import FastAPI
 

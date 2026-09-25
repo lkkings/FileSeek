@@ -4,20 +4,17 @@ from pathlib import Path
 from fileseek.config.settings import get_settings
 from fileseek.features.library.application.commands import AddFileCommand
 from fileseek.features.library.domain.entities import File
-from fileseek.features.library.domain.repositories import (
-    FileRepository,
-    FolderRepository
-)
+from fileseek.features.library.domain.repositories import FileRepository, FolderRepository
+from fileseek.features.tasks.domain.entities import Task
 from fileseek.features.tasks.domain.ports import TaskManager
+from fileseek.infrastructure.fs import VirtualPath
 from fileseek.shared.application.exceptions import (
+    FileAlreadyExistsError,
     FileNotSupportError,
     NotFoundError,
-    FileAlreadyExistsError
 )
 from fileseek.shared.domain.file_types import FileType
-from fileseek.shared.utils.file_utils import detect_file_type,bytes_hash
-
-from fileseek.infrastructure.fs import VirtualPath
+from fileseek.shared.utils.file_utils import bytes_hash, detect_file_type_from_file
 
 
 class AddFileUseCase:
@@ -49,20 +46,25 @@ class AddFileUseCase:
             )
         # 获取文件类型
         data_bytes = source_path.read_bytes()
-        file_type = detect_file_type(data_bytes)
+        file_id = bytes_hash(data_bytes)
+        temp_path = self.settings.temp_dir / f"{file_id}"
+        temp_path.parent.mkdir(exist_ok=True,parents=True)
+        temp_path.write_bytes(data_bytes)
+        file_type = detect_file_type_from_file(temp_path)
         if file_type is None:
             raise FileNotSupportError(
-                f"不支持的文件类型: {command.filename}"
+                f"不支持的文件类型: {command.path}"
             )
-        file_id = bytes_hash(data_bytes)
+
         file = await self.file_repo.get_by_id(file_id)
         if file is not None:
             raise FileAlreadyExistsError(f"文件已经存在：{file.path}")
 
         file_stat = source_path.stat()
         file_size = file_stat["size"]
+        modified_ts = file_stat["mtime"]
         modified = datetime.fromtimestamp(
-            file_stat["mtime"]
+            modified_ts
         ).isoformat()
         # 确定文件存储目录
         target_dir = self._get_target_directory(file_type)
@@ -90,6 +92,7 @@ class AddFileUseCase:
             modified=modified,
             path=str(target_path),
             parent_folder=command.folder_id,
+            tags=[],
         )
         await self.file_repo.save(file)
         if command.folder_id:
@@ -97,23 +100,27 @@ class AddFileUseCase:
                 command.folder_id,
                 1,
             )
-        temp_path = self.settings.temp_dir / f"{file_id}"
-        temp_path.parent.mkdir(exist_ok=True,parents=True)
-        temp_path.write_bytes(data_bytes)
-        await self.task_manager.create(file_id,str(temp_path))
+        task = Task(
+            id=file_id,
+            source_path=str(temp_path),
+            lib_path=str(target_path),
+            file_type=file_type.value,
+            file_modified_ts=modified_ts
+        )
+        await self.task_manager.create(task)
         return file_id
 
     def _get_target_directory(
         self,
         file_type: FileType,
     ) -> Path:
-        if file_type == FileType.DOCUMENT:
+        if file_type.is_document:
             return self.settings.lib_root / "documents"
 
-        if file_type == FileType.IMAGE:
+        if file_type.is_image:
             return self.settings.lib_root / "images"
 
-        if file_type == FileType.VIDEO:
+        if file_type.is_video:
             return self.settings.lib_root / "videos"
 
         raise FileNotSupportError(

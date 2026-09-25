@@ -4,30 +4,30 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from fileseek.features.library.application.use_cases import (
+from fileseek.features.recycle.application.commands import ClearRecycleBinCommand
+from fileseek.features.recycle.application.use_cases import (
     ClearRecycleBinUseCase,
     DeleteRecycleUseCase,
     ListRecycleItemsUseCase,
     RestoreRecycleUseCase,
 )
-from fileseek.features.library.application.commands import ClearRecycleBinCommand
-from fileseek.features.library.interfaces.http.dependencies import (
+from fileseek.features.recycle.interfaces.http.dependencies import (
     get_clear_recycle_bin_use_case,
     get_delete_recycle_use_case,
     get_list_recycle_items_use_case,
     get_restore_recycle_use_case,
 )
-from fileseek.features.library.interfaces.http.mappers import (
+from fileseek.features.recycle.interfaces.http.mappers import (
     delete_permanently_command,
     list_recycle_query,
     recycle_item_to_schema,
     restore_item_command,
 )
+from fileseek.shared.application.exceptions import ApplicationError
 from fileseek.shared.envelope import (
     error_response,
     success_response,
 )
-from fileseek.shared.application.exceptions import ApplicationError
 
 router = APIRouter(
     prefix="/library/recycle",

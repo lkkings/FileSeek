@@ -1,21 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass,field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from fileseek.features.library.domain.exceptions import FolderNotEmptyError
 from fileseek.shared.domain.file_types import FileType
-
-
-
-@dataclass
-class RecentAccessRecord:
-    """最近访问记录领域实体。"""
-
-    file_id: str
-    accessed_at: str
-    id: int = field(default=0)
-
 
 
 @dataclass
@@ -30,7 +19,6 @@ class Folder:
     def rename(self, name: str) -> None:
         if not name.strip():
             raise ValueError("文件夹名称不能为空")
-
         self.name = name
         self._touch()
 
@@ -53,18 +41,15 @@ class Folder:
     def decrease_file_count(self) -> None:
         if self.file_count <= 0:
             raise ValueError("文件数量不能小于 0")
-
         self.file_count -= 1
         self._touch()
 
     def _touch(self) -> None:
         self.modified = datetime.now(UTC).isoformat()
 
-
 @dataclass
 class File:
     """文件领域实体。"""
-
     id: str
     name: str
     file_type: FileType
@@ -72,6 +57,7 @@ class File:
     modified: str
     path: str
     parent_folder: str | None = None
+    tags: list[str] = field(default_factory=list)
 
     def move_to_folder(self, folder_id: str | None) -> None:
         """将文件移动到指定文件夹。
@@ -81,19 +67,4 @@ class File:
         """
         self.parent_folder = folder_id
 
-@dataclass
-class RecycleItem:
-    """回收站条目领域实体。"""
-
-    id: str
-    original_file_id: str
-    original_name: str
-    original_path: str
-    deleted_at: str
-    file_type: FileType
-    size: int
-    original_parent_folder: str | None = None
-    recycle_path: str | None = None
-
-
-__all__ = ["File", "Folder", "RecycleItem", "RecentAccessRecord"]
+__all__ = ["File", "Folder"]

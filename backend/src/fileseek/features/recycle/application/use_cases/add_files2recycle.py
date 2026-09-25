@@ -1,16 +1,15 @@
 from datetime import UTC, datetime
 
-from fileseek.features.library.domain.entities import RecycleItem
-from fileseek.features.library.domain.repositories import (
+from fileseek.config.settings import get_settings
+from fileseek.features.recycle.application.commands import AddFiles2RecycleCommand
+from fileseek.features.recycle.domain.entities import RecycleItem
+from fileseek.features.recycle.domain.repositories import (
     FileRepository,
     FolderRepository,
     RecycleRepository,
 )
-from fileseek.shared.domain.identifiers import generate_id
-from fileseek.features.library.application.commands import AddFiles2RecycleCommand
-
 from fileseek.infrastructure.fs import VirtualPath
-from fileseek.config.settings import get_settings
+from fileseek.shared.domain.identifiers import generate_id
 
 
 class AddFiles2RecycleUseCase:
@@ -52,7 +51,6 @@ class AddFiles2RecycleUseCase:
             )
 
             await self.recycle_repo.save(recycle_item)
-            await self.file_repo.delete(file_id)
 
             if file.parent_folder:
                 await self.folder_repo.increment_file_count(

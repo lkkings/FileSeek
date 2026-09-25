@@ -1,7 +1,7 @@
 """Library 最近访问记录的 Tortoise 仓储实现。"""
 
-from fileseek.features.library.domain.entities import RecentAccessRecord
-from fileseek.features.library.domain.repositories import RecentAccessRepository
+from fileseek.features.recent.domain.entities import RecentAccessRecord
+from fileseek.features.recent.domain.repositories import RecentAccessRepository
 from fileseek.infrastructure.database.models import RecentAccessModel
 
 

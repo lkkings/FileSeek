@@ -1,18 +1,13 @@
-from datetime import UTC, datetime
 
-from fileseek.features.library.domain.entities import (
-    File,
-)
-from fileseek.features.library.domain.exceptions import (
+from fileseek.features.recycle.application.commands import RestoreItemCommand
+from fileseek.features.recycle.domain.exceptions import (
     RecycleItemNotFoundError,
 )
-from fileseek.features.library.domain.repositories import (
+from fileseek.features.recycle.domain.repositories import (
     FileRepository,
     FolderRepository,
     RecycleRepository,
 )
-from fileseek.features.library.application.commands import RestoreItemCommand
-
 from fileseek.infrastructure.fs import VirtualPath
 
 
@@ -43,19 +38,6 @@ class RestoreRecycleUseCase:
         recycle_path = VirtualPath(item.recycle_path)
         restore_path = VirtualPath(item.original_path)
         recycle_path.decompress(restore_path)
-        
-        file = File(
-            id=item.original_file_id,
-            name=item.original_name,
-            file_type=item.file_type,
-            size=item.size,
-            modified=datetime.now(UTC).isoformat(),
-            path=str(restore_path),
-            parent_folder=folder.id if folder else None,
-        )
-
-        # 5. 保存 File
-        await self.file_repo.save(file)
 
         # 6. 更新 Folder
         if folder:
