@@ -1,6 +1,6 @@
 """Shared application 层模块。"""
 
-from fileseek.shared.application.exceptions import (
+from fileseek.shared.domain.exceptions import (
     ApplicationError,
     NotFoundError,
     ValidationError,

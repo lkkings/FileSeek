@@ -1,0 +1,137 @@
+.file-library__table-wrapper {
+  width: 100%;
+  overflow: auto;
+  max-height: 500px;
+  border: 1px solid rgba(75, 143, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(8, 25, 59, 0.78);
+}
+
+.search-results-table-page,
+.folder-details-table-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.folder-details-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-library__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.file-library__table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(75, 143, 255, 0.2);
+  background: #0d2347;
+  color: #a9bae1;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.file-library__table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(75, 143, 255, 0.12);
+  color: #c7d5f8;
+  vertical-align: middle;
+}
+
+.file-library__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.file-table-row:hover td {
+  background: rgba(39, 136, 255, 0.08);
+}
+
+.file-table-row.is-selected td {
+  background: rgba(39, 165, 255, 0.12);
+}
+
+.file-name-button {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #f2f6ff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.file-name-button span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-table-checkbox-cell {
+  width: 44px;
+}
+
+.file-table-path {
+  max-width: 360px;
+  overflow: hidden;
+  color: #a9bae1;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-table-match {
+  max-width: 320px;
+  overflow: hidden;
+  color: #a9bae1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-table-score {
+  width: 76px;
+  color: #8fd4ff;
+  font-weight: 700;
+}
+
+.file-table-actions {
+  width: 56px;
+  text-align: right;
+}
+
+.file-table-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(75, 143, 255, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  color: #a9bae1;
+  cursor: pointer;
+}
+
+.file-table-actions button:hover {
+  border-color: #27a5ff;
+  color: #d4eaff;
+}
+
+@media (max-width: 780px) {
+  .file-library__table {
+    min-width: 760px;
+  }
+}

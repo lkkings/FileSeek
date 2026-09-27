@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from fileseek.features.tasks.domain.entities import Task
+from fileseek.features.tasks.domain.entities import Task,TaskStatus
 
 
 class TaskRepository(Protocol):
@@ -15,7 +15,7 @@ class TaskRepository(Protocol):
 
     async def get_by_id(self, task_id: str) -> Task | None: ...
 
-    async def list_all(self, status: str | None, page: int, page_size: int) -> tuple[list[Task], int]: ...
+    async def list_all(self, status: TaskStatus | None, page: int, page_size: int) -> tuple[list[Task], int]: ...
 
     async def save(self, task: Task) -> None: ...
 

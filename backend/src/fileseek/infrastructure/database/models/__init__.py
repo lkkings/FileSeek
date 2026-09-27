@@ -1,120 +1,278 @@
 """Tortoise ORM 数据模型。
 
-模型只描述数据库结构，不承载领域规则。领域实体与模型之间的转换由各仓储完成。
+模型只描述数据库结构，不承载领域规则。
+领域实体与模型之间的转换由各仓储完成。
 """
 
 from tortoise import fields
 from tortoise.models import Model
 
 
-
 class FolderModel(Model):
-    id = fields.CharField(max_length=255, pk=True)
-    name = fields.CharField(max_length=255)
-    icon_type = fields.CharField(max_length=255)
+    """文件夹数据库模型。"""
+
+    # 文件夹唯一标识
+    id = fields.CharField(
+        max_length=255,
+        pk=True,
+    )
+
+    # 文件夹名称
+    name = fields.CharField(
+        max_length=255,
+    )
+
+    # 文件夹图标类型
+    icon_type = fields.CharField(
+        max_length=255,
+    )
+
+    # 文件夹描述
     description = fields.TextField()
-    modified = fields.CharField(max_length=64)
-    file_count = fields.IntField(default=0)
+
+    # 最近修改时间
+    modified = fields.DatetimeField()
+
+    # 当前文件数量，属于缓存/派生数据
+    file_count = fields.IntField(
+        default=0,
+    )
 
     class Meta:
         table = "folders"
 
+class TagModel(Model):
+    """文件标签。"""
 
-class FileModel(Model):
     id = fields.CharField(
         max_length=64,
         pk=True,
     )
 
     name = fields.CharField(
-        max_length=255,
+        max_length=64,
+        unique=True,
     )
-
-    file_type = fields.CharField(
-        max_length=32,
-    )
-
-    size = fields.BigIntField()
-
-    modified = fields.DatetimeField()
 
     created_at = fields.DatetimeField(
         auto_now_add=True,
     )
 
-    parent_folder = fields.ForeignKeyField(
+    class Meta:
+        table = "tags"
+        indexes = (
+            ("name",),
+        )
+
+class FileChunkModel(Model):
+    # 文件唯一标识
+    id = fields.CharField(
+        max_length=128,
+        pk=True,
+    )
+
+    file = fields.ForeignKeyField(
+        "models.FileModel",
+        related_name="filechunks",
+        on_delete=fields.CASCADE,
+    )
+
+    # 文件块相关的扩展元信息
+    metadata = fields.JSONField(
+        default=dict,
+    )
+
+
+
+class FileModel(Model):
+    """文件数据库模型。"""
+
+    # 文件唯一标识
+    id = fields.CharField(
+        max_length=64,
+        pk=True,
+    )
+
+    # 文件名称，不包含父目录路径
+    name = fields.CharField(
+        max_length=255,
+    )
+
+    # 文件扩展名，例如 pdf、jpg、mp4
+    file_type = fields.CharField(
+        max_length=32,
+    )
+
+    # 文件种类，例如 image、video、document
+    category = fields.CharField(
+        max_length=32,
+    )
+
+    # 文件大小，单位：字节
+    size = fields.BigIntField()
+
+    # 文件最后修改时间
+    modified = fields.DatetimeField()
+
+    # 数据库记录创建时间
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    # 当前所属父文件夹
+    folder = fields.ForeignKeyField(
         "models.FolderModel",
         related_name="files",
         null=True,
         on_delete=fields.SET_NULL,
     )
 
+    # 文件当前实际路径
     path = fields.CharField(
         max_length=4096,
         unique=True,
     )
 
+    # 文件标签
+    tags = fields.ManyToManyField(
+        "models.TagModel",
+        related_name="files",
+        through="file_tags",
+    )
+
     class Meta:
         table = "files"
+
         indexes = (
-            ("parent_folder", "file_type"),
+            ("folder_id",),
+            ("category",),
+            ("file_type",),
+            ("created_at",),
+            ("modified",),
+            ("size",),
         )
-
-
 class RecycleItemModel(Model):
-    id = fields.CharField(max_length=255, pk=True)
-    original_file_id = fields.CharField(max_length=255)
-    original_name = fields.CharField(max_length=255)
-    original_parent_folder = fields.CharField(max_length=255, null=True)
-    original_path = fields.CharField(max_length=4096)
-    # 压缩包在哪。和 original_path 分开存：前者是还原目标（文件原来在哪），后者是包的位置。
-    recycle_path = fields.CharField(max_length=4096, null=True)
-    deleted_at = fields.CharField(max_length=64)
-    file_type = fields.CharField(max_length=32)
-    size = fields.BigIntField()
+    """回收站项目数据库模型。"""
+
+    # 回收站项目唯一标识
+    id = fields.CharField(
+        max_length=64,
+        pk=True,
+    )
+
+    # 对应的文件
+    file = fields.OneToOneField(
+        "models.FileModel",
+        related_name="recycle_item",
+        on_delete=fields.RESTRICT,
+    )
+
+    # 文件进入回收站时的实际存储路径
+    recycle_path = fields.CharField(
+        max_length=4096,
+        null=True,
+    )
+
+    # 文件进入回收站的时间
+    deleted_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
 
     class Meta:
         table = "recycle_bin"
 
+        indexes = (
+            ("deleted_at",),
+        )
+
 
 class TaskModel(Model):
-    id = fields.CharField(max_length=255, pk=True)
-    source_path = fields.CharField(max_length=4096)
-    status = fields.CharField(max_length=32)
-    progress = fields.IntField(default=0)
-    stage = fields.CharField(max_length=32, null=True)
-    error_message = fields.TextField(null=True)
-    created_at = fields.CharField(max_length=64)
-    updated_at = fields.CharField(max_length=64)
-    retry_count = fields.IntField(default=0)
+    """后台任务数据库模型。"""
+
+    # 任务唯一标识
+    id = fields.CharField(
+        max_length=255,
+        pk=True,
+    )
+
+    # 任务关联的文件
+    file = fields.ForeignKeyField(
+        "models.FileModel",
+        related_name="tasks",
+        on_delete=fields.CASCADE,
+        null=True,
+    )
+
+    # 任务相关的扩展元信息
+    metadata = fields.JSONField(
+        default=dict,
+    )
+
+    # 任务当前状态
+    status = fields.CharField(
+        max_length=32,
+    )
+
+    # 任务执行进度
+    progress = fields.IntField(
+        default=0,
+    )
+
+    # 任务当前执行阶段
+    stage = fields.CharField(
+        max_length=32,
+        null=True,
+    )
+
+    # 任务失败时的错误信息
+    error_message = fields.TextField(
+        null=True,
+    )
+
+    # 任务创建时间
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    # 任务最后更新时间
+    updated_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    # 已重试次数
+    retry_count = fields.IntField(
+        default=0,
+    )
 
     class Meta:
         table = "tasks"
-        indexes = ("status", "created_at")
-
+        indexes = (
+            ("status", "created_at"),
+            ("file_id",),
+        )
 
 class RecentAccessModel(Model):
-    id = fields.IntField(pk=True)
-    file_id = fields.CharField(max_length=255)
-    accessed_at = fields.CharField(max_length=64)
+    """文件最近访问记录数据库模型。"""
+
+    # 访问记录唯一标识
+    id = fields.IntField(
+        pk=True,
+    )
+
+    # 被访问的文件 ID
+    file_id = fields.CharField(
+        max_length=255,
+    )
+
+    # 文件访问时间
+    accessed_at = fields.DatetimeField()
 
     class Meta:
         table = "recent_access"
-        indexes = ("accessed_at",)
-
-
-class SettingsModel(Model):
-    id = fields.CharField(max_length=64, pk=True)
-    lib_root = fields.CharField(max_length=4096)
-    nas_enabled = fields.BooleanField(default=False)
-    nas_protocol = fields.CharField(max_length=32, null=True)
-    nas_host = fields.CharField(max_length=255, null=True)
-    nas_share_path = fields.CharField(max_length=4096, null=True)
-    nas_username = fields.CharField(max_length=255, null=True)
-    nas_password = fields.CharField(max_length=255, null=True)
-
-    class Meta:
-        table = "settings"
+        indexes = (
+            ("accessed_at",),
+            ("file_id", "accessed_at"),
+        )
 
 
 
@@ -124,5 +282,4 @@ __all__ = [
     "RecentAccessModel",
     "RecycleItemModel",
     "TaskModel",
-    "SettingsModel",
 ]

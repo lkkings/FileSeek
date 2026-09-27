@@ -30,12 +30,15 @@ import contextlib
 import logging
 import queue
 import time
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
+from fileseek.config.constant import QUERY_CACHE_KEY
+from fileseek.features.library.domain.repositories import FileRepository,FileChunkRepository
+from fileseek.features.tasks.application.processor import TaskProcessor
 from fileseek.features.tasks.domain.entities import Task, TaskStatus
 from fileseek.features.tasks.domain.repositories import TaskRepository
-from fileseek.features.tasks.application.processor import TaskProcessor
+from fileseek.shared.utils.cache import TTLLRUCache
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +65,18 @@ class TaskScheduler:
     def __init__(
         self,
         task_repo: TaskRepository,
+        file_repo: FileRepository,
+        file_chunk_repo: FileChunkRepository,
         processor: TaskProcessor,
-        poll_interval: float = 2.0,
-        max_workers: int = 1,
+        poll_interval: float,
+        max_workers: int,
+        cache: TTLLRUCache,
     ) -> None:
         self.task_repo = task_repo
+        self.file_repo = file_repo
+        self.file_chunk_repo = file_chunk_repo
         self.processor = processor
+        self.cache = cache
         self.poll_interval = poll_interval
         self._running = False
         self._task: asyncio.Task[None] | None = None
@@ -159,7 +168,7 @@ class TaskScheduler:
         released: list[str] = []
         page = 1
         while True:
-            tasks, total = await self.task_repo.list_all(TaskStatus.PROCESSING.value, page, 100)
+            tasks, total = await self.task_repo.list_all(TaskStatus.PROCESSING, page, 100)
             if not tasks:
                 break
             for task in tasks:
@@ -272,17 +281,9 @@ class TaskScheduler:
                         await asyncio.sleep(_PROGRESS_POLL_INTERVAL)
                 await future
             finally:
-                # 收尾这次读队列成功失败都要做，而且必须在状态还是 PROCESSING 时做
-                # （advance_stage 只认这个状态）。
-                #
-                # 成功时：处理器最后那几条（通常是 encoded/indexed）很可能还在管道里
-                # 没过来——put 只是交给 feeder 线程，而上面的循环在 future.done() 变
-                # True 的那一刻就不再读了。少了这一次，任务阶段会永远停在倒数第二个。
-                #
-                # 失败时：队列里压着的是已经跑完的那几个阶段。丢掉它们，失败任务的
-                # progress 就成了 0，用户没法知道到底卡在哪一步。
                 await self._drain_progress(task, progress_queue, grace=_PROGRESS_FINAL_GRACE)
             task.mark_completed()
+            await self.cache.clear(QUERY_CACHE_KEY)
         except NotImplementedError as exc:
             logger.warning("任务 %s 处理器功能尚未实现: %s", task.id, exc)
             task.mark_failed(f"处理器功能尚未实现: {exc}")
@@ -292,6 +293,8 @@ class TaskScheduler:
         finally:
             task.updated_at = datetime.now().isoformat()  # noqa: DTZ005
             await self.task_repo.save(task)
+            await self.file_repo.save(task.file)
+            await self.file_chunk_repo.save_batch(task.file.chunks)
             self._close_progress_queue(progress_queue)
             self._active -= 1
 

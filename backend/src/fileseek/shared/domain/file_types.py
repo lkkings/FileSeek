@@ -3,173 +3,178 @@ from __future__ import annotations
 from enum import Enum
 
 
-class FileType(str, Enum):
-    """文件类型。"""
+class FileCategory(str, Enum):
+    """文件粗分类。"""
 
     DOCUMENT = "document"
     IMAGE = "image"
     VIDEO = "video"
 
-    @classmethod
-    def from_extension(cls, extension: str) -> FileType | None:
-        """根据文件扩展名推断文件类型。
 
-        注意：
-            此方法仅根据扩展名进行推断，不代表文件的真实内容类型。
+class FileType(str, Enum):
+    """具体文件格式。"""
 
-        Args:
-            extension: 文件扩展名，可以包含或不包含前导点。
+    PDF = "pdf"
+    DOC = "doc"
+    DOCX = "docx"
+    ODT = "odt"
+    RTF = "rtf"
+    TXT = "txt"
+    MARKDOWN = "markdown"
+    HTML = "html"
+    XML = "xml"
+    CSV = "csv"
+    XLS = "xls"
+    XLSX = "xlsx"
+    ODS = "ods"
+    PPT = "ppt"
+    PPTX = "pptx"
+    ODP = "odp"
 
-        Returns:
-            对应的文件类型，无法识别时返回 None。
-        """
-        extension = extension.lower().lstrip(".")
+    JPG = "jpg"
+    PNG = "png"
+    GIF = "gif"
+    BMP = "bmp"
+    WEBP = "webp"
+    SVG = "svg"
+    HEIC = "heic"
+    HEIF = "heif"
+    TIFF = "tiff"
+    ICO = "ico"
 
-        if extension in DOCUMENT_EXTENSIONS:
-            return cls.DOCUMENT
+    MP4 = "mp4"
+    AVI = "avi"
+    MOV = "mov"
+    MKV = "mkv"
+    FLV = "flv"
+    WMV = "wmv"
+    WEBM = "webm"
+    M4V = "m4v"
+    MPEG = "mpeg"
+    MPG = "mpg"
+    THREE_GP = "3gp"
+    TS = "ts"
+    MTS = "mts"
+    M2TS = "m2ts"
 
-        if extension in IMAGE_EXTENSIONS:
-            return cls.IMAGE
+    @property
+    def media_type(self) -> str:
+        return FILE_TYPE_MEDIA_TYPES[self]
 
-        if extension in VIDEO_EXTENSIONS:
-            return cls.VIDEO
+    @property
+    def category(self) -> FileCategory:
+        """返回文件的粗分类。"""
+        return FILE_TYPE_CATEGORIES[self]
 
-        return None
+    @property
+    def is_document(self) -> bool:
+        return self.category is FileCategory.DOCUMENT
 
-    @classmethod
-    def from_mime(cls, mime_type: str) -> FileType | None:
-        """根据 MIME Type 推断文件类型。
+    @property
+    def is_image(self) -> bool:
+        return self.category is FileCategory.IMAGE
 
-        Args:
-            mime_type: MIME 类型，例如 application/pdf。
+    @property
+    def is_video(self) -> bool:
+        return self.category is FileCategory.VIDEO
 
-        Returns:
-            对应的文件类型，无法识别时返回 None。
-        """
-        mime_type = mime_type.lower().strip()
-
-        if mime_type in DOCUMENT_MIME_TYPES:
-            return cls.DOCUMENT
-
-        if mime_type in IMAGE_MIME_TYPES:
-            return cls.IMAGE
-
-        if mime_type in VIDEO_MIME_TYPES:
-            return cls.VIDEO
-
-        return None
-
-
-DOCUMENT_EXTENSIONS = frozenset(
-    {
-        "pdf",
-        "doc",
-        "docx",
-        "odt",
-        "rtf",
-        "txt",
-        "md",
-        "markdown",
-        "html",
-        "htm",
-        "xml",
-        "csv",
-        "xls",
-        "xlsx",
-        "ods",
-        "ppt",
-        "pptx",
-        "odp",
-    }
-)
-
-IMAGE_EXTENSIONS = frozenset(
-    {
-        "jpg",
-        "jpeg",
-        "png",
-        "gif",
-        "bmp",
-        "webp",
-        "svg",
-        "heic",
-        "heif",
-        "tif",
-        "tiff",
-        "ico",
-    }
-)
-
-VIDEO_EXTENSIONS = frozenset(
-    {
-        "mp4",
-        "avi",
-        "mov",
-        "mkv",
-        "flv",
-        "wmv",
-        "webm",
-        "m4v",
-        "mpeg",
-        "mpg",
-        "3gp",
-        "ts",
-        "mts",
-        "m2ts",
-    }
-)
+    @property
+    def is_support(self) -> bool:
+        return self.is_document or self.is_video or self.is_image
 
 
-DOCUMENT_MIME_TYPES = frozenset(
-    {
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.oasis.opendocument.text",
-        "application/rtf",
-        "text/plain",
-        "text/markdown",
-        "text/html",
-        "application/xhtml+xml",
-        "text/csv",
-        "application/xml",
-        "text/xml",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.oasis.opendocument.spreadsheet",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "application/vnd.oasis.opendocument.presentation",
-    }
-)
+FILE_TYPE_MEDIA_TYPES: dict[FileType, str] = {
+    # Documents
+    FileType.PDF: "application/pdf",
+    FileType.DOC: "application/msword",
+    FileType.DOCX: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    FileType.ODT: "application/vnd.oasis.opendocument.text",
+    FileType.RTF: "application/rtf",
+    FileType.TXT: "text/plain",
+    FileType.MARKDOWN: "text/markdown",
+    FileType.HTML: "text/html",
+    FileType.XML: "application/xml",
+    FileType.CSV: "text/csv",
+    FileType.XLS: "application/vnd.ms-excel",
+    FileType.XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    FileType.ODS: "application/vnd.oasis.opendocument.spreadsheet",
+    FileType.PPT: "application/vnd.ms-powerpoint",
+    FileType.PPTX: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    FileType.ODP: "application/vnd.oasis.opendocument.presentation",
 
-IMAGE_MIME_TYPES = frozenset(
-    {
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/bmp",
-        "image/webp",
-        "image/svg+xml",
-        "image/heic",
-        "image/heif",
-        "image/tiff",
-        "image/x-icon",
-    }
-)
+    # Images
+    FileType.JPG: "image/jpeg",
+    FileType.PNG: "image/png",
+    FileType.GIF: "image/gif",
+    FileType.BMP: "image/bmp",
+    FileType.WEBP: "image/webp",
+    FileType.SVG: "image/svg+xml",
+    FileType.HEIC: "image/heic",
+    FileType.HEIF: "image/heif",
+    FileType.TIFF: "image/tiff",
+    FileType.ICO: "image/x-icon",
 
-VIDEO_MIME_TYPES = frozenset(
-    {
-        "video/mp4",
-        "video/mpeg",
-        "video/quicktime",
-        "video/x-msvideo",
-        "video/x-matroska",
-        "video/x-flv",
-        "video/x-ms-wmv",
-        "video/webm",
-        "video/x-m4v",
-        "video/3gpp",
-        "video/mp2t",
-    }
-)
+    # Videos
+    FileType.MP4: "video/mp4",
+    FileType.AVI: "video/x-msvideo",
+    FileType.MOV: "video/quicktime",
+    FileType.MKV: "video/x-matroska",
+    FileType.FLV: "video/x-flv",
+    FileType.WMV: "video/x-ms-wmv",
+    FileType.WEBM: "video/webm",
+    FileType.M4V: "video/x-m4v",
+    FileType.MPEG: "video/mpeg",
+    FileType.MPG: "video/mpeg",
+    FileType.THREE_GP: "video/3gpp",
+    FileType.TS: "video/mp2t",
+    FileType.MTS: "video/mp2t",
+    FileType.M2TS: "video/mp2t",
+}
+
+FILE_TYPE_CATEGORIES: dict[FileType, FileCategory] = {
+    # Documents
+    FileType.PDF: FileCategory.DOCUMENT,
+    FileType.DOC: FileCategory.DOCUMENT,
+    FileType.DOCX: FileCategory.DOCUMENT,
+    FileType.ODT: FileCategory.DOCUMENT,
+    FileType.RTF: FileCategory.DOCUMENT,
+    FileType.TXT: FileCategory.DOCUMENT,
+    FileType.MARKDOWN: FileCategory.DOCUMENT,
+    FileType.HTML: FileCategory.DOCUMENT,
+    FileType.XML: FileCategory.DOCUMENT,
+    FileType.CSV: FileCategory.DOCUMENT,
+    FileType.XLS: FileCategory.DOCUMENT,
+    FileType.XLSX: FileCategory.DOCUMENT,
+    FileType.ODS: FileCategory.DOCUMENT,
+    FileType.PPT: FileCategory.DOCUMENT,
+    FileType.PPTX: FileCategory.DOCUMENT,
+    FileType.ODP: FileCategory.DOCUMENT,
+
+    # Images
+    FileType.JPG: FileCategory.IMAGE,
+    FileType.PNG: FileCategory.IMAGE,
+    FileType.GIF: FileCategory.IMAGE,
+    FileType.BMP: FileCategory.IMAGE,
+    FileType.WEBP: FileCategory.IMAGE,
+    FileType.SVG: FileCategory.IMAGE,
+    FileType.HEIC: FileCategory.IMAGE,
+    FileType.HEIF: FileCategory.IMAGE,
+    FileType.TIFF: FileCategory.IMAGE,
+    FileType.ICO: FileCategory.IMAGE,
+
+    # Videos
+    FileType.MP4: FileCategory.VIDEO,
+    FileType.AVI: FileCategory.VIDEO,
+    FileType.MOV: FileCategory.VIDEO,
+    FileType.MKV: FileCategory.VIDEO,
+    FileType.FLV: FileCategory.VIDEO,
+    FileType.WMV: FileCategory.VIDEO,
+    FileType.WEBM: FileCategory.VIDEO,
+    FileType.M4V: FileCategory.VIDEO,
+    FileType.MPEG: FileCategory.VIDEO,
+    FileType.MPG: FileCategory.VIDEO,
+    FileType.THREE_GP: FileCategory.VIDEO,
+    FileType.TS: FileCategory.VIDEO,
+    FileType.MTS: FileCategory.VIDEO,
+    FileType.M2TS: FileCategory.VIDEO,
+}

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from fileseek.features.library.domain.exceptions import FolderNotEmptyError
-from fileseek.shared.domain.file_types import FileType
+from fileseek.shared.domain.file_types import FileType,FileCategory
 
 
 @dataclass
@@ -13,7 +13,7 @@ class Folder:
     name: str
     icon_type: str
     description: str
-    modified: str
+    modified: datetime
     file_count: int = 0
 
     def rename(self, name: str) -> None:
@@ -53,11 +53,13 @@ class File:
     id: str
     name: str
     file_type: FileType
+    category: FileCategory
     size: int
-    modified: str
+    modified: datetime
     path: str
-    parent_folder: str | None = None
+    folder_id: str | None = None
     tags: list[str] = field(default_factory=list)
+    chunks: list[FileChunk] = field(default_factory=list)
 
     def move_to_folder(self, folder_id: str | None) -> None:
         """将文件移动到指定文件夹。
@@ -65,6 +67,22 @@ class File:
         Args:
             folder_id: 目标文件夹 ID，None 表示移动到根目录
         """
-        self.parent_folder = folder_id
+        self.folder_id = folder_id
+
+    def add_tags(self,tags:list[str]) -> None:
+        self.tags.extend(tags)
+
+    def add_chunks(self,chunks: list[FileChunk]) -> None:
+        self.chunks.extend(chunks)
+
+@dataclass
+class FileChunk:
+    id: str
+    file_id: str
+    score: float = 0
+    metadata: dict[str, object] | None = None
+
+    def set_score(self,score: float):
+        self.score = score
 
 __all__ = ["File", "Folder"]

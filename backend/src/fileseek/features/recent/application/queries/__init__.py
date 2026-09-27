@@ -5,4 +5,5 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ListRecentAccessQuery:
-    limit: int = 20
+    page: int
+    page_size: int

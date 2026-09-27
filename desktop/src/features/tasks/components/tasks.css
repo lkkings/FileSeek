@@ -1,0 +1,259 @@
+.task-row {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(260px, 1fr) 112px;
+  align-items: center;
+  gap: 20px;
+}
+
+.task-results-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.task-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.task-filters .sidebar-action-btn {
+  height: 32px;
+  gap: 7px;
+  font-size: 13px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.task-filter-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.task-row-main {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+  padding: 18px 18px 18px 32px;
+}
+
+.task-row-copy {
+  min-width: 0;
+}
+
+.task-row-copy h2 {
+  overflow: hidden;
+  color: #f2f6ff;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  color: #a9bae1;
+  font-size: 13px;
+}
+
+.task-row-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 22px 18px 0;
+}
+
+.task-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #a9bae1;
+  font-size: 12px;
+}
+
+.task-progress-header strong {
+  color: #c7d5f8;
+}
+
+.task-progress-track {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(39, 111, 205, 0.32);
+}
+
+.task-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #27a5ff, #1461e9);
+  transition: width 0.2s ease;
+}
+
+.task-row.status-failed .task-progress-fill {
+  background: #ff4d4f;
+}
+
+.task-row.status-completed .task-progress-fill {
+  background: #22c55e;
+}
+
+.task-stage-flow {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-stage-step {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #7286ad;
+}
+
+.task-stage-step + .task-stage-step {
+  margin-left: 14px;
+}
+
+.task-stage-step + .task-stage-step::before {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  width: 14px;
+  height: 1px;
+  background: rgba(39, 111, 205, 0.46);
+  content: "";
+}
+
+.task-stage-dot {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(114, 134, 173, 0.9);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.task-stage-name {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-stage-step.is-current {
+  color: #d4eaff;
+}
+
+.task-stage-step.is-current .task-stage-dot {
+  border-color: #27a5ff;
+  background: #27a5ff;
+  box-shadow: 0 0 0 4px rgba(39, 165, 255, 0.14);
+}
+
+.task-stage-step.is-complete {
+  color: #9ff0bc;
+}
+
+.task-stage-step.is-complete .task-stage-dot {
+  border-color: #22c55e;
+  background: #22c55e;
+}
+
+.task-stage-step.is-failed {
+  color: #ff8f91;
+}
+
+.task-stage-step.is-failed .task-stage-dot {
+  border-color: #ff4d4f;
+  background: #ff4d4f;
+  box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.14);
+}
+
+.task-error {
+  margin: 0;
+  color: #ff7a7c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.task-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.task-status-queued {
+  background: rgba(169, 186, 225, 0.16);
+  color: #c7d5f8;
+}
+
+.task-status-processing {
+  background: rgba(39, 165, 255, 0.16);
+  color: #8fd4ff;
+}
+
+.task-status-completed {
+  background: rgba(34, 197, 94, 0.16);
+  color: #9ff0bc;
+}
+
+.task-status-failed {
+  background: rgba(255, 77, 79, 0.16);
+  color: #ff8f91;
+}
+
+.task-retry-button {
+  height: 34px;
+  margin-right: 22px;
+  padding: 0 12px;
+}
+
+@media (max-width: 1180px) and (min-width: 781px) {
+  .task-row {
+    grid-template-columns: minmax(280px, 1fr) 220px;
+  }
+
+  .task-retry-button {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .task-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .task-row-main {
+    padding: 0;
+    gap: 14px;
+  }
+
+  .task-row-progress {
+    padding: 0;
+  }
+
+  .task-retry-button {
+    width: 100%;
+    margin: 0;
+  }
+}

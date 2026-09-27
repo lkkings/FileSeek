@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fileseek.shared.application.exceptions import ApplicationError, NotFoundError
+from fileseek.shared.domain.exceptions import ApplicationError, NotFoundError
 
 
 class FolderNotFoundError(NotFoundError):

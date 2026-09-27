@@ -1,9 +1,11 @@
 from pydantic import BaseModel
 
+from fileseek.features.tasks.application.dto import FileDTO
+
 
 class TaskResponse(BaseModel):
     id: str
-    source_path: str
+    file: FileDTO
     status: str
     progress: int
     stage: str | None
@@ -17,5 +19,4 @@ class TaskListResponse(BaseModel):
     page: int
     page_size: int
     total: int
-    pagination: dict[str, int]
 

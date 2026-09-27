@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from fileseek.features.search.application import SearchFilesUseCase
+from fileseek.features.search.application.use_cases import SearchFilesUseCase
 from fileseek.shared.application.dependencies import resolve_dependency
 
 

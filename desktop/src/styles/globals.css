@@ -1,0 +1,93 @@
+:root {
+  /* Fonts */
+  --font-sans: Inter, "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  
+  /* Color Palette */
+  --color-bg-base: #020a1d;
+  --color-text-main: #f4f7ff;
+  --color-text-muted: #a3b2d6;
+  --color-accent-blue: #2788ff;
+  --color-accent-light: #47adff;
+  --color-border-subtle: rgba(75, 143, 255, .08);
+  --color-border-focus: #2da9ff;
+  
+  /* Corner Radii - Locked Shape Consistency */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  /* Spacing */
+  --space-xs: clamp(8px, 1vw, 12px);
+  --space-sm: clamp(12px, 1.5vw, 18px);
+  --space-md: clamp(16px, 2vw, 24px);
+  --space-lg: clamp(24px, 3vw, 36px);
+  --space-xl: clamp(32px, 4vw, 48px);
+  
+  /* Fluid Typography */
+  --font-size-hero: clamp(28px, 4.5vw, 48px);
+  --font-size-h2: clamp(20px, 3vw, 28px);
+  --font-size-h3: clamp(17px, 2.2vw, 22px);
+  --font-size-body: clamp(14px, 1vw + 10px, 16px);
+  --font-size-sm: clamp(12px, 0.8vw + 9px, 14px);
+  
+  /* Content Max Width constraint */
+  --content-max-width: 1400px;
+
+  font-family: var(--font-sans);
+  color: var(--color-text-main);
+  background: var(--color-bg-base);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { 
+  margin: 0; 
+  min-width: 320px; 
+  min-height: 100vh; 
+  min-height: 100dvh;
+  overflow: hidden; 
+  font-family: var(--font-sans);
+  color: var(--color-text-main);
+  background: var(--color-bg-base);
+}
+button, input, select, textarea { font: inherit; }
+button { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+input::placeholder { color: var(--color-text-muted); opacity: 1; }
+
+/* Accessibility & Touch Guardrails */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbars styling for a modern premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(6, 20, 46, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(39, 136, 255, 0.25);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(39, 136, 255, 0.45);
+}
+
+/* Focus indicator resets for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-border-focus, #2da9ff);
+  outline-offset: 2px;
+}

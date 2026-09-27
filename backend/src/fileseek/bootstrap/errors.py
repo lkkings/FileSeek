@@ -17,7 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
-from fileseek.shared.application.exceptions import (
+from fileseek.shared.domain.exceptions import (
     ApplicationError,
     NotFoundError,
     ValidationError,

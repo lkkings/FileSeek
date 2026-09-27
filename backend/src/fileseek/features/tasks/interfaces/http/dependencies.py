@@ -2,17 +2,12 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from fileseek.features.tasks.application import (
-    GetTaskUseCase,
+from fileseek.features.tasks.application.use_cases import (
     ListTasksUseCase,
     RetryTaskUseCase,
 )
 from fileseek.shared.application.dependencies import resolve_dependency
 
-
-
-def get_task_use_case(request: Request) -> GetTaskUseCase:
-    return resolve_dependency(request, "get_task_use_case")
 
 
 def get_list_tasks_use_case(request: Request) -> ListTasksUseCase:

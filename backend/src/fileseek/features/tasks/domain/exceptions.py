@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fileseek.shared.application.exceptions import ApplicationError, NotFoundError
+from fileseek.shared.domain.exceptions import ApplicationError, NotFoundError
 
 
 class TaskNotFoundError(NotFoundError):
@@ -19,17 +19,6 @@ class DocumentParseError(RuntimeError):
 
 class UnsupportedFormatError(ValueError):
     """不支持的文档格式。"""
-
-
-class ModelLoadError(RuntimeError):
-    """模型加载失败。"""
-
-
-class InferenceError(RuntimeError):
-    """模型推理失败。"""
-
-class ImageProcessError(RuntimeError):
-    """图片文件损坏或格式不支持。"""
 
 
 class VideoProcessError(RuntimeError):

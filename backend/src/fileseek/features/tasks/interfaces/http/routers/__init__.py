@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from fileseek.features.tasks.application import (
+from fileseek.features.tasks.application.use_cases import (
     ListTasksUseCase,
     RetryTaskUseCase,
 )
@@ -24,7 +24,7 @@ from fileseek.shared.envelope import (
 
 router = APIRouter(
     prefix="/tasks",
-    tags=["tasks"],
+    tags=["Tasks"],
 )
 
 

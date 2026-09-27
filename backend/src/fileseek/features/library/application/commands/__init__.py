@@ -15,10 +15,6 @@ class AddFileCommand:
     path: str
 
 @dataclass(frozen=True)
-class DeleteFileCommand:
-    file_id: str
-
-@dataclass(frozen=True)
 class UpdateFolderCommand:
     folder_id: str
     name: str

@@ -1,0 +1,51 @@
+import { defaultClient, type ApiClient, type ApiResponse } from "./client";
+
+export interface FileItem {
+  file_id: string;
+  file_name: string;
+  file_type: string;
+  category: string;
+  path: string;
+  size: number | null;
+  modified: string | null;
+  tags: string[];
+  score: number;
+  metadata?: FileMetadata | null;
+  chunks?: unknown[] | null;
+}
+
+export interface FileMetadata {
+  scene?: string;
+  duration?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface SearchRequest {
+  query: string;
+  folder_id?: string | null;
+  categories?: string[];
+  tag?: string | null;
+  name_query?: string | null;
+  min_size_m?: number | null;
+  max_size_m?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  sort_by: "relevance" | "created_at" | "size";
+  sort_order: "asc" | "desc";
+  page_number?: number;
+  page_size?: number;
+}
+
+export interface SearchResponseData {
+  items: FileItem[];
+  total: number;
+  page_number: number;
+  page_size: number;
+  has_more: boolean;
+  counter: Record<string, number>
+}
+
+export function searchFiles(request: SearchRequest, client: ApiClient = defaultClient): Promise<ApiResponse<SearchResponseData>> {
+  return client.post<SearchResponseData>("/search", request);
+}

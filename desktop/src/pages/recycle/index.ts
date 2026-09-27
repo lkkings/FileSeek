@@ -1,0 +1,1 @@
+export { RecyclePage } from "./RecyclePage";

@@ -1,80 +1,95 @@
 """Search feature HTTP 请求/响应模型。
 
-响应形状不走 `shared.envelope`：契约要求 `error` 是 `{code, message}` 对象，而共享
-envelope 的 `error` 是字符串。所以这里自带一个同名字段但结构更细的信封。
+搜索结果数据模型；HTTP 信封统一使用 `fileseek.shared.envelope`。
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal,Any
 
+from pydantic import BaseModel, Field,ConfigDict
 
+class FileItem(BaseModel):
+    """向量命中的文件基础信息。"""
+
+    file_id: str
+    file_name: str
+    file_type: str
+    category: str
+    path: str
+    size: int | None = None
+    modified: str | None = None
+    tags: list[str] = []
+    score: float = 0
+    metadata: dict[str, Any] | None = None
+    chunks: list[Any] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 class SearchRequest(BaseModel):
     """搜索请求。"""
 
-    # 空串/纯空白的校验放在路由层做：在这里用 field_validator 抛错会被 FastAPI 收敛成
-    # 422 的字段级报错，返回不出契约要求的 INVALID_QUERY 形状。
-    query: str = Field(..., description="自然语言查询，必须含至少一个非空白字符")
-    file_types: list[str] = Field(
+    query: str = Field(..., description="可选的自然语言查询")
+    folder_id: str | None = Field(None, description="文件夹ID，为空则表示全部文件夹")
+
+    categories: list[str] = Field(
         default_factory=lambda: ["document", "image", "video"],
         description="媒体类型过滤：document / image / video",
     )
-    limit: int = Field(20, ge=1, description="每种媒体类型各自返回的 Top N 数量")
+
+    tag: str | None = Field(None, description="文件标签，例如（旅游，游戏）")
     name_query: str | None = Field(None, description="文件名子串匹配")
+
     min_size_m: float | None = Field(None, ge=0, description="最小体积 (MB)")
     max_size_m: float | None = Field(None, ge=0, description="最大体积 (MB)")
+
     start_date: str | None = Field(None, description="开始日期 YYYY-MM-DD")
     end_date: str | None = Field(None, description="结束日期 YYYY-MM-DD")
 
+    sort_by: Literal["relevance", "created_at", "size"] = Field(
+        "relevance",
+        description="排序字段：relevance / created_at / size",
+    )
+    sort_order: Literal["asc", "desc"] = Field(
+        "desc",
+        description="排序方向：asc / desc",
+    )
 
-class SearchResultBase(BaseModel):
-    """三种媒体类型结果的公共字段。"""
-
-    file_id: str
-    filename: str
-    preview_url: str
-    score: float
-    path: str
-    accessible: bool
-
-
-class DocumentSearchResult(SearchResultBase):
-    """文档结果：额外带命中文本及其位置。"""
-
-    matched_text: str = ""
-    page_number: int | None = None
-    line_number: int | None = None
-
-
-class ImageSearchResult(SearchResultBase):
-    """图片结果：只有公共字段。"""
-
-
-class VideoSearchResult(SearchResultBase):
-    """视频结果：额外带命中片段的起止时间（秒）。"""
-
-    start_time: int | None = None
-    end_time: int | None = None
-
-
-class SearchResponseData(BaseModel):
-    """按媒体类型分组的搜索结果。某类无命中时为空数组。"""
-
-    documents: list[DocumentSearchResult] = Field(default_factory=list)
-    images: list[ImageSearchResult] = Field(default_factory=list)
-    videos: list[VideoSearchResult] = Field(default_factory=list)
-
-
-class SearchError(BaseModel):
-    """错误信息。"""
-
-    code: str
-    message: str
-
+    page_number: int = Field(1, ge=1, description="页码")
+    page_size: int = Field(20, ge=1, description="每页大小")
 
 class SearchResponse(BaseModel):
-    """搜索响应信封。"""
+    """通用分页响应"""
 
-    status: str = "success"
-    data: SearchResponseData | None = None
-    error: SearchError | None = None
+    items: list[FileItem] = Field(
+        default_factory=list,
+        description="当前页数据",
+    )
+
+    page_number: int = Field(
+        default=1,
+        ge=1,
+        description="页码，从 1 开始",
+    )
+
+    page_size: int = Field(
+        default=20,
+        ge=1,
+        description="每页大小",
+    )
+
+    counter: dict[str,int] =  Field(
+        ...,
+        description="每种文件数量的统计",
+    )
+
+    total: int = Field(
+        ge=0,
+        description="全部数量",
+    )
+
+
+    has_more: bool = Field(
+        default=False,
+        description="是否还有更多数据",
+    )
+

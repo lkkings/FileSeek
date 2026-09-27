@@ -1,13 +1,11 @@
+from __future__ import annotations
 
-from fileseek.features.recycle.application.commands import RestoreItemCommand
+from fileseek.features.recycle.application.commands import RestoreItemsCommand
 from fileseek.features.recycle.domain.exceptions import (
     RecycleItemNotFoundError,
 )
-from fileseek.features.recycle.domain.repositories import (
-    FileRepository,
-    FolderRepository,
-    RecycleRepository,
-)
+from fileseek.features.library.domain.repositories import FileRepository, FolderRepository
+from fileseek.features.recycle.domain.repositories import RecycleRepository
 from fileseek.infrastructure.fs import VirtualPath
 
 
@@ -22,8 +20,11 @@ class RestoreRecycleUseCase:
         self.file_repo = file_repo
         self.folder_repo = folder_repo
 
-    async def execute(self, command: RestoreItemCommand) -> None:
-        item_id = command.item_id
+    async def execute(self, command: RestoreItemsCommand) -> None:
+        for item_id in command.item_ids:
+            await self._restore_item(item_id)
+
+    async def _restore_item(self, item_id: str) -> None:
         item = await self.recycle_repo.get_by_id(item_id)
 
         if item is None:
@@ -32,8 +33,8 @@ class RestoreRecycleUseCase:
         # 1. 检查原父文件夹
         folder = None
 
-        if item.original_parent_folder:
-            folder = await self.folder_repo.get_by_id(item.original_parent_folder)
+        if item.original_folder_id:
+            folder = await self.folder_repo.get_by_id(item.original_folder_id)
 
         recycle_path = VirtualPath(item.recycle_path)
         restore_path = VirtualPath(item.original_path)

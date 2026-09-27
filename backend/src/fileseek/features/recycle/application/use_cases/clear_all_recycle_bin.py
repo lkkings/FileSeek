@@ -3,11 +3,9 @@ from __future__ import annotations
 import logging
 
 from fileseek.features.recycle.application.commands import ClearRecycleBinCommand
-from fileseek.features.recycle.domain.repositories import (
-    FileRepository,
-    RecycleRepository,
-)
-from fileseek.features.tasks.domain.ports import VectorIndexPort
+from fileseek.features.library.domain.repositories import FileRepository
+from fileseek.features.recycle.domain.repositories import RecycleRepository
+from fileseek.infrastructure.vector_store import VectorIndexPort
 from fileseek.infrastructure.fs import VirtualPath
 
 logger = logging.getLogger(__name__)
@@ -32,21 +30,17 @@ class ClearRecycleBinUseCase:
             recycle_path = VirtualPath(item.recycle_path)
             if recycle_path.exists():
                 recycle_path.delete()
-            self._delete_vectors(item.original_file_id)
+            await self._delete_vectors(item.original_file_id)
             file_ids_to_delete.append(item.original_file_id)
 
         await self.recycle_repo.delete_all()
         if file_ids_to_delete:
             await self.file_repo.delete_batch(file_ids_to_delete)
 
-    def _delete_vectors(self, file_id: str) -> None:
-        """删掉该文件的全部向量。失败只记日志，不中断清空。
-
-        向量库是派生索引：文件此刻已经从磁盘删掉了，再把异常抛出去只会让回收站永远
-        清不干净，用户也没有别的补救入口。残留向量下次检索会指向不存在的文件，由
-        `accessible=False` 兜住，所以宁可留下可见的日志也不要卡住清空。
-        """
+    async def _delete_vectors(self, file_id: str) -> None:
         try:
-            self.vector_index.delete_file_vectors(file_id)
+            file = await self.file_repo.get_by_id(file_id)
+            chunk_ids = [chunk.id for chunk in file.chunks]
+            self.vector_index.delete_batch(chunk_ids)
         except Exception:
             logger.exception("删除文件 %s 的向量失败，向量库中可能残留", file_id)

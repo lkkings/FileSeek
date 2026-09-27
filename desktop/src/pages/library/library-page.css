@@ -1,0 +1,43 @@
+/* Main Area and Content Max-Width Limiter for Ultra-Wide Screens */
+.main-content {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 27px 35px 12px 32px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Smoother scrolling inside the main content viewport */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Force standard responsive margins on wide screens */
+.main-content > .search-results-screen {
+  width: 100%;
+  max-width: 1400px;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+/* Medium Screens Configuration */
+@media (max-width: 1440px) and (min-width: 781px) {
+  .main-content {
+    padding: 24px 28px 12px 30px;
+  }
+}
+
+/* Small Screens Adaptive Configuration (<= 780px) */
+@media (max-width: 780px) {
+  .main-content {
+    height: 100%;
+    min-height: 0;
+    padding: var(--space-md, 16px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .main-content > .search-results-screen {
+    min-height: auto;
+  }
+}

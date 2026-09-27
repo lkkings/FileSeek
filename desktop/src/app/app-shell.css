@@ -1,0 +1,96 @@
+/* Base App Shell Layout */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: radial-gradient(circle at 78% 0%, rgba(35, 108, 221, .24), transparent 34%),
+              linear-gradient(118deg, #0a1d3c 0%, #071631 48%, #041027 100%);
+  box-shadow: none;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  pointer-events: none;
+}
+
+/* Fixed top mobile header (Hidden by default on desktop) */
+.app-mobile-header {
+  display: none;
+  height: 56px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(12, 35, 71, 0.95);
+  border-bottom: 1px solid rgba(75, 143, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 10;
+}
+
+.mobile-menu-trigger {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-main, #f4f7ff);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.mobile-menu-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-brand-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+}
+
+.mobile-header-spacer {
+  width: 40px; /* Balance spacing equal to trigger size */
+}
+
+/* Responsive Adaptive Strategy (<= 780px) */
+@media (max-width: 780px) {
+  body {
+    overflow: hidden; /* Avoid double scrolling issues */
+  }
+
+  .app-shell {
+    width: 100%;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    flex-direction: column; /* Stacks header vertically on mobile */
+  }
+
+  .app-shell::before {
+    display: none;
+  }
+
+  .app-mobile-header {
+    display: flex; /* Displays mobile top bar */
+  }
+}

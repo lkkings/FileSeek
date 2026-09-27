@@ -2,7 +2,7 @@ from fileseek.features.library.application.dto import FileDTO
 from fileseek.features.library.application.mappers import file_to_dto
 from fileseek.features.library.application.queries import GetFileQuery
 from fileseek.features.library.domain.repositories import FileRepository
-from fileseek.shared.application.exceptions import NotFoundError
+from fileseek.shared.domain.exceptions import NotFoundError
 
 
 class GetFileUseCase:

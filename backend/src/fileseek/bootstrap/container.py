@@ -1,11 +1,29 @@
-"""组装根：把跨请求存活的协作者装到一起。
+"""应用组装根。
 
-请求作用域的依赖由各 feature 的 `interfaces/http/dependencies.py` 经 FastAPI `Depends`
-自行解析，这里只负责后台任务调度器——它有自己的生命周期，由 lifespan 启停。
+负责组装跨请求、跨任务生命周期存活的协作者。
 
-向量存储和嵌入服务这两个进程内单例放在 `infrastructure/vector/providers.py`，不在
-这里：组装根要 import 各 feature 的路由，feature 的 dependencies 再 import 回组装根
-就成了环。检索和调度器都从那个模块取同一个实例。
+依赖方向：
+
+    bootstrap
+        ↓
+    features / infrastructure
+
+后台任务：
+
+    TaskScheduler
+        ↓
+    TaskProcessor
+        ↓
+    FileHandlerRegistry
+        ↓
+    DocumentHandler / ImageHandler / VideoHandler
+        ↓
+    各基础设施服务
+
+请求作用域的依赖由各 Feature 的
+`interfaces/http/dependencies.py` 通过 FastAPI Depends 自行解析。
+
+这里不负责请求级依赖。
 """
 
 from __future__ import annotations
@@ -14,63 +32,168 @@ import logging
 from dataclasses import dataclass
 
 from fileseek.config.settings import Settings
-from fileseek.features.library.infrastructure.repositories import FileRepositoryImpl
-from fileseek.features.tasks.application.processor import TaskProcessor
-from fileseek.features.tasks.application.scheduler import TaskScheduler
-from fileseek.features.tasks.infrastructure.classifier import get_classifier
-from fileseek.features.tasks.infrastructure.embedding import get_embedding_service
+
+from fileseek.features.library.infrastructure.repositories import (
+    FileRepositoryImpl,
+    FileChunkRepositoryImpl
+)
+
+from fileseek.features.tasks.application.handlers import (
+    DocumentHandler,
+    FileHandlerRegistry,
+    ImageHandler,
+    VideoHandler,
+)
+from fileseek.features.tasks.application.processor import (
+    TaskProcessor,
+)
+from fileseek.features.tasks.application.scheduler import (
+    TaskScheduler,
+)
+
 from fileseek.features.tasks.infrastructure.file_processor import (
     DocumentParser,
-    OCRService,
     VideoSampler,
 )
-from fileseek.features.tasks.infrastructure.repositories import TaskRepositoryImpl
-from fileseek.features.tasks.infrastructure.vector_store import (
+from fileseek.features.tasks.infrastructure.repositories import (
+    TaskRepositoryImpl,
+)
+
+from fileseek.infrastructure.classifier import (
+    get_classifier,
+)
+from fileseek.infrastructure.embedding import (
+    get_embedding_service,
+)
+from fileseek.infrastructure.ocr import (
+    get_ocr_service,
+)
+from fileseek.infrastructure.vector_store import (
     get_vector_store,
 )
-from fileseek.shared.utils.cache import get_search_results_cache
+
+from fileseek.shared.utils.cache import (
+    get_cache_service,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def build_task_scheduler(settings: Settings) -> TaskScheduler:
-    """装配后台任务调度器。
+def build_task_scheduler(
+    settings: Settings,
+) -> TaskScheduler:
+    """组装后台任务调度器。
 
-    调度器持有自己的仓储实例：它在后台线程里跑，和请求作用域的连接互不相干。
+    这里创建后台任务所需的完整依赖图。
+
+    Handler 负责具体文件类型的处理逻辑，
+    TaskProcessor 只负责调度 Handler，
+    TaskScheduler 只负责任务调度。
     """
-    embedder = get_embedding_service()
-    vector_store = get_vector_store()
+
+    # ==================================================
+    # 基础设施
+    # ==================================================
+
+    embedding_service = get_embedding_service()
+    vector_index = get_vector_store()
     classifier = get_classifier()
-    cache = get_search_results_cache()
-    processor = TaskProcessor(
-        document_parser=DocumentParser(),
-        ocr_service=OCRService(),
-        video_sampler=VideoSampler(
-            sample_every_n_frames=settings.video_sample_every_n_frames,
-            hash_threshold=settings.video_perceptual_hash_threshold,
+    ocr_service = get_ocr_service()
+    cache = get_cache_service()
+
+    # ==================================================
+    # 文件处理基础服务
+    # ==================================================
+
+    document_parser = DocumentParser()
+
+    video_sampler = VideoSampler(
+        sample_every_n_frames=(
+            settings.video_sample_every_n_frames
         ),
-        embedding_service=embedder,
-        vector_index=vector_store,
+        hash_threshold=(
+            settings.video_perceptual_hash_threshold
+        ),
+    )
+
+    # ==================================================
+    # File Handlers
+    # ==================================================
+
+    document_handler = DocumentHandler(
+        document_parser=document_parser,
+        embedding_service=embedding_service,
+        vector_index=vector_index,
         classifier=classifier,
     )
 
+    image_handler = ImageHandler(
+        ocr_service=ocr_service,
+        embedding_service=embedding_service,
+        vector_index=vector_index,
+        classifier=classifier,
+    )
+
+    video_handler = VideoHandler(
+        video_sampler=video_sampler,
+        embedding_service=embedding_service,
+        vector_index=vector_index,
+        classifier=classifier,
+    )
+
+    # ==================================================
+    # Handler Registry
+    # ==================================================
+
+    handler_registry = FileHandlerRegistry(
+        handlers=[
+            document_handler,
+            image_handler,
+            video_handler,
+        ]
+    )
+
+    # ==================================================
+    # Task Processor
+    # ==================================================
+
+    processor = TaskProcessor(
+        handler_registry=handler_registry,
+        vector_index=vector_index,
+    )
+
+    # ==================================================
+    # Repository
+    # ==================================================
+
     file_repo = FileRepositoryImpl()
+    file_chunk_repo = FileChunkRepositoryImpl()
+    task_repo = TaskRepositoryImpl()
+
+    # ==================================================
+    # Task Scheduler
+    # ==================================================
 
     return TaskScheduler(
-        task_repo=TaskRepositoryImpl(),
+        task_repo=task_repo,
+        file_repo=file_repo,
+        file_chunk_repo=file_chunk_repo,
         processor=processor,
         poll_interval=settings.task_poll_interval,
         max_workers=settings.task_max_workers,
-        file_repository=file_repo,
         cache=cache,
     )
 
 
 @dataclass
 class Container:
-    """服务运行期持有的长生命周期协作者。
+    """应用运行期的长生命周期协作者。
 
-    放在 `app.state.container` 上，lifespan 负责启停，路由需要时从 request 取。
+    实例挂载到：
+
+        app.state.container
+
+    由应用 lifespan 负责创建和关闭。
     """
 
     settings: Settings

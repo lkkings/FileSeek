@@ -17,8 +17,9 @@ class FileDTO:
     id: str
     name: str
     file_type: str
+    category: str
     size: int
     modified: str
     path: str
-    parent_folder: str | None
+    folder_id: str | None
     tags: list[str]

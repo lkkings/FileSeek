@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass,field
 from enum import Enum
+from datetime import datetime
 
 from fileseek.features.tasks.domain.exceptions import InvalidTransitionError
+from fileseek.features.library.domain.entities import File,FileChunk
 
 
 class TaskStatus(str, Enum):
@@ -21,6 +23,7 @@ class TaskStage(str, Enum):
     """任务处理阶段枚举。"""
     EXTRACTED = "extracted"
     ENCODED = "encoded"
+    CLASSIFY = "classify"
     INDEXED = "indexed"
 
 @dataclass
@@ -30,19 +33,24 @@ class TaskProgress:
     message: str | None = None
 
 
+
 @dataclass
 class Task:
-    """任务领域实体（带状态机）。"""
-
     id: str
-    source_path: str
-    status: TaskStatus
+    file: File
+    metadata: dict[str, object] | None = None
+    status: TaskStatus = TaskStatus.QUEUED
     progress: int = 0
     stage: TaskStage | None = None
-
     error_message: str | None = None
-    created_at: str = ""
-    updated_at: str = ""
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    def add_file_tags(self,tags: list[str]):
+        self.file.add_tags(tags)
+
+    def add_file_chunks(self,chunks: list[FileChunk]):
+        self.file.add_chunks(chunks)
 
 
     def advance_stage(self, progress: TaskProgress) -> None:

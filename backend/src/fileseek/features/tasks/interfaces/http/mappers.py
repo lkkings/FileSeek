@@ -16,7 +16,7 @@ from fileseek.features.tasks.interfaces.http.schemas import (
 def task_to_schema(task: TaskDTO) -> TaskResponse:
     return TaskResponse(
         id=task.id,
-        source_path=task.source_path,
+        file=task.file,
         status=task.status,
         progress=task.progress,
         stage=task.stage,
@@ -36,6 +36,5 @@ def task_list_to_schema(value: TaskListDTO, page: int, page_size: int) -> TaskLi
         counts=value.counts,
         page=page,
         page_size=page_size,
-        total=value.total,
-        pagination={"page": page, "page_size": page_size, "total": value.total},
+        total=value.total
     )

@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -61,11 +62,25 @@ class Settings(BaseSettings):
 
     # 向量索引配置
     vector_store_provider: Literal["chroma"] = "chroma"
+    vector_distance_metric: Literal["l2","cosine","ip"] = "cosine"
     vector_db_path: Path | None = None  # 默认为 lib_root / "vectors"
 
     # 视频处理配置
     video_sample_every_n_frames: int = 30
     video_perceptual_hash_threshold: int = 10  # hamming distance
+
+    # OCR配置
+    ocr_provider: Literal["rapidocr"] = "rapidocr"
+
+    # File classifier label vocabularies
+    classifier_document_labels: list[str] = Field(default_factory=lambda: ["document"])
+    classifier_video_labels: list[str] = Field(default_factory=lambda: ["video"])
+    classifier_image_labels: list[str] = Field(default_factory=lambda: ["photo", "image"])
+    classifier_provider: Literal["jina-clip-v2"] = "jina-clip-v2"
+    classifier_text_similarity_threshold: float = 0.3
+    classifier_image_similarity_threshold: float = 0.3
+    classifier_video_similarity_threshold: float = 0.3
+    classifier_max_labels: int = 5
 
     # 回收站文件夹
     recycle_dir: Path | None = None
@@ -78,6 +93,7 @@ class Settings(BaseSettings):
         # 设置默认派生路径
         if self.db_path is None:
             db_dir = self.lib_root / ".db"
+            db_dir.mkdir(parents=True,exist_ok=True)
             self.db_path = db_dir / "app.db"
         if self.vector_db_path is None:
             self.vector_db_path = self.lib_root / ".vectors"
@@ -88,6 +104,7 @@ class Settings(BaseSettings):
 
         if self.temp_dir is None:
             self.temp_dir = self.lib_root / ".temp"
+
 
 @lru_cache
 def get_settings() -> Settings:

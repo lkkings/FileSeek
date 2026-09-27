@@ -1,19 +1,26 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
-from fileseek.features.tasks.domain.ports import IndexedFileMetadata
+
+@dataclass(frozen=True)
+class FileDTO:
+    id: str
+    name: str
+    path: str
+    size: int
+    file_type: str
+    modified: str
 
 
 @dataclass(frozen=True)
 class TaskDTO:
     id: str
-    source_path: str
+    file: FileDTO
     status: str
     progress: int
     stage: str | None
     error_message: str | None
     created_at: str
+    updated_at: str
 
 
 @dataclass(frozen=True)

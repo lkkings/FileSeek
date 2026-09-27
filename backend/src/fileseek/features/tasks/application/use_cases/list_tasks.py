@@ -1,11 +1,8 @@
 from fileseek.features.tasks.application.dto import TaskListDTO
 from fileseek.features.tasks.application.mappers import task_to_dto
 from fileseek.features.tasks.application.queries import ListTasksQuery
-from fileseek.features.tasks.domain.entities import TaskStatus
 from fileseek.features.tasks.domain.repositories import TaskRepository
-
-# 统计各状态计数时一次性拉取的上限，避免逐状态查询。
-_COUNT_SCAN_LIMIT = 10000
+from fileseek.features.tasks.domain.entities import TaskStatus
 
 
 class ListTasksUseCase:
@@ -16,22 +13,22 @@ class ListTasksUseCase:
         self,
         query: ListTasksQuery,
     ) -> TaskListDTO:
-        status_filter, page, page_size = query.status, query.page, query.page_size
+        status = TaskStatus(query.status) if query.status else None
         tasks, total = await self.task_repo.list_all(
-            status_filter,
-            page,
-            page_size,
+            status=status,
+            page=query.page,
+            page_size=query.page_size,
         )
 
-        all_tasks, _ = await self.task_repo.list_all(
-            None,
-            1,
-            _COUNT_SCAN_LIMIT,
-        )
+        status_counts = await self.task_repo.count_by_status()
 
         counts = {
-            status.value: sum(1 for task in all_tasks if task.status == status)
-            for status in TaskStatus
+            status.value: count
+            for status, count in status_counts.items()
         }
 
-        return TaskListDTO(tasks=[task_to_dto(task) for task in tasks], total=total, counts=counts)
+        return TaskListDTO(
+            tasks=[task_to_dto(task) for task in tasks],
+            total=total,
+            counts=counts,
+        )

@@ -11,7 +11,7 @@ def _to_entity(model: RecycleItemModel) -> RecycleItem:
         id=model.id,
         original_file_id=model.file.id,
         original_name=model.file.name,
-        original_parent_folder=model.file.parent_folder_id,
+        original_folder_id=model.file.folder_id,
         original_path=model.file.path,
         recycle_path=model.recycle_path,
         deleted_at=model.deleted_at.isoformat() if hasattr(model.deleted_at, "isoformat") else model.deleted_at,

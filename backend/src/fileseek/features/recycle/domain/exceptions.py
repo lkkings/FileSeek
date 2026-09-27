@@ -1,4 +1,4 @@
-from fileseek.shared.application.exceptions import NotFoundError
+from fileseek.shared.domain.exceptions import NotFoundError
 
 
 class RecycleItemNotFoundError(NotFoundError):
