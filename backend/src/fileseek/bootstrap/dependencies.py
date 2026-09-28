@@ -11,6 +11,8 @@ from fileseek.features.library.application.use_cases import (
     DeleteFolderUseCase,
     GetFileUseCase,
     ListFoldersUseCase,
+    ListTagsUseCase,
+    MoveFilesUseCase,
     UpdateFolderUseCase,
 )
 from fileseek.features.library.infrastructure.repositories import (
@@ -64,6 +66,7 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
     return {
         # 文件夹管理
         "list_folders_use_case": ListFoldersUseCase(folder_repo),
+        "list_tags_use_case": ListTagsUseCase(file_repo),
         "create_folder_use_case": CreateFolderUseCase(folder_repo),
         "update_folder_use_case": UpdateFolderUseCase(folder_repo),
         "delete_folder_use_case": DeleteFolderUseCase(folder_repo),
@@ -71,6 +74,7 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
         # 文件管理
         "add_file_use_case": AddFileUseCase(file_repo,folder_repo,task_manager),
         "get_file_use_case": GetFileUseCase(file_repo),
+        "move_files_use_case": MoveFilesUseCase(file_repo, folder_repo),
 
         # 回收站管理
         "add_files2recycle_use_case": AddFiles2RecycleUseCase(

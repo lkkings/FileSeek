@@ -24,3 +24,9 @@ class UpdateFolderCommand:
 @dataclass(frozen=True)
 class DeleteFolderCommand:
     folder_id: str
+
+
+@dataclass(frozen=True)
+class MoveFilesCommand:
+    file_ids: tuple[str, ...]
+    target_folder_id: str

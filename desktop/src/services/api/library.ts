@@ -15,9 +15,32 @@ export interface FolderInput {
   description: string;
 }
 
+export interface MoveFilesToFolderInput {
+  fileIds: string[];
+  targetFolderId: string;
+}
+
+export interface MoveFilesToFolderResponse {
+  moved_count: number;
+}
+
 export function listFolders(client: ApiClient = defaultClient): Promise<ApiResponse<ApiFolder[]>> {
   return client.get<ApiFolder[]>("/library/folders");
 }
+
+export function listTags(client: ApiClient = defaultClient): Promise<ApiResponse<string[]>> {
+  return client.get<string[]>("/library/tags");
+ }
+
+export function moveFilesToFolder(
+  input: MoveFilesToFolderInput,
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<MoveFilesToFolderResponse>> {
+  return client.post<MoveFilesToFolderResponse>("/library/files/move", {
+    file_ids: input.fileIds,
+    target_folder_id: input.targetFolderId,
+  });
+ }
 
 export function createFolder(input: FolderInput, client: ApiClient = defaultClient): Promise<ApiResponse<ApiFolder>> {
   return client.post<ApiFolder>("/library/folders", input);

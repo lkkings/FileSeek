@@ -4,6 +4,7 @@ from fileseek.features.library.application.commands import (
     AddFileCommand,
     CreateFolderCommand,
     DeleteFolderCommand,
+    MoveFilesCommand,
     UpdateFolderCommand,
 )
 from fileseek.features.library.application.dto import (
@@ -20,6 +21,7 @@ from fileseek.features.library.interfaces.http.schemas import (
     FolderCreateRequest,
     FolderResponse,
     FolderUpdateRequest,
+    MoveFilesRequest,
 )
 
 
@@ -59,6 +61,10 @@ def delete_folder_command(folder_id: str) -> DeleteFolderCommand:
 
 def add_file_request_to_command(body: FileImportRequest) -> AddFileCommand:
     return AddFileCommand(body.folder_id, body.path)
+
+
+def move_files_request_to_command(body: MoveFilesRequest) -> MoveFilesCommand:
+    return MoveFilesCommand(tuple(body.file_ids), body.target_folder_id)
 
 def get_file_query(file_id: str) -> GetFileQuery:
     return GetFileQuery(file_id)

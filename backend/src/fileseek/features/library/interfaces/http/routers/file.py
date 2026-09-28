@@ -7,20 +7,25 @@ from fastapi.responses import Response
 
 from fileseek.features.library.application.use_cases import (
     AddFileUseCase,
-    GetFileUseCase
+    GetFileUseCase,
+    MoveFilesUseCase,
 )
 from fileseek.features.library.interfaces.http.dependencies import (
     get_add_file_use_case,
-    get_get_file_use_case
+    get_get_file_use_case,
+    get_move_files_use_case,
 )
 from fileseek.features.library.interfaces.http.mappers import (
     add_file_request_to_command,
     get_file_query,
+    move_files_request_to_command,
 )
 from fileseek.features.library.interfaces.http.responses import stream_file
 from fileseek.features.library.interfaces.http.schemas import (
     FileImportRequest,
     FileImportResponse,
+    MoveFilesRequest,
+    MoveFilesResponse,
 )
 from fileseek.shared.envelope import success_response
 
@@ -40,6 +45,22 @@ async def add_file(
     """入库单个文件，返回生成的 file_id。"""
     file_id = await use_case.execute(add_file_request_to_command(body))
     return success_response(FileImportResponse(file_id=file_id).model_dump(by_alias=True))
+
+
+@router.post("/move")
+async def move_files(
+    body: MoveFilesRequest,
+    use_case: Annotated[
+        MoveFilesUseCase,
+        Depends(get_move_files_use_case),
+    ],
+) -> dict[str, object]:
+    """批量移动文件到指定文件夹。"""
+    moved_count = await use_case.execute(move_files_request_to_command(body))
+
+    return success_response(
+        MoveFilesResponse(moved_count=moved_count).model_dump(by_alias=True),
+    )
 
 
 @router.get("/preview/{file_id}")

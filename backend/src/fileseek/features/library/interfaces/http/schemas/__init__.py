@@ -4,6 +4,8 @@ from fileseek.features.library.interfaces.http.schemas.file import (
     FileImportRequest,
     FileImportResponse,
     FileResponse,
+    MoveFilesRequest,
+    MoveFilesResponse,
 )
 from fileseek.features.library.interfaces.http.schemas.folder import (
     FolderCreateRequest,
@@ -19,4 +21,6 @@ __all__ = [
     "FileResponse",
     "FileImportRequest",
     "FileImportResponse",
+    "MoveFilesRequest",
+    "MoveFilesResponse",
 ]

@@ -6,6 +6,7 @@ from fileseek.features.library.application.dto import FolderDTO, FileDTO
 from fileseek.shared.domain.exceptions import NotFoundError
 from fileseek.features.library.domain.exceptions import FolderNotEmptyError
 from fileseek.shared.domain.file_types import FileType
+from fileseek.shared.domain.exceptions import ApplicationError
 
 def test_list_folders_normal(auth_client: TestClient, app):
     mock_use_case = AsyncMock()
@@ -29,6 +30,45 @@ def test_list_folders_normal(auth_client: TestClient, app):
     assert json_data["data"][0]["id"] == "f1"
     assert json_data["data"][0]["name"] == "Test Folder"
     assert json_data["data"][0]["file_count"] == 5
+
+
+def test_list_tags_success(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = ["旅游", "攻略"]
+    app.state.dependencies["list_tags_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/tags")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"] == ["旅游", "攻略"]
+
+
+def test_list_tags_empty(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = []
+    app.state.dependencies["list_tags_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/tags")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"] == []
+
+
+def test_list_tags_error(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.side_effect = ApplicationError("标签读取失败")
+    app.state.dependencies["list_tags_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/tags")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "error"
+    assert json_data["error"] == "标签读取失败"
 
 def test_create_folder_normal(auth_client: TestClient, app):
     mock_use_case = AsyncMock()
@@ -164,6 +204,33 @@ def test_add_file_missing_required(auth_client: TestClient):
     }
     response = auth_client.post("/api/v1/library/files", json=payload)
     assert response.status_code == 422
+
+
+def test_move_files_normal(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = 2
+    app.state.dependencies["move_files_use_case"] = mock_use_case
+
+    response = auth_client.post(
+        "/api/v1/library/files/move",
+        json={"file_ids": ["f1", "f2"], "target_folder_id": "folder-2"},
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"] == {"moved_count": 2}
+    mock_use_case.execute.assert_awaited_once()
+
+
+def test_move_files_missing_required(auth_client: TestClient):
+    response = auth_client.post(
+        "/api/v1/library/files/move",
+        json={"target_folder_id": "folder-2"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["status"] == "error"
 
 def test_preview_file_not_found(auth_client: TestClient, app):
     mock_use_case = AsyncMock()

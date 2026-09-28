@@ -8,6 +8,7 @@ import {
   DeleteFolderDialog,
   useFileLibrary,
   FolderDetailsView,
+  useMoveFilesToFolder,
 } from "../../features/library";
 import { useMoveFilesToRecycle } from "../../features/recycle";
 import { useRecordRecentAccess } from "../../features/recent";
@@ -27,6 +28,7 @@ export function LibraryPage() {
   const [currentFolder, setCurrentFolder] = useState<FolderRecord | null>(null);
   const [showFolderSearch, setShowFolderSearch] = useState(false);
   const moveFilesToRecycle = useMoveFilesToRecycle();
+  const moveFilesToFolder = useMoveFilesToFolder();
   const recordRecentAccess = useRecordRecentAccess();
   const fileActions = useFileActions();
 
@@ -68,6 +70,11 @@ export function LibraryPage() {
 
   const handleMoveToRecycle = async (fileIds: string[]) => {
     const response = await moveFilesToRecycle.mutateAsync(fileIds);
+    return response.status === "success";
+  };
+
+  const handleMoveToFolder = async (fileIds: string[], targetFolderId: string) => {
+    const response = await moveFilesToFolder.mutateAsync({ fileIds, targetFolderId });
     return response.status === "success";
   };
 
@@ -183,7 +190,9 @@ export function LibraryPage() {
               onFolderAction={(msg) => setNotice(message => message ? message + "\n" + msg : msg)}
               onToggleSearch={() => setShowFolderSearch((prev) => !prev)}
               isSearchActive={showFolderSearch}
+              folders={folders}
               onMoveToRecycle={handleMoveToRecycle}
+              onMoveToFolder={handleMoveToFolder}
               onOpenFile={handleOpenFile}
             />
           ) : (

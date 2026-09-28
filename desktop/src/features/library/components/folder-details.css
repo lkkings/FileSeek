@@ -48,6 +48,10 @@
   transform: translateX(-2px);
 }
 
+.btn-icon-back svg {
+  transform: rotate(90deg);
+}
+
 .breadcrumbs-path {
   display: flex;
   align-items: center;
@@ -60,6 +64,19 @@
 .breadcrumbs-path .path-active {
   color: #ffffff;
   font-weight: 600;
+}
+
+.breadcrumbs-path .path-crumb {
+  border: 0;
+  background: transparent;
+  color: #aebedf;
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.breadcrumbs-path .path-crumb:hover {
+  color: #ffffff;
 }
 
 .breadcrumbs-path .path-separator {
@@ -111,6 +128,12 @@
   color: #fff;
 }
 
+.btn-advanced-filter.is-active {
+  border-color: #21a7ff;
+  background: rgba(33, 167, 255, 0.16);
+  color: #ffffff;
+}
+
 .btn-advanced-filter svg {
   color: #21a7ff;
 }
@@ -149,11 +172,21 @@
 }
 
 /* Category Filter Tabs Row */
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
 .category-filter-tabs {
   display: flex;
   align-items: center;
   gap: 12px;
   padding-bottom: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .category-tab-btn {
@@ -194,6 +227,38 @@
 
 .category-tab-btn.is-active .category-tab-count {
   opacity: 1;
+}
+
+.tag-filter-selector {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tag-filter-selector .tag-pills-list {
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.tag-row-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: #a9bae1;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.tag-row-error button {
+  border: 0;
+  background: transparent;
+  color: #27a5ff;
+  cursor: pointer;
+  font-size: 13px;
 }
 
 /* Tag Selection Row */
@@ -303,6 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   min-height: 44px;
 }
 
@@ -314,7 +380,10 @@
 .sort-selection-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-left: 0;
 }
 
 .btn-sort-selector {
@@ -651,9 +720,9 @@
 
 /* Bottom Pagination Styling */
 .details-pagination-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   border-top: 1px solid rgba(65, 126, 218, 0.25);
   padding-top: 18px;
   margin-top: 14px;
@@ -663,7 +732,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 auto; /* Centering the controls */
+  justify-self: center;
 }
 
 .btn-pagination-action,
@@ -706,6 +775,296 @@
 .pagination-total-items {
   font-size: 13.5px;
   color: #8fa0c2;
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pagination-prev svg {
+  transform: rotate(90deg);
+}
+
+.pagination-next svg {
+  transform: rotate(-90deg);
+}
+
+.files-grid-container .empty-results {
+  grid-column: 1 / -1;
+}
+
+.file-list-view {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.file-list-header,
+.file-list-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 180px 110px;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid rgba(43, 90, 158, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(11, 38, 82, 0.45) 0%, rgba(6, 22, 54, 0.6) 100%);
+}
+
+.file-list-header {
+  color: #a9bae1;
+  font-size: 12px;
+  font-weight: 600;
+  justify-items: center;
+  text-align: center;
+}
+
+.file-list-row {
+  color: #e7eefc;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.file-list-row:hover {
+  border-color: #21a7ff;
+  background: linear-gradient(135deg, rgba(15, 50, 107, 0.6) 0%, rgba(9, 31, 74, 0.75) 100%);
+}
+
+.file-list-row.is-selected {
+  border-color: #27a5ff;
+  box-shadow: 0 0 10px rgba(39, 165, 255, 0.35);
+}
+
+.file-list-preview-thumb {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 52px;
+  border: 1px solid rgba(43, 90, 158, 0.3);
+  border-radius: 8px;
+  background: rgba(3, 14, 38, 0.5);
+  color: #ccd9f0;
+}
+
+.file-list-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-list-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-list-checkbox.is-checked {
+  border-color: #27a5ff;
+  background: #27a5ff;
+}
+
+.file-list-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.file-list-name {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-list-size {
+  color: #aebedf;
+  font-size: 12px;
+  text-align: right;
+}
+
+.details-sub-actions-bar .sort-controls-wrap .sort-button,
+.details-sub-actions-bar .sort-controls-wrap .sort-menu {
+  min-width: 150px;
+}
+
+.details-sub-actions-bar .sort-controls-wrap .sort-button {
+  height: 38px;
+  border-radius: 9px;
+  border-color: rgba(43, 90, 158, 0.5);
+  background: rgba(10, 31, 64, 0.6);
+  color: #ccd9f0;
+  font-size: 13.5px;
+}
+
+.details-sub-actions-bar .sort-controls-wrap .sort-button:hover {
+  border-color: #21a7ff;
+  color: #ffffff;
+  background: rgba(43, 90, 158, 0.25);
+}
+
+@media (max-width: 1200px) {
+  .details-header,
+  .details-sub-actions-bar,
+  .details-pagination-footer {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .header-right-actions {
+    margin-left: auto;
+  }
+
+  .files-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell.sidebar-collapsed .files-grid-container,
+  .files-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .app-shell.sidebar-collapsed .file-list-header,
+  .app-shell.sidebar-collapsed .file-list-row {
+    grid-template-columns: 72px minmax(0, 1fr) 140px 90px;
+    gap: 10px;
+  }
+
+  .filter-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .category-filter-tabs {
+    width: 100%;
+  }
+
+  .tag-filter-selector {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .breadcrumbs-container {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .breadcrumbs-path {
+    font-size: 16px;
+  }
+
+  .category-filter-tabs {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag-selection-panel {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .tag-pills-list {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .details-sub-actions-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .files-grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  .file-item-card {
+    height: 96px;
+  }
+
+  .file-card-thumb-area {
+    width: 96px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell.sidebar-collapsed .files-grid-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .files-grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell.sidebar-collapsed .file-list-header,
+  .app-shell.sidebar-collapsed .file-list-row {
+    grid-template-columns: 64px minmax(0, 1fr) 110px 80px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .file-list-header,
+  .file-list-row {
+    grid-template-columns: 64px minmax(0, 1fr) 110px 80px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .details-header,
+  .header-right-actions,
+  .details-sub-actions-bar,
+  .sort-selection-group,
+  .details-pagination-footer,
+  .pagination-controls-group {
+    width: 100%;
+  }
+
+  .header-right-actions {
+    justify-content: space-between;
+  }
+
+  .btn-advanced-filter {
+    flex: 1;
+  }
+
+  .btn-advanced-filter span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sort-selection-group {
+    justify-content: space-between;
+  }
+
+  .details-pagination-footer {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .pagination-total-items {
+    justify-self: end;
+  }
+
+  .file-title-text {
+    font-size: 14px;
+  }
 }
 
 
@@ -736,6 +1095,10 @@
   border-color: transparent;
   color: #fff;
   box-shadow: 0 4px 12px rgba(33, 167, 255, 0.35);
+}
+
+.btn-folder-search-toggle.is-active svg {
+  fill: currentColor;
 }
 
 /* Batch Operations Styles */

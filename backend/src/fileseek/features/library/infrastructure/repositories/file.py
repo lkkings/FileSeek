@@ -1,11 +1,13 @@
 """Library 文件的 Tortoise 仓储实现。"""
 
 from datetime import datetime, time
+from collections.abc import Sequence
 
 from fileseek.features.library.domain.entities import File,FileChunk
 from fileseek.features.library.domain.repositories import FileRepository
 from fileseek.infrastructure.database.models import FileModel,TagModel
 from fileseek.shared.domain.file_types import FileType, FileCategory
+from tortoise.transactions import in_transaction
 
 
 async def _to_entity(model: FileModel) -> File:
@@ -41,6 +43,9 @@ async def _to_entities(models: list[FileModel]) -> list[File]:
 
 
 class FileRepositoryImpl(FileRepository):
+    async def list_tags(self) -> list[str]:
+        return await TagModel.all().order_by("name").values_list("name", flat=True)
+
 
     async def get_by_id(self, file_id: str) -> File | None:
         return await self._get_by_id(file_id)
@@ -57,6 +62,15 @@ class FileRepositoryImpl(FileRepository):
 
     async def save(self, file: File) -> None:
         await self._save(file)
+
+
+    async def save_batch(self, files: Sequence[File]) -> None:
+        if not files:
+            return
+
+        async with in_transaction():
+            for file in files:
+                await self._save(file)
 
 
     async def _save(self, file: File) -> None:

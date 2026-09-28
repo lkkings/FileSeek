@@ -4,10 +4,12 @@ from fastapi import Request
 
 from fileseek.features.library.application.use_cases import (
     AddFileUseCase,
-    GetFileUseCase,
     CreateFolderUseCase,
     DeleteFolderUseCase,
+    GetFileUseCase,
     ListFoldersUseCase,
+    ListTagsUseCase,
+    MoveFilesUseCase,
     UpdateFolderUseCase,
 )
 from fileseek.shared.application.dependencies import resolve_dependency
@@ -15,6 +17,10 @@ from fileseek.shared.application.dependencies import resolve_dependency
 
 def get_list_folders_use_case(request: Request) -> ListFoldersUseCase:
     return resolve_dependency(request, "list_folders_use_case")
+
+
+def get_list_tags_use_case(request: Request) -> ListTagsUseCase:
+    return resolve_dependency(request, "list_tags_use_case")
 
 def get_create_folder_use_case(request: Request) -> CreateFolderUseCase:
     return resolve_dependency(request, "create_folder_use_case")
@@ -31,3 +37,7 @@ def get_add_file_use_case(request: Request) -> AddFileUseCase:
 
 def get_get_file_use_case(request: Request) -> GetFileUseCase:
     return resolve_dependency(request, "get_file_use_case")
+
+
+def get_move_files_use_case(request: Request) -> MoveFilesUseCase:
+    return resolve_dependency(request, "move_files_use_case")
