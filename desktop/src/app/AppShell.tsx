@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     : children;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <header className="app-mobile-header">
         <button className="mobile-menu-trigger" type="button" aria-label={t("nav.expand", "展开菜单")} onClick={() => setMobileMenuOpen(true)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TaskRowItem } from "./TaskRowItem";
@@ -31,7 +31,16 @@ describe("TaskRowItem", () => {
     "renders status, progress, stages, and retry behavior for %s",
     (status) => {
       const onRetry = vi.fn();
-      const { unmount } = renderWithI18n(<TaskRowItem task={createTask(status)} onRetry={onRetry} />);
+      const onRemove = vi.fn();
+      const onOpenDetails = vi.fn();
+      const { unmount } = renderWithI18n(
+        <TaskRowItem
+          task={createTask(status)}
+          onRetry={onRetry}
+          onRemove={onRemove}
+          onOpenDetails={onOpenDetails}
+        />,
+      );
 
       expect(screen.getByText("Task.pdf")).toBeInTheDocument();
       expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(status === "completed" ? 100 : status === "failed" ? 45 : status === "processing" ? 60 : 0));
@@ -52,10 +61,21 @@ describe("TaskRowItem", () => {
       }
 
       if (status === "failed") {
-        expect(screen.getByRole("button", { name: /重试/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Task.pdf 重试" })).toBeInTheDocument();
       } else {
-        expect(screen.queryByRole("button", { name: /重试/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Task.pdf 重试" })).not.toBeInTheDocument();
       }
+
+      const removeButton = screen.getByRole("button", { name: "Task.pdf 移除" });
+      if (status === "processing") {
+        expect(removeButton).toBeDisabled();
+      } else {
+        fireEvent.click(removeButton);
+        expect(onRemove).toHaveBeenCalledWith(`task-${status}`);
+      }
+
+      fireEvent.click(screen.getByRole("button", { name: "Task.pdf 文件详情" }));
+      expect(onOpenDetails).toHaveBeenCalledWith(createTask(status));
       unmount();
     },
   );

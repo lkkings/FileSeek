@@ -20,6 +20,21 @@ export interface MoveFilesToFolderInput {
   targetFolderId: string;
 }
 
+export interface BatchImportItem {
+  path: string;
+  storageId?: string;
+}
+
+export interface BatchImportInput {
+  folderId: string;
+  items: BatchImportItem[];
+}
+
+export interface BatchImportResponse {
+  import_id: string;
+  total: number;
+}
+
 export interface MoveFilesToFolderResponse {
   moved_count: number;
 }
@@ -43,11 +58,32 @@ export function moveFilesToFolder(
  }
 
 export function createFolder(input: FolderInput, client: ApiClient = defaultClient): Promise<ApiResponse<ApiFolder>> {
-  return client.post<ApiFolder>("/library/folders", input);
+  return client.post<ApiFolder>("/library/folders", {
+    name: input.name,
+    icon_type: input.iconType,
+    description: input.description,
+  });
+}
+
+export function startBatchImport(
+  input: BatchImportInput,
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<BatchImportResponse>> {
+  return client.post<BatchImportResponse>("/library/files/import", {
+    folder_id: input.folderId,
+    items: input.items.map((item) => ({
+      path: item.path,
+      storage_id: item.storageId ?? "local",
+    })),
+  });
 }
 
 export function updateFolder(folderId: string, input: FolderInput, client: ApiClient = defaultClient): Promise<ApiResponse<ApiFolder>> {
-  return client.put<ApiFolder>(`/library/folders/${encodeURIComponent(folderId)}`, input);
+  return client.put<ApiFolder>(`/library/folders/${encodeURIComponent(folderId)}`, {
+    name: input.name,
+    icon_type: input.iconType,
+    description: input.description,
+  });
 }
 
 export function deleteFolder(folderId: string, client: ApiClient = defaultClient): Promise<ApiResponse<null>> {

@@ -1,12 +1,17 @@
 import { Icon } from "./Icon";
 import { useTranslate } from "../i18n/useTranslate";
+import {
+  DocumentDrawerPreview,
+  ImageDrawerPreview,
+  VideoDrawerPreview,
+} from "../features/file-preview";
 import type { FileItem } from "../services/api/search";
 
 interface FileDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   file: FileItem | null;
-  onOpenAction: (file: FileItem) => void;
+  onOpenAction?: (file: FileItem) => void;
 }
 
 export function FileDetailDrawer({
@@ -20,6 +25,8 @@ export function FileDetailDrawer({
   if (!isOpen || !file) return null;
 
   const isVideo = file.category === "video";
+  const isDocument = file.category === "document";
+  const isImage = file.category === "image";
   const scene = file.metadata?.scene;
   const duration = file.metadata?.duration;
 
@@ -36,9 +43,7 @@ export function FileDetailDrawer({
     }
   }
 
-  const handleOpenAction = () => {
-    onOpenAction(file);
-  };
+  const handleOpenAction = onOpenAction ? () => onOpenAction(file) : undefined;
 
   return (
     <>
@@ -46,10 +51,40 @@ export function FileDetailDrawer({
       <aside className="result-sidebar">
         <div className="sidebar-header">
           <h3>{t("search.details", "文件详情")}</h3>
+          <button type="button" onClick={onClose} aria-label={t("dialog.close", "关闭")}>
+            <Icon name="close" size={18} />
+          </button>
         </div>
         <div className="sidebar-scroll-content">
           <div className="sidebar-preview-container">
-            {scene ? (
+            {isDocument ? (
+              <DocumentDrawerPreview
+                key={file.file_id}
+                item={{
+                  fileId: file.file_id,
+                  fileName: file.file_name,
+                  fileType: "document",
+                }}
+              />
+            ) : isImage ? (
+              <ImageDrawerPreview
+                key={file.file_id}
+                item={{
+                  fileId: file.file_id,
+                  fileName: file.file_name,
+                  fileType: "image",
+                }}
+              />
+            ) : isVideo ? (
+              <VideoDrawerPreview
+                key={file.file_id}
+                item={{
+                  fileId: file.file_id,
+                  fileName: file.file_name,
+                  fileType: "video",
+                }}
+              />
+            ) : scene ? (
               <div className={`preview-thumb scene-${scene}`} style={{ width: "100%", height: "100%" }}>
                 {isVideo && (
                   <span className="preview-play">
@@ -86,16 +121,18 @@ export function FileDetailDrawer({
               </div>
             )}
           </div>
-          <div className="sidebar-actions">
-            <button
-              className="sidebar-action-btn btn-primary"
-              type="button"
-              onClick={handleOpenAction}
-            >
-              <Icon name="eye" size={18} />
-              <span>{t("search.open", "打开")}</span>
-            </button>
-          </div>
+          {handleOpenAction && (
+            <div className="sidebar-actions">
+              <button
+                className="sidebar-action-btn btn-primary"
+                type="button"
+                onClick={handleOpenAction}
+              >
+                <Icon name="eye" size={18} />
+                <span>{t("search.open", "打开")}</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>

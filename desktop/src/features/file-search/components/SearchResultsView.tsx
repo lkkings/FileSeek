@@ -1,82 +1,88 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { BatchOperationsBar } from "../../../components/BatchOperationsBar";
 import { DeleteConfirmDialog } from "../../../components/DeleteConfirmDialog";
+import { FileDetailDrawer } from "../../../components/FileDetailDrawer";
+import { FileListRow } from "../../../components/FileListRow";
 import { Icon } from "../../../components/Icon";
+import { MoveToFolderDialog } from "../../../components/MoveToFolderDialog";
+import { Pagination } from "../../../components/Pagination";
 import { SortControls } from "../../../components/SortControls";
 import { useTranslate } from "../../../i18n/useTranslate";
 import type { FileItem, SearchResponseData } from "../../../services/api/search";
-import type { FileType } from "../types";
-import { FileRowItem } from "./FileRowItem";
 import "./search-results.css";
 
 type SortMode = "relevance" | "created_at" | "size";
+type SortOrder = "asc" | "desc";
+
+interface FolderOption {
+  id: string;
+  name: string;
+}
 
 interface SearchResultsViewProps {
   query: string;
-  fileType?: FileType;
-  onFileTypeChange?: (fileType: FileType) => void;
   onNotice: (message: string) => void;
   onMoveToRecycle?: (fileIds: string[]) => Promise<boolean>;
+  onMoveToFolder?: (fileIds: string[], targetFolderId: string) => Promise<boolean>;
+  folders?: FolderOption[];
+  foldersLoading?: boolean;
+  foldersError?: string | null;
+  searchScopeFolderId?: string | null;
   onOpenFile?: (file: FileItem) => void | Promise<void>;
-  onLocateFile?: (file: FileItem) => void | Promise<void>;
   onRefresh?: () => void;
+  onPageChange?: (pageNumber: number) => void;
+  currentPage?: number;
+  pageSize?: number;
+  totalItems?: number;
+  sortBy?: SortMode;
+  sortOrder?: SortOrder;
+  onSortByChange?: (sortBy: SortMode) => void;
+  onSortOrderChange?: (sortOrder: SortOrder) => void;
   data?: SearchResponseData | undefined;
   status?: "success" | "error" | "loading" | "idle";
   error?: string | null;
   onBack?: () => void;
 }
 
-const TYPE_OPTIONS: Array<{ id: FileType; labelId: string; label: string; icon: "archive" | "document" | "image" | "video" }> = [
-  { id: "all", labelId: "fileType.all", label: "全部", icon: "archive" },
-  { id: "document", labelId: "fileType.document", label: "文档", icon: "document" },
-  { id: "image", labelId: "fileType.image", label: "图片", icon: "image" },
-  { id: "video", labelId: "fileType.video", label: "视频", icon: "video" },
-];
-
 export function SearchResultsView({
   query,
-  fileType = "all",
-  onFileTypeChange,
   onNotice,
   onMoveToRecycle,
+  onMoveToFolder,
+  folders = [],
+  foldersLoading = false,
+  foldersError = null,
+  searchScopeFolderId = null,
   onOpenFile,
-  onLocateFile,
   onRefresh,
+  onPageChange,
+  currentPage,
+  pageSize,
+  totalItems,
+  sortBy = "relevance",
+  sortOrder = "desc",
+  onSortByChange,
+  onSortOrderChange,
   data,
   status,
   error,
   onBack,
 }: SearchResultsViewProps) {
   const t = useTranslate();
-  const [sortMode, setSortMode] = useState<SortMode>("relevance");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [recycleSubmitting, setRecycleSubmitting] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveSubmitting, setMoveSubmitting] = useState(false);
+  const [detailFile, setDetailFile] = useState<FileItem | null>(null);
 
-  const viewResults = useMemo<FileItem[]>(() => data?.items ?? [], [data]);
-  const visibleResults = useMemo(() => {
-    const results = [...viewResults];
-    results.sort((left, right) => {
-      let comparison: number;
-      if (sortMode === "size") {
-        comparison = (left.size ?? 0) - (right.size ?? 0);
-      } else if (sortMode === "created_at") {
-        comparison = (left.modified ?? "").localeCompare(right.modified ?? "");
-      } else {
-        comparison = left.score - right.score;
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-    return results;
-  }, [sortMode, sortOrder, viewResults]);
-
+  const viewResults = data?.items ?? [];
+  const itemCount = totalItems ?? data?.total ?? viewResults.length;
+  const itemPageSize = pageSize ?? data?.page_size ?? 20;
+  const itemCurrentPage = currentPage ?? data?.page_number ?? 1;
+  const totalPages = Math.max(1, Math.ceil(itemCount / itemPageSize));
   const isBatchMode = selectedItemIds.size > 0;
-
-  const countByType = (type: FileType) => {
-    if (type === "all") return viewResults.length;
-    return viewResults.filter((file) => file.category === type).length;
-  };
 
   const setSelection = (updater: (current: Set<string>) => Set<string>) => {
     setSelectedItemIds((current) => new Set(updater(current)));
@@ -102,13 +108,13 @@ export function SearchResultsView({
   };
 
   const handleSelectAll = () => {
-    setSelectedItemIds(new Set(visibleResults.map((file) => file.file_id)));
+    setSelectedItemIds(new Set(viewResults.map((file) => file.file_id)));
   };
 
   const handleInvertSelection = () => {
     setSelection((current) => {
       const next = new Set<string>();
-      visibleResults.forEach((file) => {
+      viewResults.forEach((file) => {
         if (!current.has(file.file_id)) next.add(file.file_id);
       });
       return next;
@@ -123,14 +129,43 @@ export function SearchResultsView({
       return;
     }
 
-    const success = await onMoveToRecycle(fileIds);
-    if (success) {
-      onNotice(`${t("recycle.batchMoved", "已移入回收站")} ${fileIds.length} ${t("folder.filesCount", "个文件")}`);
-      setSelectedItemIds(new Set());
-      setConfirmDeleteOpen(false);
-      onRefresh?.();
-    } else {
-      onNotice(t("recycle.moveFailed", "移入回收站失败"));
+    setRecycleSubmitting(true);
+    try {
+      const success = await onMoveToRecycle(fileIds);
+      if (success) {
+        onNotice(`${t("recycle.batchMoved", "已移入回收站")} ${fileIds.length} ${t("folder.filesCount", "个文件")}`);
+        setSelectedItemIds(new Set());
+        setConfirmDeleteOpen(false);
+        onRefresh?.();
+      } else {
+        onNotice(t("recycle.moveFailed", "移入回收站失败"));
+      }
+    } finally {
+      setRecycleSubmitting(false);
+    }
+  };
+
+  const handleBatchMove = async (targetFolderId: string) => {
+    if (!onMoveToFolder) return;
+    const fileIds = Array.from(selectedItemIds);
+    if (fileIds.length === 0) {
+      setMoveDialogOpen(false);
+      return;
+    }
+
+    setMoveSubmitting(true);
+    try {
+      const success = await onMoveToFolder(fileIds, targetFolderId);
+      if (success) {
+        onNotice(`${t("folder.batchMoved", "已移动")} ${fileIds.length} ${t("folder.filesCount", "个文件")}`);
+        setSelectedItemIds(new Set());
+        setMoveDialogOpen(false);
+        onRefresh?.();
+      } else {
+        onNotice(t("folder.moveFailed", "移动文件失败"));
+      }
+    } finally {
+      setMoveSubmitting(false);
     }
   };
 
@@ -139,30 +174,26 @@ export function SearchResultsView({
     else onNotice(`${t("folder.fileActionsFor", "已查看文件操作")} “${file.file_name}”`);
   };
 
-  const handleLocateFile = (file: FileItem) => {
-    if (onLocateFile) void onLocateFile(file);
-    else onNotice(`${t("search.locateFile", "在文件夹中显示")} “${file.file_name}”`);
+  const handlePageChange = (nextPage: number) => {
+    setSelectedItemIds(new Set());
+    setDetailFile(null);
+    onPageChange?.(nextPage);
+  };
+
+  const handleSortByChange = (nextSortBy: SortMode) => {
+    setSelectedItemIds(new Set());
+    setDetailFile(null);
+    onSortByChange?.(nextSortBy);
+  };
+
+  const handleSortOrderChange = (nextSortOrder: SortOrder) => {
+    setSelectedItemIds(new Set());
+    setDetailFile(null);
+    onSortOrderChange?.(nextSortOrder);
   };
 
   return (
     <div className="results-workspace">
-      <div className="result-tabs" role="tablist" aria-label={t("search.type.label", "文件类型")}>
-        {TYPE_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={fileType === option.id}
-            className={`result-tab ${fileType === option.id ? "is-active" : ""}`}
-            onClick={() => onFileTypeChange?.(option.id)}
-          >
-            <Icon name={option.icon} size={18} />
-            <span>{t(option.labelId, option.label)}</span>
-            <span className="tab-count">{countByType(option.id)}</span>
-          </button>
-        ))}
-      </div>
-
       <div className="results-heading">
         <div className="results-title-group">
           {onBack && (
@@ -173,7 +204,7 @@ export function SearchResultsView({
           )}
           <p>
             <strong>{t("search.resultsTitle", "搜索结果")}</strong>
-            <span>({viewResults.length})</span>
+            <span>({itemCount})</span>
             <em>“{query}”</em>
           </p>
         </div>
@@ -183,10 +214,10 @@ export function SearchResultsView({
             { value: "size", label: t("search.sortSize", "文件大小") },
             { value: "created_at", label: t("search.sortModified", "按修改时间") },
           ]}
-          sortBy={sortMode}
+          sortBy={sortBy}
           sortOrder={sortOrder}
-          onSortByChange={(value) => setSortMode(value as SortMode)}
-          onSortOrderChange={setSortOrder}
+          onSortByChange={(value) => handleSortByChange(value as SortMode)}
+          onSortOrderChange={handleSortOrderChange}
         />
       </div>
 
@@ -194,29 +225,38 @@ export function SearchResultsView({
       {error && <div className="results-error">{error}</div>}
 
       {status !== "loading" && !error && (
-        <div className="result-list" aria-live="polite">
-          {visibleResults.length === 0 ? (
-            <div className="empty-results">
-              <Icon name="search" size={28} />
-              <p>{t("search.empty", "没有找到匹配的文件")}</p>
-            </div>
-          ) : (
-            visibleResults.map((file) => (
-              <FileRowItem
-                key={file.file_id}
-                file={file}
-                isSelected={false}
-                isBatchMode={isBatchMode}
-                isRowChecked={selectedItemIds.has(file.file_id)}
-                onRowClick={handleOpenFile}
-                onToggleCheck={handleToggleCheck}
-                onLongPress={handleLongPress}
-                onOpenFile={handleOpenFile}
-                onLocateFile={handleLocateFile}
-              />
-            ))
-          )}
-        </div>
+        <>
+          <div className="result-list" aria-live="polite">
+            {viewResults.length === 0 ? (
+              <div className="empty-results">
+                <Icon name="search" size={28} />
+                <p>{t("search.empty", "没有找到匹配的文件")}</p>
+              </div>
+            ) : (
+              viewResults.map((file) => (
+                <FileListRow
+                  key={file.file_id}
+                  file={file}
+                  isBatchMode={isBatchMode}
+                  isRowChecked={selectedItemIds.has(file.file_id)}
+                  onRowClick={setDetailFile}
+                  onRowDoubleClick={handleOpenFile}
+                  onToggleCheck={handleToggleCheck}
+                  onLongPress={handleLongPress}
+                  showTime
+                />
+              ))
+            )}
+          </div>
+
+          <Pagination
+            currentPage={itemCurrentPage}
+            totalPages={totalPages}
+            totalItems={itemCount}
+            onPageChange={handlePageChange}
+            variant="details"
+          />
+        </>
       )}
 
       {isBatchMode && (
@@ -225,6 +265,7 @@ export function SearchResultsView({
           onSelectAll={handleSelectAll}
           onInvertSelection={handleInvertSelection}
           onDelete={() => setConfirmDeleteOpen(true)}
+          onMoveTo={() => setMoveDialogOpen(true)}
           onCancel={() => setSelectedItemIds(new Set())}
           deleteLabel={t("recycle.moveToTrash", "移入回收站")}
         />
@@ -235,6 +276,28 @@ export function SearchResultsView({
         onClose={() => setConfirmDeleteOpen(false)}
         onConfirm={handleBatchDelete}
         selectedCount={selectedItemIds.size}
+        confirmDisabled={recycleSubmitting}
+      />
+
+      <MoveToFolderDialog
+        isOpen={moveDialogOpen}
+        folders={folders}
+        loading={foldersLoading}
+        error={foldersError}
+        excludeFolderId={searchScopeFolderId}
+        selectedCount={selectedItemIds.size}
+        submitting={moveSubmitting}
+        onClose={() => {
+          if (!moveSubmitting) setMoveDialogOpen(false);
+        }}
+        onConfirm={(targetFolderId) => void handleBatchMove(targetFolderId)}
+      />
+
+      <FileDetailDrawer
+        isOpen={detailFile !== null}
+        onClose={() => setDetailFile(null)}
+        file={detailFile}
+        onOpenAction={handleOpenFile}
       />
     </div>
   );

@@ -5,7 +5,8 @@ from pathlib import Path
 from fileseek.features.library.domain.entities import FileChunk
 from fileseek.features.tasks.domain.entities import Task,TaskStage
 from fileseek.infrastructure.embedding import EmbeddingPort
-from fileseek.infrastructure.classifier import ClassifierPort
+from fileseek.infrastructure.classifier import ClassifierProvider
+from fileseek.features.tasks.domain.ports import ClassifierLabelSnapshot
 from fileseek.infrastructure.vector_store import (
     VectorIndexPort,
 )
@@ -28,7 +29,7 @@ class VideoHandler(FileHandler):
         video_sampler: VideoSamplerPort,
         embedding_service: EmbeddingPort,
         vector_index: VectorIndexPort,
-        classifier: ClassifierPort | None = None,
+        classifier: ClassifierProvider | None = None,
     ) -> None:
         self._video_sampler = video_sampler
         self._embedding_service = embedding_service
@@ -106,7 +107,12 @@ class VideoHandler(FileHandler):
             0,
             TaskStage.CLASSIFY,
         )
-        scores = self._classifier.classify_video(
+        if self._classifier is None:
+            return []
+        classifier = self._classifier.get_classifier(
+            ClassifierLabelSnapshot.from_metadata(task.metadata)
+        )
+        scores = classifier.classify_video(
             embeddings
         )
         tags = [

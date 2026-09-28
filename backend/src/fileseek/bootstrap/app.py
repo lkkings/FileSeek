@@ -27,6 +27,7 @@ from fileseek.features.library.interfaces.http import router as library_router
 from fileseek.features.recent.interfaces.http.routers import router as recent_router
 from fileseek.features.recycle.interfaces.http.routers import router as recycle_router
 from fileseek.features.search.interfaces.http import router as search_router
+from fileseek.features.settings.interfaces.http import router as settings_router
 
 from fileseek.features.tasks.interfaces.http import router as tasks_router
 from fileseek.shared.envelope import success_response
@@ -127,6 +128,7 @@ def create_app(
         recent_router,
         recycle_router,
         search_router,
+        settings_router,
         tasks_router,
 
     ):

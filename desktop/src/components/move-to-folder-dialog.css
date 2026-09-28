@@ -1,0 +1,170 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(1, 8, 23, 0.8);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+}
+
+.modal-dialog {
+  position: relative;
+  width: min(100%, 520px);
+  overflow: hidden;
+  border: 1px solid rgba(79, 153, 245, 0.54);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(18, 50, 105, 0.98), rgba(7, 24, 56, 0.99));
+  color: #f4f7ff;
+  animation: move-folder-dialog-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.folder-dialog {
+  padding: clamp(20px, 4vw, 32px);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.dialog-header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dialog-header h3 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(39, 165, 255, 0.14);
+  color: #27a5ff;
+}
+
+.dialog-close,
+.dialog-secondary,
+.dialog-primary,
+.move-folder-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.dialog-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(77, 143, 221, 0.65);
+  background: rgba(12, 43, 91, 0.76);
+  color: #dceaff;
+}
+
+.delete-warning {
+  margin-bottom: 18px;
+  color: #a9bcdf;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.folder-dialog-status,
+.folder-dialog-error {
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.folder-dialog-status {
+  color: #a9bcdf;
+}
+
+.folder-dialog-error {
+  color: #ff9ba7;
+}
+
+.move-folder-options {
+  display: grid;
+  gap: 8px;
+  max-height: 240px;
+  margin-bottom: 20px;
+  padding: 8px;
+  border: 1px solid rgba(42, 92, 167, 0.55);
+  border-radius: 10px;
+  background: rgba(8, 29, 66, 0.5);
+  overflow-y: auto;
+}
+
+.move-folder-options button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #dbe7ff;
+  text-align: left;
+}
+
+.move-folder-options button:hover,
+.move-folder-options button.is-selected {
+  border-color: rgba(42, 165, 255, 0.55);
+  background: rgba(39, 165, 255, 0.12);
+  color: #fff;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dialog-secondary,
+.dialog-primary {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dialog-secondary {
+  border: 1px solid #2a5ca7;
+  background: rgba(8, 29, 66, 0.6);
+  color: #dbe7ff;
+}
+
+.dialog-primary {
+  border: 1px solid #2aa5ff;
+  background: linear-gradient(135deg, #27a5ff, #0a62f1);
+  color: #fff;
+}
+
+.dialog-secondary:disabled,
+.dialog-primary:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@keyframes move-folder-dialog-appear {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}

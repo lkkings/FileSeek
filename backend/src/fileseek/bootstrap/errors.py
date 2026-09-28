@@ -22,6 +22,7 @@ from fileseek.shared.domain.exceptions import (
     NotFoundError,
     ValidationError,
 )
+from fileseek.features.library.domain.exceptions import SourceUnavailableError
 from fileseek.shared.envelope import error_response
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,14 @@ async def handle_application_error(_request: Request, exc: Exception) -> JSONRes
     所以报文原文照传。
     """
     return JSONResponse(error_response(str(exc)), status_code=400)
+
+
+async def handle_source_unavailable(
+    _request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """索引存在但来源不可获取 → 410。"""
+    return JSONResponse(error_response(str(exc)), status_code=410)
 
 
 async def handle_request_validation(
@@ -97,6 +106,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     所以 NotFoundError 命中自己的 handler 而不是 ApplicationError 的。
     """
     app.add_exception_handler(NotFoundError, handle_not_found)
+    app.add_exception_handler(SourceUnavailableError, handle_source_unavailable)
     app.add_exception_handler(ValidationError, handle_validation)
     app.add_exception_handler(ApplicationError, handle_application_error)
     app.add_exception_handler(RequestValidationError, handle_request_validation)

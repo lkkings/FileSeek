@@ -1,6 +1,7 @@
 import { LibraryPage } from "../pages/library/LibraryPage";
 import { RecentPage } from "../pages/recent/RecentPage";
 import { RecyclePage } from "../pages/recycle/RecyclePage";
+import { SettingsPage } from "../pages/settings/SettingsPage";
 import { TasksPage } from "../pages/tasks/TasksPage";
 import type { NavigationDestination } from "../types/navigation";
 
@@ -19,7 +20,7 @@ export function Router({ currentPath = "library" }: RouterProps) {
     case "tasks":
       return <TasksPage />;
     case "settings":
-      return <div>TODO: SettingsPage</div>;
+      return <SettingsPage />;
     default:
       return <LibraryPage />;
   }

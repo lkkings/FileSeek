@@ -60,7 +60,7 @@ from fileseek.features.tasks.infrastructure.repositories import (
 )
 
 from fileseek.infrastructure.classifier import (
-    get_classifier,
+    SnapshotClassifierProvider,
 )
 from fileseek.infrastructure.embedding import (
     get_embedding_service,
@@ -97,7 +97,7 @@ def build_task_scheduler(
 
     embedding_service = get_embedding_service()
     vector_index = get_vector_store()
-    classifier = get_classifier()
+    classifier_provider = SnapshotClassifierProvider()
     ocr_service = get_ocr_service()
     cache = get_cache_service()
 
@@ -124,21 +124,21 @@ def build_task_scheduler(
         document_parser=document_parser,
         embedding_service=embedding_service,
         vector_index=vector_index,
-        classifier=classifier,
+        classifier=classifier_provider,
     )
 
     image_handler = ImageHandler(
         ocr_service=ocr_service,
         embedding_service=embedding_service,
         vector_index=vector_index,
-        classifier=classifier,
+        classifier=classifier_provider,
     )
 
     video_handler = VideoHandler(
         video_sampler=video_sampler,
         embedding_service=embedding_service,
         vector_index=vector_index,
-        classifier=classifier,
+        classifier=classifier_provider,
     )
 
     # ==================================================

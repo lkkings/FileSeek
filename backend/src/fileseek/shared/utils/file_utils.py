@@ -423,6 +423,9 @@ def _looks_like_svg(
 
     lowered = text.lower()
 
+    if _looks_like_html(lowered):
+        return False
+
     if lowered.startswith("<svg"):
         return True
 

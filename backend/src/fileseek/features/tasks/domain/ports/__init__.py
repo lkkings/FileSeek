@@ -1,23 +1,29 @@
+from fileseek.features.tasks.domain.ports.classifier_labels import (
+    ClassifierLabelProvider,
+    ClassifierLabelSnapshot,
+)
 from fileseek.features.tasks.domain.ports.document_parser import (
     DocumentChunk,
     DocumentParserPort,
     ParsedDocument,
 )
+from fileseek.features.tasks.domain.ports.progress import ProgressReporter
 from fileseek.features.tasks.domain.ports.task_manager import TaskManager
 from fileseek.features.tasks.domain.ports.video_sampler import (
     VideoFrame,
     VideoKeyframe,
     VideoSamplerPort,
 )
-from fileseek.features.tasks.domain.ports.progress import ProgressReporter
 
 __all__ = [
+    "ClassifierLabelProvider",
+    "ClassifierLabelSnapshot",
     "DocumentChunk",
-    "ParsedDocument",
     "DocumentParserPort",
-    "VideoKeyframe",
-    "VideoSamplerPort",
+    "ParsedDocument",
+    "ProgressReporter",
     "TaskManager",
     "VideoFrame",
-    "ProgressReporter"
+    "VideoKeyframe",
+    "VideoSamplerPort",
 ]

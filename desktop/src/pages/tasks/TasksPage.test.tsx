@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderWithI18n } from "../../test/test-utils";
@@ -56,10 +56,28 @@ describe("TasksPage", () => {
     expect(screen.getByRole("button", { name: /失败/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /pending/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /重试/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Task.pdf 重试" }));
 
     await waitFor(() => expect(mocks.retryTask.mutateAsync).toHaveBeenCalledWith("task-1"));
     expect(mocks.reload).toHaveBeenCalled();
     expect(screen.getByText(/任务重试已提交/)).toBeInTheDocument();
+  });
+
+  it("opens the file detail drawer and retries all failed tasks", async () => {
+    renderWithI18n(<TasksPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Task.pdf 文件详情" }));
+    const drawer = screen.getByText("文件详情").closest("aside");
+    expect(drawer).toBeInTheDocument();
+    expect(within(drawer!).getByText("Task.pdf")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /关闭/ }));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /一键重试/ }));
+
+    await waitFor(() => expect(mocks.retryTask.mutateAsync).toHaveBeenCalledWith("task-1"));
+    expect(mocks.reload).toHaveBeenCalled();
+    expect(screen.getByText(/已提交 1 个重试/)).toBeInTheDocument();
   });
 });

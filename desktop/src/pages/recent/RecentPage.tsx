@@ -3,9 +3,10 @@ import { useMemo, useState } from "react";
 import { BatchOperationsBar } from "../../components/BatchOperationsBar";
 import { DeleteConfirmDialog } from "../../components/DeleteConfirmDialog";
 import { FileDetailDrawer } from "../../components/FileDetailDrawer";
+import { FileListRow } from "../../components/FileListRow";
+import { FileViewerOverlay, useFileViewer } from "../../features/file-preview";
 import { Notice } from "../../components/Notice";
 import { Pagination } from "../../components/Pagination";
-import { FileRowItem } from "../../features/file-search/components/FileRowItem";
 import { useRecentAccess } from "../../features/recent/hooks/useRecentAccess";
 import { useRecordRecentAccess } from "../../features/recent/hooks/useRecordRecentAccess";
 import type { RecentRecord } from "../../features/recent/types";
@@ -19,6 +20,7 @@ export function RecentPage() {
   const [notice, setNotice] = useState("");
   const { data, loading, error, page, setPage, pageSize, reload, deleteRecords } = useRecentAccess();
   const recordAccess = useRecordRecentAccess();
+  const fileViewer = useFileViewer();
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<number>>(new Set());
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -93,6 +95,11 @@ export function RecentPage() {
   const handleOpenFile = async (file: FileItem) => {
     const response = await recordAccess.mutateAsync(file.file_id);
     if (response.status === "success") {
+      fileViewer.openFile({
+        fileId: file.file_id,
+        fileName: file.file_name,
+        fileType: file.category as "document" | "image" | "video",
+      });
       setNotice(`${t("recent.recorded", "已记录访问")} “${file.file_name}”`);
       void reload();
     } else {
@@ -128,15 +135,17 @@ export function RecentPage() {
                     </div>
                   ) : (
                     viewResults.map((record) => (
-                      <FileRowItem
+                      <FileListRow
                         key={record.recordId}
                         file={record.file}
-                        isSelected={selectedFileId === record.file.file_id}
                         isBatchMode={isBatchMode}
                         isRowChecked={selectedRecordIds.has(record.recordId)}
                         onRowClick={handleSelectRow}
+                        onRowDoubleClick={handleOpenFile}
                         onToggleCheck={() => toggleRecord(record)}
                         onLongPress={handleLongPress}
+                        showTime
+                        timeLabel={record.accessedAt}
                       />
                     ))
                   )}
@@ -181,6 +190,12 @@ export function RecentPage() {
         onClose={() => setConfirmDeleteOpen(false)}
         onConfirm={handleBatchDelete}
         selectedCount={selectedRecordIds.size}
+      />
+
+      <FileViewerOverlay
+        isOpen={fileViewer.isOpen}
+        item={fileViewer.item}
+        onClose={fileViewer.onClose}
       />
 
       {notice && <Notice message={notice} onClose={() => setNotice("")} />}

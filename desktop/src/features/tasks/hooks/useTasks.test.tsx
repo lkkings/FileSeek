@@ -67,4 +67,23 @@ describe("useTasks", () => {
     expect(transport).toHaveBeenCalledTimes(3);
     vi.useRealTimers();
   });
+
+  it("removes a task and invalidates the list", async () => {
+    vi.useFakeTimers();
+    const transport = vi.fn(async (method: string, path: string): Promise<RawResponse> => {
+      const data = method === "DELETE" && path === "/api/v1/tasks/task-1" ? null : taskList;
+      return { status: 200, body: JSON.stringify({ status: "success", data, error: null }) };
+    });
+    const client = new ApiClient(transport);
+    const { result } = renderHookWithProviders(() => useTasks(null, client));
+
+    await vi.advanceTimersByTimeAsync(0);
+    const response = await result.current.removeTask.mutateAsync("task-1");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(response.status).toBe("success");
+    expect(transport).toHaveBeenCalledWith("DELETE", "/api/v1/tasks/task-1", undefined);
+    expect(transport).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
 });

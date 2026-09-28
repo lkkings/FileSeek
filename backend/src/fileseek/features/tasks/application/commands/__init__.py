@@ -8,3 +8,7 @@ class RetryTaskCommand:
     task_id: str
 
 
+@dataclass(frozen=True)
+class DeleteTaskCommand:
+    task_id: str
+

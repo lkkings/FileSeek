@@ -58,6 +58,9 @@ class File:
     modified: datetime
     path: str
     folder_id: str | None = None
+    storage_id: str | None = None
+    access_state: str = "available"
+    last_checked_at: datetime | None = None
     tags: list[str] = field(default_factory=list)
     chunks: list[FileChunk] = field(default_factory=list)
 

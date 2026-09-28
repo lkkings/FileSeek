@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
 from fileseek.features.tasks.application.dto import TaskDTO, TaskListDTO, FileDTO
+from fileseek.features.tasks.application.commands import DeleteTaskCommand
 from fileseek.shared.domain.exceptions import NotFoundError
 
 def test_list_tasks_normal(auth_client: TestClient, app):
@@ -99,3 +100,17 @@ def test_retry_task_not_found(auth_client: TestClient, app):
     json_data = response.json()
     assert json_data["status"] == "error"
     assert "不存在" in json_data["error"]
+
+
+def test_delete_task_normal(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = None
+    app.state.dependencies["delete_task_use_case"] = mock_use_case
+
+    response = auth_client.delete("/api/v1/tasks/t1")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"] is None
+    mock_use_case.execute.assert_awaited_once_with(DeleteTaskCommand(task_id="t1"))

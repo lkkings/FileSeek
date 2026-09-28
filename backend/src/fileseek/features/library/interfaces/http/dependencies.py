@@ -3,13 +3,17 @@ from __future__ import annotations
 from fastapi import Request
 
 from fileseek.features.library.application.use_cases import (
-    AddFileUseCase,
+    BatchImportSessionManager,
+    CheckFileAvailabilityUseCase,
     CreateFolderUseCase,
     DeleteFolderUseCase,
+    GetFileThumbnailUseCase,
     GetFileUseCase,
+    GetFileSourceUseCase,
     ListFoldersUseCase,
     ListTagsUseCase,
     MoveFilesUseCase,
+    StartBatchImportUseCase,
     UpdateFolderUseCase,
 )
 from fileseek.shared.application.dependencies import resolve_dependency
@@ -32,12 +36,34 @@ def get_delete_folder_use_case(request: Request) -> DeleteFolderUseCase:
     return resolve_dependency(request, "delete_folder_use_case")
 
 
-def get_add_file_use_case(request: Request) -> AddFileUseCase:
-    return resolve_dependency(request, "add_file_use_case")
+def get_start_batch_import_use_case(
+    request: Request,
+) -> StartBatchImportUseCase:
+    return resolve_dependency(request, "start_batch_import_use_case")
+
+
+def get_batch_import_session_manager(
+    request: Request,
+) -> BatchImportSessionManager:
+    return resolve_dependency(request, "batch_import_session_manager")
 
 def get_get_file_use_case(request: Request) -> GetFileUseCase:
     return resolve_dependency(request, "get_file_use_case")
 
 
+def get_get_file_source_use_case(request: Request) -> GetFileSourceUseCase:
+    return resolve_dependency(request, "get_file_source_use_case")
+
+
+def get_file_thumbnail_use_case(request: Request) -> GetFileThumbnailUseCase:
+    return resolve_dependency(request, "get_file_thumbnail_use_case")
+
+
 def get_move_files_use_case(request: Request) -> MoveFilesUseCase:
     return resolve_dependency(request, "move_files_use_case")
+
+
+def get_check_file_availability_use_case(
+    request: Request,
+) -> CheckFileAvailabilityUseCase:
+    return resolve_dependency(request, "check_file_availability_use_case")

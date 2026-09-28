@@ -8,7 +8,8 @@ from fileseek.features.tasks.application.handlers.base import FileHandler
 from fileseek.features.tasks.domain.ports import (
     ProgressReporter,
 )
-from fileseek.infrastructure.classifier import ClassifierPort
+from fileseek.infrastructure.classifier import ClassifierProvider
+from fileseek.features.tasks.domain.ports import ClassifierLabelSnapshot
 from fileseek.infrastructure.embedding import EmbeddingPort
 from fileseek.infrastructure.ocr import (
     ImageContent,
@@ -28,7 +29,7 @@ class ImageHandler(FileHandler):
         ocr_service: OCRPort,
         embedding_service: EmbeddingPort,
         vector_index: VectorIndexPort,
-        classifier: ClassifierPort,
+        classifier: ClassifierProvider,
     ) -> None:
         self._ocr_service = ocr_service
         self._embedding_service = embedding_service
@@ -132,7 +133,10 @@ class ImageHandler(FileHandler):
             progress=0,
             stage=TaskStage.CLASSIFY,
         )
-        scores = self._classifier.classify_image(
+        classifier = self._classifier.get_classifier(
+            ClassifierLabelSnapshot.from_metadata(task.metadata)
+        )
+        scores = classifier.classify_image(
             embeddings[0]
         )
         tags = [

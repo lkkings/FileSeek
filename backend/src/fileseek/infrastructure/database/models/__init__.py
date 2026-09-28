@@ -64,6 +64,106 @@ class TagModel(Model):
             ("name",),
         )
 
+
+class StorageLocationModel(Model):
+    """Indexed file source location database model."""
+
+    id = fields.CharField(
+        max_length=64,
+        pk=True,
+    )
+
+    type = fields.CharField(
+        max_length=32,
+    )
+
+    name = fields.CharField(
+        max_length=255,
+    )
+
+    protocol = fields.CharField(
+        max_length=32,
+    )
+
+    endpoint = fields.CharField(
+        max_length=2048,
+    )
+
+    root_path = fields.CharField(
+        max_length=4096,
+        default="",
+    )
+
+    account = fields.CharField(
+        max_length=255,
+        null=True,
+    )
+
+    password = fields.CharField(
+        max_length=4096,
+        null=True,
+    )
+
+    status = fields.CharField(
+        max_length=32,
+        default="active",
+    )
+
+    is_system = fields.BooleanField(
+        default=False,
+    )
+
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        table = "storage_locations"
+        indexes = (
+            ("type",),
+            ("status",),
+        )
+
+
+class ClassifierLabelModel(Model):
+    """Model classifier vocabulary database model."""
+
+    id = fields.CharField(
+        max_length=64,
+        pk=True,
+    )
+
+    category = fields.CharField(
+        max_length=32,
+    )
+
+    label = fields.CharField(
+        max_length=255,
+    )
+
+    enabled = fields.BooleanField(
+        default=True,
+    )
+
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        table = "classifier_labels"
+        unique_together = (
+            ("category", "label"),
+        )
+
+
 class FileChunkModel(Model):
     # 文件唯一标识
     id = fields.CharField(
@@ -131,6 +231,20 @@ class FileModel(Model):
     path = fields.CharField(
         max_length=4096,
         unique=True,
+    )
+
+    storage_id = fields.CharField(
+        max_length=64,
+        null=True,
+    )
+
+    access_state = fields.CharField(
+        max_length=32,
+        null=True,
+    )
+
+    last_checked_at = fields.DatetimeField(
+        null=True,
     )
 
     # 文件标签
@@ -277,9 +391,11 @@ class RecentAccessModel(Model):
 
 
 __all__ = [
+    "ClassifierLabelModel",
     "FileModel",
     "FolderModel",
     "RecentAccessModel",
     "RecycleItemModel",
+    "StorageLocationModel",
     "TaskModel",
 ]

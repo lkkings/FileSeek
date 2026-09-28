@@ -10,3 +10,14 @@ class ListFoldersQuery:
 @dataclass(frozen=True)
 class GetFileQuery:
     file_id: str
+
+
+@dataclass(frozen=True)
+class GetFileThumbnailQuery:
+    file_id: str
+    size: str
+
+
+@dataclass(frozen=True)
+class CheckFileAvailabilityQuery:
+    file_id: str

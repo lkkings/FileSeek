@@ -47,3 +47,7 @@ export function listTasks(
 export function retryTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<TaskItem>> {
   return client.post<TaskItem>(`/tasks/${encodeURIComponent(taskId)}/retry`);
 }
+
+export function deleteTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<null>> {
+  return client.delete<null>(`/tasks/${encodeURIComponent(taskId)}`);
+}

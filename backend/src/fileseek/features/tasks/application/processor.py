@@ -4,21 +4,16 @@ import logging
 import queue
 from pathlib import Path
 
-from fileseek.features.library.domain.entities import File
 from fileseek.features.tasks.application.handlers import (
     FileHandlerRegistry,
 )
-from fileseek.features.tasks.domain.ports import (
-    ProgressReporter
-)
+from fileseek.features.tasks.application.progress_reporter import QueueProgressReporter
 from fileseek.features.tasks.domain.entities import (
     Task,
     TaskProgress,
 )
-from fileseek.infrastructure.vector_store import (
-    VectorIndexPort
-)
-from fileseek.features.tasks.application.progress_reporter import QueueProgressReporter
+from fileseek.features.tasks.domain.ports import ProgressReporter
+from fileseek.infrastructure.vector_store import VectorIndexPort
 
 logger = logging.getLogger(__name__)
 
@@ -51,42 +46,34 @@ class TaskProcessor:
         self,
         task: Task,
         progress_queue: queue.Queue[TaskProgress],
-    ):
+    ) -> None:
         """处理任务。"""
-
         logger.info(
             "开始处理任务: task_id=%s, path=%s",
             task.id,
             task.file.path,
         )
-
         # --------------------------------------------------
         # 1. 创建进度上报器
         # --------------------------------------------------
-
         progress = self._create_progress_reporter(
             progress_queue
         )
-
         # --------------------------------------------------
         # 2. 获取 Handler
         # --------------------------------------------------
-
         handler = self._handler_registry.get(
             task.file.file_type
         )
-
         logger.debug(
             "使用文件处理器: task_id=%s, handler=%s",
             task.id,
             type(handler).__name__,
         )
-
-
         # --------------------------------------------------
         # 3. Handler 完整处理
         # --------------------------------------------------
-        temp_path = Path(task.metadata["temp_path"])
+        temp_path = task.metadata.get("temp_path") if task.metadata else None
         handler.process(
             task,
             progress,
@@ -96,30 +83,11 @@ class TaskProcessor:
             "任务处理完成: task_id=%s",
             task.id,
         )
-
         # --------------------------------------------------
         # 4. 删除缓存文件
         # --------------------------------------------------
-
-        temp_path.unlink(missing_ok=True)
-
-    def _persist_tags(
-        self,
-        file_id: str,
-        tags: list[str],
-    ) -> None:
-        """将文件标签写入向量索引。"""
-
-        try:
-            self._vector_index.update_file_tags(
-                file_id,
-                tags,
-            )
-        except Exception:
-            logger.exception(
-                "文件 tags 写入向量索引失败: file_id=%s",
-                file_id,
-            )
+        if isinstance(temp_path, str):
+            Path(temp_path).unlink(missing_ok=True)
 
     @staticmethod
     def _create_progress_reporter(

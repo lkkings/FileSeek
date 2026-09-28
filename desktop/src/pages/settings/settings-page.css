@@ -1,0 +1,22 @@
+.settings-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 30px 36px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 1440px) and (min-width: 781px) {
+  .settings-main {
+    padding: 26px 30px 18px;
+  }
+}
+
+@media (max-width: 780px) {
+  .settings-main {
+    padding: 18px 16px 16px;
+  }
+}

@@ -1,7 +1,11 @@
+from typing import Any
+
+from fileseek.config.constant import QUERY_CACHE_KEY
 from fileseek.features.library.application.commands import MoveFilesCommand
 from fileseek.features.library.domain.exceptions import FileNotFoundError, FolderNotFoundError
 from fileseek.features.library.domain.repositories import FileRepository, FolderRepository
 from fileseek.shared.domain.exceptions import ValidationError
+from fileseek.shared.utils.cache import TTLLRUCache
 
 
 class MoveFilesUseCase:
@@ -9,9 +13,11 @@ class MoveFilesUseCase:
         self,
         file_repo: FileRepository,
         folder_repo: FolderRepository,
+        search_cache: TTLLRUCache[str, Any],
     ) -> None:
         self.file_repo = file_repo
         self.folder_repo = folder_repo
+        self.search_cache = search_cache
 
     async def execute(self, command: MoveFilesCommand) -> int:
         file_ids = list(dict.fromkeys(command.file_ids))
@@ -34,10 +40,16 @@ class MoveFilesUseCase:
             source_counts[file.folder_id] = source_counts.get(file.folder_id, 0) + 1
             file.move_to_folder(command.target_folder_id)
 
-        await self.file_repo.save_batch(files)
-        for source_folder_id, count in source_counts.items():
-            if source_folder_id is not None:
-                await self.folder_repo.increment_file_count(source_folder_id, -count)
-        await self.folder_repo.increment_file_count(command.target_folder_id, len(files))
+        try:
+            await self.file_repo.save_batch(files)
+            for source_folder_id, count in source_counts.items():
+                if source_folder_id is not None:
+                    await self.folder_repo.increment_file_count(source_folder_id, -count)
+            await self.folder_repo.increment_file_count(
+                command.target_folder_id,
+                len(files),
+            )
+        finally:
+            await self.search_cache.clear(QUERY_CACHE_KEY)
 
         return len(files)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import Request
 
 from fileseek.features.tasks.application.use_cases import (
+    DeleteTaskUseCase,
     ListTasksUseCase,
     RetryTaskUseCase,
 )
@@ -17,3 +18,6 @@ def get_list_tasks_use_case(request: Request) -> ListTasksUseCase:
 def get_retry_task_use_case(request: Request) -> RetryTaskUseCase:
     return resolve_dependency(request, "retry_task_use_case")
 
+
+def get_delete_task_use_case(request: Request) -> DeleteTaskUseCase:
+    return resolve_dependency(request, "delete_task_use_case")

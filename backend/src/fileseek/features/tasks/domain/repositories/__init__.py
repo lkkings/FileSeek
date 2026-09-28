@@ -19,6 +19,10 @@ class TaskRepository(Protocol):
 
     async def save(self, task: Task) -> None: ...
 
+    async def delete(self, task_id: str) -> bool:
+        """删除非处理中的任务，返回任务是否被删除。"""
+        ...
+
     async def claim_next_queued(self) -> Task | None:
         """取出下一个待处理任务并标记状态，用于调度器轮询。"""
         ...

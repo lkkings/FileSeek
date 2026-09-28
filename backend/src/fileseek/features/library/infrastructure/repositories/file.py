@@ -1,6 +1,7 @@
 """Library 文件的 Tortoise 仓储实现。"""
 
 from datetime import datetime, time
+from datetime import UTC
 from collections.abc import Sequence
 
 from fileseek.features.library.domain.entities import File,FileChunk
@@ -21,6 +22,9 @@ async def _to_entity(model: FileModel) -> File:
         modified=model.modified,
         folder_id=model.folder_id,
         path=model.path,
+        storage_id=model.storage_id,
+        access_state=model.access_state or "unknown",
+        last_checked_at=model.last_checked_at,
         tags=[
             tag.name
             for tag in model.tags
@@ -84,6 +88,9 @@ class FileRepositoryImpl(FileRepository):
                 "modified": file.modified,
                 "folder_id": file.folder_id,
                 "path": file.path,
+                "storage_id": file.storage_id,
+                "access_state": file.access_state,
+                "last_checked_at": file.last_checked_at,
             },
         )
 
@@ -110,6 +117,26 @@ class FileRepositoryImpl(FileRepository):
 
     async def delete(self, file_id: str) -> None:
         await self._delete(file_id)
+
+    async def set_access_state(
+        self,
+        file_id: str,
+        access_state: str,
+    ) -> bool:
+        updated = await FileModel.filter(id=file_id).update(
+            access_state=access_state,
+            last_checked_at=datetime.now(UTC),
+        )
+        return updated > 0
+
+    async def mark_unavailable_by_storage(
+        self,
+        storage_id: str,
+    ) -> int:
+        return await FileModel.filter(storage_id=storage_id).update(
+            access_state="unavailable",
+            last_checked_at=datetime.now(UTC),
+        )
 
     async def _delete(self, file_id: str) -> None:
         await FileModel.filter(

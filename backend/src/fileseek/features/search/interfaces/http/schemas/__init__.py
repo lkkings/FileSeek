@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-from typing import Literal,Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field,ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class FileItem(BaseModel):
     """向量命中的文件基础信息。"""
@@ -19,10 +20,10 @@ class FileItem(BaseModel):
     path: str
     size: int | None = None
     modified: str | None = None
-    tags: list[str] = []
+    tags: list[str] = Field(default_factory=list)
     score: float = 0
-    metadata: dict[str, Any] | None = None
-    chunks: list[Any] | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    chunks: list[Any] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 class SearchRequest(BaseModel):
@@ -92,4 +93,3 @@ class SearchResponse(BaseModel):
         default=False,
         description="是否还有更多数据",
     )
-

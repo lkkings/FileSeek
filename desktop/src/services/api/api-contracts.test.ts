@@ -4,7 +4,7 @@ import { ApiClient, type RawResponse } from "./client";
 import { addFilesToRecycle, deleteRecycleBatch, listRecycle } from "./recycle";
 import { moveFilesToFolder } from "./library";
 import { addRecent, deleteRecentRecord, listRecent } from "./recent";
-import { listTasks, retryTask } from "./tasks";
+import { deleteTask, listTasks, retryTask } from "./tasks";
 
 function createClient() {
   const transport = vi.fn(async (): Promise<RawResponse> => ({
@@ -73,13 +73,15 @@ describe("Library API services", () => {
 });
 
 describe("Tasks API services", () => {
-  it("builds the filtered task query and retry path", async () => {
+  it("builds the filtered task query, retry path, and delete path", async () => {
     const { client, transport } = createClient();
 
     await listTasks("processing", 2, 25, client);
     await retryTask("task/1", client);
+    await deleteTask("task/1", client);
 
     expect(transport).toHaveBeenNthCalledWith(1, "GET", "/api/v1/tasks?page=2&page_size=25&status=processing", undefined);
     expect(transport).toHaveBeenNthCalledWith(2, "POST", "/api/v1/tasks/task%2F1/retry", undefined);
+    expect(transport).toHaveBeenNthCalledWith(3, "DELETE", "/api/v1/tasks/task%2F1", undefined);
   });
 });

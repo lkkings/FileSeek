@@ -10,6 +10,16 @@
   --color-accent-light: #47adff;
   --color-border-subtle: rgba(75, 143, 255, .08);
   --color-border-focus: #2da9ff;
+  --app-bg: #020a1d;
+  --app-shell-bg: radial-gradient(circle at 78% 0%, rgba(35, 108, 221, .24), transparent 34%),
+                  linear-gradient(118deg, #0a1d3c 0%, #071631 48%, #041027 100%);
+  --app-sidebar-bg: linear-gradient(180deg, #0c2347 0%, #081a38 60%, #071631 100%);
+  --app-border: rgba(75, 143, 255, .14);
+  --app-header-bg: rgba(12, 35, 71, .95);
+  --app-text: #f4f7ff;
+  --app-muted: #a3b2d6;
+  --app-hover: rgba(31, 86, 186, .28);
+  --app-active: linear-gradient(100deg, #0f58ce, #183e90);
   
   /* Corner Radii - Locked Shape Consistency */
   --radius-sm: 8px;
@@ -73,7 +83,7 @@ input::placeholder { color: var(--color-text-muted); opacity: 1; }
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(6, 20, 46, 0.5);
+  background: color-mix(in srgb, var(--app-bg) 72%, transparent);
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(39, 136, 255, 0.25);

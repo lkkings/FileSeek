@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { useTranslate } from "../../../i18n/useTranslate";
 import { defaultClient, errorText, type ApiClient } from "../../../services/api/client";
-import { listTasks, retryTask } from "../../../services/api/tasks";
+import { deleteTask, listTasks, retryTask } from "../../../services/api/tasks";
 import type { TaskStatus } from "../../../services/api/tasks";
 
 const TASKS_LIST_QUERY_KEY = ["tasks", "list"] as const;
@@ -38,6 +38,16 @@ export function useTasks(statusFilter: TaskStatus | null = null, client: ApiClie
     },
   });
 
+  const remove = useMutation({
+    mutationFn: (taskId: string) => deleteTask(taskId, client),
+    onSuccess: (response) => {
+      if (response.status === "success") {
+        void queryClient.invalidateQueries({ queryKey: TASKS_LIST_QUERY_KEY });
+      }
+      return response;
+    },
+  });
+
   return {
     data: query.data,
     loading: query.isPending,
@@ -47,5 +57,6 @@ export function useTasks(statusFilter: TaskStatus | null = null, client: ApiClie
     pageSize,
     reload: () => queryClient.invalidateQueries({ queryKey: TASKS_LIST_QUERY_KEY }),
     retryTask: retry,
+    removeTask: remove,
   };
 }

@@ -1,142 +1,120 @@
-import { useFileLibrary } from "../features/library/hooks/useFileLibrary";
+import { useState, type FormEvent } from "react";
+
 import { Icon } from "./Icon";
 import { useTranslate } from "../i18n/useTranslate";
-import { type FolderRecord } from "../features/library/types";
+import "./move-to-folder-dialog.css";
 
 interface MoveToFolderDialogProps {
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (targetFolder: FolderRecord) => void;
-  excludeFolderId?: string;
+  folders: Array<{ id: string; name: string }>;
+  loading?: boolean;
+  error?: string | null;
+  excludeFolderId?: string | null;
   selectedCount: number;
+  submitting?: boolean;
+  onClose: () => void;
+  onConfirm: (targetFolderId: string) => void;
 }
 
 export function MoveToFolderDialog({
   isOpen,
+  folders,
+  loading = false,
+  error = null,
+  excludeFolderId = null,
+  selectedCount,
+  submitting = false,
   onClose,
   onConfirm,
-  excludeFolderId,
-  selectedCount,
 }: MoveToFolderDialogProps) {
   const t = useTranslate();
-  const { folders, loading, error } = useFileLibrary();
+  const [targetFolderId, setTargetFolderId] = useState("");
+  const availableFolders = folders.filter((folder) => folder.id !== excludeFolderId);
 
   if (!isOpen) return null;
 
-  const availableFolders = folders.filter((f) => f.id !== excludeFolderId);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!targetFolderId || submitting) return;
+    onConfirm(targetFolderId);
+  };
 
   return (
     <div
       className="modal-backdrop"
-      style={{ display: "grid", placeItems: "center", zIndex: 1000 }}
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target && !submitting) onClose();
+      }}
     >
-      <div
-        className="folder-dialog"
-        style={{
-          width: "440px",
-          padding: "24px",
-          display: "block",
-          maxHeight: "80vh",
-          overflowY: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
+      <form
+        className="folder-dialog modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="move-to-folder-dialog-title"
+        onSubmit={handleSubmit}
       >
-        <div className="dialog-heading">
-          <h3 style={{ fontSize: "18px", fontWeight: "700" }}>
-            {t("batch.confirmMoveTitle", "确认批量移动")}
-          </h3>
-          <p
-            className="delete-warning"
-            style={{ marginTop: "8px", color: "#c6d4ed", fontSize: "14px" }}
-          >
-            {t("batch.confirmMoveDesc", "将选中的")}{" "}
-            <strong>{selectedCount}</strong>{" "}
-            {t("batch.confirmMoveDescSuffix", "个文件移动到指定文件夹")}
-          </p>
-        </div>
-
-        <div style={{ marginTop: "16px", marginBottom: "16px" }}>
-          {loading && (
-            <p style={{ color: "#a9bae1", textAlign: "center" }}>
-              {t("common.loading", "正在加载...")}
-            </p>
-          )}
-          {error && <p style={{ color: "#ff4d4f" }}>{error}</p>}
-          {!loading && !error && availableFolders.length === 0 && (
-            <p style={{ color: "#a9bae1", textAlign: "center" }}>
-              {t("folder.noAvailableFolders", "没有可选的文件夹")}
-            </p>
-          )}
-          {!loading && !error && availableFolders.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                maxHeight: "240px",
-                overflowY: "auto",
-                border: "1px solid #1a2c4e",
-                borderRadius: "6px",
-                padding: "8px",
-                backgroundColor: "#0d1b3e",
-              }}
-            >
-              {availableFolders.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => onConfirm(f)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "none",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: "#fff",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontSize: "14px",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "rgba(39, 165, 255, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  <Icon name="folder" size={16} />
-                  <span>{f.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div
-          className="dialog-actions"
-          style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end", gap: "12px" }}
-        >
-          <button
-            type="button"
-            className="dialog-secondary"
-            onClick={onClose}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "transparent",
-              border: "1px solid #3d4f73",
-              color: "#c6d4ed",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            {t("dialog.cancel", "取消")}
+        <div className="dialog-header">
+          <div>
+            <span className="dialog-icon">
+              <Icon name="folder" size={18} />
+            </span>
+            <h3 id="move-to-folder-dialog-title">
+              {t("batch.confirmMoveTitle", "确认批量移动")}
+            </h3>
+          </div>
+          <button type="button" className="dialog-close" onClick={onClose} disabled={submitting}>
+            <Icon name="close" size={16} />
           </button>
         </div>
-      </div>
+
+        <p className="delete-warning">
+          {t("batch.confirmMoveDesc", "将选中的")} <strong>{selectedCount}</strong>
+          {t("batch.confirmMoveDescSuffix", "个文件移动到指定文件夹")}
+        </p>
+
+        {loading && <p className="folder-dialog-status">{t("common.loading", "正在加载...")}</p>}
+        {error && <p className="folder-dialog-error">{error}</p>}
+        {!loading && !error && availableFolders.length === 0 && (
+          <p className="folder-dialog-status">{t("folder.noAvailableFolders", "没有可选的文件夹")}</p>
+        )}
+
+        {!loading && !error && availableFolders.length > 0 && (
+          <div className="move-folder-options" role="radiogroup" aria-label={t("batch.moveTo", "移动到")}>
+            {availableFolders.map((folder) => (
+              <button
+                key={folder.id}
+                type="button"
+                role="radio"
+                aria-checked={targetFolderId === folder.id}
+                className={targetFolderId === folder.id ? "is-selected" : ""}
+                onClick={() => setTargetFolderId(folder.id)}
+              >
+                <Icon name="folder" size={16} />
+                <span>{folder.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="dialog-actions">
+          <button type="button" className="dialog-secondary" onClick={onClose} disabled={submitting}>
+            {t("dialog.cancel", "取消")}
+          </button>
+          <button
+            type="submit"
+            className="dialog-primary"
+            disabled={!targetFolderId || availableFolders.length === 0 || submitting}
+          >
+            <Icon name="folder" size={16} />
+            <span>
+              {submitting
+                ? t("folder.moving", "移动中...")
+                : t("folder.confirmMove", "确认移动")}
+            </span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

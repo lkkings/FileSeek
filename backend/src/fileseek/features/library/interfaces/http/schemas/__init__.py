@@ -1,8 +1,9 @@
 """Library HTTP schemas."""
 
 from fileseek.features.library.interfaces.http.schemas.file import (
-    FileImportRequest,
-    FileImportResponse,
+    BatchImportItemRequest,
+    BatchImportRequest,
+    BatchImportResponse,
     FileResponse,
     MoveFilesRequest,
     MoveFilesResponse,
@@ -19,8 +20,9 @@ __all__ = [
     "FolderUpdateRequest",
     "FolderResponse",
     "FileResponse",
-    "FileImportRequest",
-    "FileImportResponse",
+    "BatchImportItemRequest",
+    "BatchImportRequest",
+    "BatchImportResponse",
     "MoveFilesRequest",
     "MoveFilesResponse",
 ]

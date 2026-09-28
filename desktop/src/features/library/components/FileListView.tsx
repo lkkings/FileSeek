@@ -1,6 +1,6 @@
 import { useTranslate } from "../../../i18n/useTranslate";
 import type { FileItem } from "../../../services/api/search";
-import { FileListRow } from "./FileListRow";
+import { FileListRow } from "../../../components/FileListRow";
 
 interface FileListViewProps {
   files: FileItem[];

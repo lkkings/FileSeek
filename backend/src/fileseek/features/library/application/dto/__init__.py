@@ -23,3 +23,48 @@ class FileDTO:
     path: str
     folder_id: str | None
     tags: list[str]
+
+
+@dataclass(frozen=True)
+class FileThumbnailDTO:
+    id: str
+    size: str
+    data: bytes
+    source_size: int
+    source_modified: str
+
+
+@dataclass(frozen=True)
+class FileAvailabilityDTO:
+    id: str
+    access_state: str
+    last_checked_at: str
+
+
+@dataclass(frozen=True)
+class AddFileResult:
+    file_id: str
+    task_id: str
+
+
+@dataclass(frozen=True)
+class BatchImportStartedDTO:
+    import_id: str
+    total: int
+
+
+@dataclass(frozen=True)
+class ImportEventDTO:
+    id: int
+    type: str
+    payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class ImportTaskSnapshotDTO:
+    task_id: str
+    file_id: str | None
+    status: str
+    progress: int
+    stage: str | None
+    error_message: str | None

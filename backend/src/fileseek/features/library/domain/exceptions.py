@@ -17,5 +17,13 @@ class RecycleItemNotFoundError(NotFoundError):
     """回收站条目未找到。"""
 
 
+class ThumbnailUnavailableError(ApplicationError):
+    """缩略图生成失败。"""
+
+
+class SourceUnavailableError(ApplicationError):
+    """索引来源不可访问。"""
+
+
 class FolderNotEmptyError(ApplicationError):
     """文件夹非空，无法删除。"""

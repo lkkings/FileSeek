@@ -8,6 +8,8 @@ export interface FolderFilesQueryOptions {
   tag?: string | null;
   sortBy?: "relevance" | "created_at" | "size";
   sortOrder?: "asc" | "desc";
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 export function useFolderFiles(
@@ -15,7 +17,17 @@ export function useFolderFiles(
   client: ApiClient = defaultClient
 ) {
   const queryClient = useQueryClient();
-  const queryKey = ["library", "folder-files", options.folderId, options.category, options.tag, options.sortBy, options.sortOrder] as const;
+  const queryKey = [
+    "library",
+    "folder-files",
+    options.folderId,
+    options.category,
+    options.tag,
+    options.sortBy,
+    options.sortOrder,
+    options.pageNumber,
+    options.pageSize,
+  ] as const;
 
   const query = useQuery({
     queryKey,
@@ -41,6 +53,8 @@ export function useFolderFiles(
           max_size_m: null,
           start_date: null,
           end_date: null,
+          page_number: options.pageNumber ?? 1,
+          page_size: options.pageSize ?? 12,
         },
         client
       );
@@ -66,6 +80,10 @@ export function useFolderFiles(
     data: query.data,
     loading: query.isPending,
     error: query.error instanceof Error ? query.error.message : null,
+    pageNumber: query.data?.page_number ?? 1,
+    pageSize: query.data?.page_size ?? 12,
+    total: query.data?.total ?? 0,
+    hasMore: query.data?.has_more ?? false,
     reload,
   };
 }

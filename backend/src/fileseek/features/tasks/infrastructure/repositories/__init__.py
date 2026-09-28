@@ -110,6 +110,15 @@ class TaskRepositoryImpl(TaskRepository):
         }
         await task_model.save(update_fields=["metadata"])
 
+    async def delete(self, task_id: str) -> bool:
+        deleted = (
+            await TaskModel
+            .filter(id=task_id)
+            .exclude(status=TaskStatus.PROCESSING.value)
+            .delete()
+        )
+        return deleted > 0
+
 
     async def claim_next_queued(self) -> Task | None:
         async with in_transaction() as connection:

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+
 from fastapi.responses import Response, StreamingResponse
 
-from fileseek.infrastructure.fs import VirtualPath
+from fileseek.features.library.application.ports import SourceFile
 from fileseek.shared.utils.file_utils import detect_file_type_from_bytes
 
 _CHUNK_SIZE = 64 * 1024
@@ -10,12 +12,10 @@ _FILE_TYPE_HEADER_SIZE = 4096
 
 
 def stream_file(
-    path: str,
+    path: SourceFile,
     range_header: str | None = None,
 ):
     """返回支持浏览器预览和视频 Range 的文件响应。"""
-
-    path = VirtualPath(path)
 
     size = path.stat()["size"]
     content_type = _detect_content_type(path)
@@ -98,7 +98,7 @@ def stream_file(
 
 
 def _detect_content_type(
-    path: VirtualPath,
+    path: SourceFile,
 ) -> str:
     """读取少量文件头检测 MIME Type。"""
 
@@ -128,7 +128,7 @@ def _range_not_satisfiable(
 
 
 def _iter_file(
-    path: VirtualPath,
+    path: SourceFile,
     start: int,
     end: int,
 ):
@@ -153,3 +153,26 @@ def _iter_file(
             remaining -= len(chunk)
 
             yield chunk
+
+
+def thumbnail_response(
+    data: bytes,
+    *,
+    source_size: int,
+    source_modified: str,
+) -> Response:
+    """Return a cacheable WebP thumbnail without exposing source paths."""
+
+    digest = hashlib.sha256(
+        f"{source_size}:{source_modified}:".encode() + data,
+    ).hexdigest()
+    return Response(
+        content=data,
+        media_type="image/webp",
+        headers={
+            "Cache-Control": "private, max-age=86400",
+            "Content-Disposition": "inline",
+            "ETag": f'"{digest}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

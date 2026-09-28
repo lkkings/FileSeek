@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fileseek.features.library.domain.entities import FileChunk
 from fileseek.features.tasks.domain.entities import Task,TaskStage
-from fileseek.infrastructure.classifier import ClassifierPort
+from fileseek.infrastructure.classifier import ClassifierProvider
 from fileseek.infrastructure.embedding import EmbeddingPort
 from fileseek.infrastructure.vector_store import (
     VectorIndexPort,
@@ -13,12 +13,11 @@ from fileseek.infrastructure.vector_store import (
 from fileseek.shared.domain.file_types import FileType
 from fileseek.features.tasks.application.handlers.base import FileHandler
 from fileseek.features.tasks.domain.ports import (
+    ClassifierLabelSnapshot,
     DocumentParserPort,
     ParsedDocument,
     ProgressReporter
 )
-from fileseek.shared.domain.identifiers import generate_id
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ class DocumentHandler(FileHandler):
         document_parser: DocumentParserPort,
         embedding_service: EmbeddingPort,
         vector_index: VectorIndexPort,
-        classifier: ClassifierPort,
+        classifier: ClassifierProvider,
     ) -> None:
         self._document_parser = document_parser
         self._embedding_service = embedding_service
@@ -92,7 +91,13 @@ class DocumentHandler(FileHandler):
             0,
             TaskStage.CLASSIFY,
         )
-        tags = self.classify(embeddings)
+        classifier = self._classifier.get_classifier(
+            ClassifierLabelSnapshot.from_metadata(task.metadata)
+        )
+        tags = [
+            score.label
+            for score in classifier.classify_document(embeddings)
+        ]
         task.add_file_tags(tags)
         progress.report(
             100,

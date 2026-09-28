@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Protocol
+
+from fileseek.features.tasks.domain.ports import ClassifierLabelSnapshot
 
 from fileseek.config.settings import get_settings
 from fileseek.infrastructure.classifier.base import ClassifierPort
@@ -22,6 +25,33 @@ def get_classifier() -> ClassifierPort:
         video_similarity_threshold=settings.classifier_video_similarity_threshold,
         max_labels=settings.classifier_max_labels,
     )
+
+
+@lru_cache
+def get_classifier_for_snapshot(
+    snapshot: ClassifierLabelSnapshot,
+) -> ClassifierPort:
+    settings = get_settings()
+    return ClassifierFactory.create(
+        provider=settings.classifier_provider,
+        embedding=get_embedding_service(),
+        document_labels=list(snapshot.document_labels),
+        video_labels=list(snapshot.video_labels),
+        image_labels=list(snapshot.image_labels),
+        text_similarity_threshold=settings.classifier_text_similarity_threshold,
+        image_similarity_threshold=settings.classifier_image_similarity_threshold,
+        video_similarity_threshold=settings.classifier_video_similarity_threshold,
+        max_labels=settings.classifier_max_labels,
+    )
+
+
+class SnapshotClassifierProvider:
+    def get_classifier(self, snapshot: ClassifierLabelSnapshot) -> ClassifierPort:
+        return get_classifier_for_snapshot(snapshot)
+
+
+class ClassifierProvider(Protocol):
+    def get_classifier(self, snapshot: ClassifierLabelSnapshot) -> ClassifierPort: ...
 
 
 class ClassifierFactory:

@@ -12,7 +12,7 @@ interface FolderSectionProps {
   onCreateFolder: () => void;
   onEditFolder: (folder: FolderRecord) => void;
   onRequestDeleteFolder: (folder: FolderRecord) => void;
-  onFolderAction: (message: string) => void;
+  onImportFiles: (folder: FolderRecord) => void;
   onRetry: () => void;
 }
 
@@ -32,7 +32,7 @@ function formatModifiedDate(dateStr: string): string {
   }
 }
 
-export function FolderSection({ folders, loading, error, onCreateFolder, onEditFolder, onRequestDeleteFolder, onFolderAction, onRetry, onEnterFolder }: FolderSectionProps) {
+export function FolderSection({ folders, loading, error, onCreateFolder, onEditFolder, onRequestDeleteFolder, onImportFiles, onRetry, onEnterFolder }: FolderSectionProps) {
   const t = useTranslate();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -53,7 +53,7 @@ export function FolderSection({ folders, loading, error, onCreateFolder, onEditF
    <section className="library-section" aria-labelledby="library-title">
      <div className="section-heading">
        <div className="section-title-wrap">
-          <Icon name="folder" size={32} />
+          <Icon name="folder" size={20} />
          <h2 id="library-title">{t("library.title", "全部文件夹")}</h2>
        </div>
         <button className="create-button" type="button" onClick={onCreateFolder}><Icon name="plus" size={14} /><span>{t("library.create", "新建文件夹")}</span></button>
@@ -71,8 +71,7 @@ export function FolderSection({ folders, loading, error, onCreateFolder, onEditF
               <div className="folder-card-top">
                 <div className="folder-illustration"><Icon name="folder" size={58} /></div>
                 <div className="folder-actions">
-                  <button type="button" aria-label={t("folder.importFile", "导入文件")} title={t("folder.importFile", "导入文件")} onClick={(e) => { e.stopPropagation(); onFolderAction(`${t("folder.importFileSuccess", "已导入文件到")} “${folder.name}”`); }}><Icon name="document" size={18} /></button>
-                  <button type="button" aria-label={t("folder.importFolder", "导入文件夹")} title={t("folder.importFolder", "导入文件夹")} onClick={(e) => { e.stopPropagation(); onFolderAction(`${t("folder.importFolderSuccess", "已导入文件夹到")} “${folder.name}”`); }}><Icon name="folder" size={18} /></button>
+                  <button type="button" aria-label={t("folder.importFile", "导入文件")} title={t("folder.importFile", "导入文件")} onClick={(e) => { e.stopPropagation(); onImportFiles(folder); }}><Icon name="import" size={18} /></button>
                   <div className="more-dropdown-container" style={{ position: "relative" }} ref={isMenuOpen ? dropdownRef : null}>
                     <button type="button" aria-label={t("folder.more", "更多")} title={t("folder.more", "更多")} onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : folder.id); }}><Icon name="more" size={21} /></button>
                     {isMenuOpen && (

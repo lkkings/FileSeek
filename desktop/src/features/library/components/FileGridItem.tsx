@@ -1,5 +1,7 @@
 import { useRef } from "react";
+
 import { Icon } from "../../../components/Icon";
+import { FilePreviewCell } from "../../file-preview";
 import { FileItem } from "../../../services/api/search";
 
 interface FileGridItemProps {
@@ -7,6 +9,7 @@ interface FileGridItemProps {
   isBatchMode: boolean;
   isCardChecked: boolean;
   onCardClick: (file: FileItem) => void;
+  onCardDoubleClick: (file: FileItem) => void;
   onToggleCheck: (file: FileItem) => void;
   onLongPress: (fileId: string) => void;
 }
@@ -31,13 +34,18 @@ export function FileGridItem({
   isBatchMode,
   isCardChecked,
   onCardClick,
+  onCardDoubleClick,
   onToggleCheck,
   onLongPress,
 }: FileGridItemProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressCompleted = useRef(false);
 
   const startLongPress = (id: string) => {
+    longPressCompleted.current = false;
     longPressTimer.current = setTimeout(() => {
+      longPressCompleted.current = true;
       onLongPress(id);
     }, 800);
   };
@@ -49,10 +57,14 @@ export function FileGridItem({
     }
   };
 
+  const clearClickTimer = () => {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+  };
+
   const isVideo = file.category === "video";
-  const isImage = file.category === "image";
-  const isDoc = file.category === "document";
-  const scene = file.metadata?.scene;
   const duration = file.metadata?.duration;
 
   const formattedSize = file.size
@@ -71,12 +83,34 @@ export function FileGridItem({
   return (
     <article
       className={`file-item-card ${isBatchMode ? "in-batch-mode" : ""} ${isCardChecked ? "is-selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={file.file_name}
       onClick={() => {
+        if (longPressCompleted.current) {
+          longPressCompleted.current = false;
+          return;
+        }
         if (isBatchMode) {
           onToggleCheck(file);
         } else {
-          onCardClick(file);
+          clearClickTimer();
+          clickTimer.current = setTimeout(() => {
+            onCardClick(file);
+            clickTimer.current = null;
+          }, 220);
         }
+      }}
+      onDoubleClick={() => {
+        if (isBatchMode) return;
+        clearClickTimer();
+        onCardDoubleClick(file);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (isBatchMode) onToggleCheck(file);
+        else onCardClick(file);
       }}
       onMouseDown={() => startLongPress(file.file_id)}
       onMouseUp={cancelLongPress}
@@ -100,35 +134,15 @@ export function FileGridItem({
       )}
 
       <div className="file-card-thumb-area">
-        {isImage && (
-          <>
-            <div className={`file-card-thumb-image simulated-bg-${scene || "mountain"}`} />
-            <span className="thumb-icon-overlay">
-              <Icon name="image" size={12} />
-            </span>
-          </>
-        )}
-
-        {isVideo && (
-          <>
-            <div className={`file-card-thumb-image simulated-bg-${scene || "snow"}`} />
-            <div className="thumb-video-overlay">
-              <span className="video-play-center-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5,3 19,12 5,21" />
-                </svg>
-              </span>
-            </div>
-            {duration && (
-              <span className="video-duration-tag">{duration}</span>
-            )}
-          </>
-        )}
-
-        {isDoc && (
-          <div className={file.file_type === "pdf" ? "file-pdf-thumb" : "file-docx-thumb"}>
-            {file.file_type === "pdf" ? "PDF" : "W"}
-          </div>
+        <FilePreviewCell
+          item={{
+            fileId: file.file_id,
+            fileName: file.file_name,
+            fileType: file.category as "document" | "image" | "video",
+          }}
+        />
+        {isVideo && duration && (
+          <span className="video-duration-tag">{duration}</span>
         )}
       </div>
 

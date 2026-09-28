@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { AdvancedFilters, SearchBar, useFileSearch } from "../../features/file-search";
-import { useFileActions } from "../../features/file-search/hooks/useFileActions";
 import { SearchResultsView } from "../../features/file-search/components/SearchResultsView";
+import { FileViewerOverlay, useFileViewer } from "../../features/file-preview";
 import {
   FolderSection,
   FolderDialog,
   DeleteFolderDialog,
+  ImportFileDialog,
   useFileLibrary,
   FolderDetailsView,
+  useBatchImport,
   useMoveFilesToFolder,
 } from "../../features/library";
+import { useSettingsPreferences } from "../../features/settings";
 import { useMoveFilesToRecycle } from "../../features/recycle";
 import { useRecordRecentAccess } from "../../features/recent";
 import type { FolderRecord, FolderFormValues } from "../../features/library";
@@ -22,7 +25,7 @@ import "./library-page.css";
 export function LibraryPage() {
   const t = useTranslate();
   const [notice, setNotice] = useState("");
-  const { filters, updateFilter, resetFilters, searchState, submitSearch } = useFileSearch();
+  const { filters, updateFilter, resetFilters, searchState, submitSearch, changePage, changeSorting } = useFileSearch();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<FolderRecord | null>(null);
@@ -30,7 +33,8 @@ export function LibraryPage() {
   const moveFilesToRecycle = useMoveFilesToRecycle();
   const moveFilesToFolder = useMoveFilesToFolder();
   const recordRecentAccess = useRecordRecentAccess();
-  const fileActions = useFileActions();
+  const fileViewer = useFileViewer();
+  const { preferences } = useSettingsPreferences();
 
   // Folder library hooks and state
   const {
@@ -43,8 +47,9 @@ export function LibraryPage() {
     deleteFolder,
   } = useFileLibrary();
 
-  const [activeDialog, setActiveDialog] = useState<"create" | "edit" | "delete" | null>(null);
+  const [activeDialog, setActiveDialog] = useState<"create" | "edit" | "delete" | "import" | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderRecord | undefined>(undefined);
+  const batchImport = useBatchImport(selectedFolder?.id ?? "", setNotice);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
@@ -54,7 +59,7 @@ export function LibraryPage() {
   }
 
   function handleSearch() {
-    submitSearch(currentFolder ? currentFolder.id : null).then((res) => {
+    submitSearch({ folderId: currentFolder ? currentFolder.id : null }).then((res) => {
       if (res.ok) {
         setNotice(`${t("search.found", "找到")} ${res.resultCount} ${t("search.results", "条结果")}`);
       }
@@ -78,17 +83,6 @@ export function LibraryPage() {
     return response.status === "success";
   };
 
-  const handleFileTypeChange = (fileType: typeof filters.fileType) => {
-    updateFilter("fileType", fileType);
-    void submitSearch(currentFolder ? currentFolder.id : null, "relevance", "desc", fileType).then((result) => {
-      if (result.ok) {
-        setIsSearching(true);
-      } else {
-        setNotice(result.message);
-      }
-    });
-  };
-
   const handleOpenFile = async (file: FileItem) => {
     const response = await recordRecentAccess.mutateAsync(file.file_id);
     if (response.status !== "success") {
@@ -96,17 +90,28 @@ export function LibraryPage() {
       return;
     }
 
-    const openFailure = await fileActions.openFile(file);
-    setNotice(openFailure ?? `${t("recent.recorded", "已记录访问")} “${file.file_name}”`);
-  };
-
-  const handleLocateFile = async (file: FileItem) => {
-    const failure = await fileActions.revealFile(file);
-    setNotice(failure ?? `${t("search.located", "已定位")} “${file.file_name}”`);
+    fileViewer.openFile({
+      fileId: file.file_id,
+      fileName: file.file_name,
+      fileType: file.category as "document" | "image" | "video",
+    });
+    setNotice(`${t("recent.recorded", "已记录访问")} “${file.file_name}”`);
   };
 
   const refreshSearch = () => {
-    void submitSearch(currentFolder ? currentFolder.id : null);
+    void submitSearch({ folderId: currentFolder ? currentFolder.id : null });
+  };
+
+  const handleSortByChange = (sortBy: "relevance" | "created_at" | "size") => {
+    void changeSorting(sortBy, searchState.sortOrder);
+  };
+
+  const handleSortOrderChange = (sortOrder: "asc" | "desc") => {
+    void changeSorting(searchState.sortBy, sortOrder);
+  };
+
+  const handlePageChange = (pageNumber: number) => {
+    void changePage(pageNumber);
   };
 
   async function handleCreateSubmit(values: FolderFormValues) {
@@ -171,13 +176,23 @@ export function LibraryPage() {
           {isSearching ? (
             <SearchResultsView
               query={filters.globalQuery}
-              fileType={filters.fileType}
-              onFileTypeChange={handleFileTypeChange}
               onNotice={setNotice}
               onMoveToRecycle={handleMoveToRecycle}
+              onMoveToFolder={handleMoveToFolder}
+              folders={folders}
+              foldersLoading={libraryLoading}
+              foldersError={libraryError}
+              searchScopeFolderId={currentFolder ? currentFolder.id : null}
               onOpenFile={handleOpenFile}
-              onLocateFile={handleLocateFile}
               onRefresh={refreshSearch}
+              onPageChange={handlePageChange}
+              currentPage={searchState.pageNumber}
+              pageSize={searchState.pageSize}
+              totalItems={searchState.resultCount}
+              sortBy={searchState.sortBy}
+              sortOrder={searchState.sortOrder}
+              onSortByChange={handleSortByChange}
+              onSortOrderChange={handleSortOrderChange}
               data={searchState.data ?? undefined}
               status={searchState.status}
               error={searchState.error}
@@ -215,7 +230,11 @@ export function LibraryPage() {
                 setDialogError(null);
                 setActiveDialog("delete");
               }}
-              onFolderAction={(message) => setNotice(message)}
+              onImportFiles={(folder) => {
+                setSelectedFolder(folder);
+                setDialogError(null);
+                setActiveDialog("import");
+              }}
               onRetry={reloadLibrary}
               onEnterFolder={(folder) => { setCurrentFolder(folder); setShowFolderSearch(false); }}
             />
@@ -255,6 +274,22 @@ export function LibraryPage() {
           onConfirm={handleDeleteConfirm}
         />
       )}
+
+      {activeDialog === "import" && selectedFolder && (
+        <ImportFileDialog
+          folderName={selectedFolder.name}
+          storageLocations={preferences.storageDrives}
+          importState={batchImport.state}
+          onStart={batchImport.start}
+          onClose={() => setActiveDialog(null)}
+        />
+      )}
+
+      <FileViewerOverlay
+        isOpen={fileViewer.isOpen}
+        item={fileViewer.item}
+        onClose={fileViewer.onClose}
+      />
     </>
   );
 }

@@ -13,6 +13,19 @@ class CreateFolderCommand:
 class AddFileCommand:
     folder_id: str
     path: str
+    storage_id: str = "local"
+
+
+@dataclass(frozen=True)
+class BatchImportItemCommand:
+    path: str
+    storage_id: str = "local"
+
+
+@dataclass(frozen=True)
+class BatchImportCommand:
+    folder_id: str
+    items: tuple[BatchImportItemCommand, ...]
 
 @dataclass(frozen=True)
 class UpdateFolderCommand:

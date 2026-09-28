@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+from uuid import uuid4
 
 from tortoise import Tortoise
 
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     # 压缩包的位置。加入回收站＝压缩，`original_path` 记文件原来在哪、`recycle_path` 记包在哪。
     ("recycle_bin", "recycle_path", "VARCHAR(4096)"),
+    ("files", "storage_id", "VARCHAR(64)"),
+    ("files", "access_state", "VARCHAR(32)"),
+    ("files", "last_checked_at", "TIMESTAMP"),
 )
 
 
@@ -35,6 +39,7 @@ async def init_db() -> None:
     )
     await Tortoise.generate_schemas(safe=True)
     await _add_missing_columns()
+    await _seed_settings_and_backfill_files(settings)
 
 
 async def _add_missing_columns() -> None:
@@ -55,6 +60,68 @@ async def _add_missing_columns() -> None:
             f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"
         )
         logger.info("已为表 %s 补上列 %s", table, column)
+
+
+async def _seed_settings_and_backfill_files(settings: Settings) -> None:
+    from fileseek.infrastructure.database.models import (
+        ClassifierLabelModel,
+        FileModel,
+        StorageLocationModel,
+    )
+
+    await StorageLocationModel.get_or_create(
+        id="local",
+        defaults={
+            "type": "local",
+            "name": "本地存储",
+            "protocol": "file",
+            "endpoint": "file://localhost",
+            "root_path": str(settings.lib_root),
+            "is_system": True,
+        },
+    )
+    await StorageLocationModel.get_or_create(
+        id="external",
+        defaults={
+            "type": "external",
+            "name": "外部链接",
+            "protocol": "http",
+            "endpoint": "external",
+            "is_system": True,
+        },
+    )
+
+    if await ClassifierLabelModel.all().count() == 0:
+        default_labels = (
+            ("document", settings.classifier_document_labels),
+            ("image", settings.classifier_image_labels),
+            ("video", settings.classifier_video_labels),
+        )
+        await ClassifierLabelModel.bulk_create(
+            [
+                ClassifierLabelModel(
+                    id=uuid4().hex,
+                    category=category,
+                    label=label,
+                )
+                for category, labels in default_labels
+                for label in labels
+            ]
+        )
+
+    legacy_files = await FileModel.filter(storage_id__isnull=True).only(
+        "id",
+        "path",
+        "access_state",
+    )
+    for model in legacy_files:
+        model.storage_id = (
+            "external"
+            if model.path.startswith(("http://", "https://"))
+            else "local"
+        )
+        model.access_state = model.access_state or "unknown"
+        await model.save(update_fields=("storage_id", "access_state"))
 
 
 async def close_db() -> None:

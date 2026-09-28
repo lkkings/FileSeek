@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fileseek.features.tasks.application.commands import (
+    DeleteTaskCommand,
     RetryTaskCommand
 )
 from fileseek.features.tasks.application.dto import (
@@ -27,6 +28,10 @@ def task_to_schema(task: TaskDTO) -> TaskResponse:
 
 def retry_task_to_command(task_id: str) -> RetryTaskCommand:
     return RetryTaskCommand(task_id=task_id)
+
+
+def delete_task_to_command(task_id: str) -> DeleteTaskCommand:
+    return DeleteTaskCommand(task_id=task_id)
 
 
 

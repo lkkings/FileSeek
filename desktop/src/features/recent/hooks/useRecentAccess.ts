@@ -3,11 +3,35 @@ import { useState } from "react";
 
 import { useTranslate } from "../../../i18n/useTranslate";
 import { defaultClient, errorText, type ApiClient } from "../../../services/api/client";
-import { deleteRecentRecord, listRecent } from "../../../services/api/recent";
+import { deleteRecentRecord, listRecent, type RecentAccessItem } from "../../../services/api/recent";
 import type { FileItem } from "../../../services/api/search";
 import type { RecentDeleteResult, RecentPageData } from "../types";
 
 const RECENT_LIST_QUERY_KEY = ["recent", "list"] as const;
+
+function latestRecordsByFileId(items: RecentAccessItem[]): RecentAccessItem[] {
+  const latest = new Map<string, RecentAccessItem>();
+
+  for (const item of items) {
+    const current = latest.get(item.file_id);
+    if (!current) {
+      latest.set(item.file_id, item);
+      continue;
+    }
+
+    const itemTime = Date.parse(item.accessed_at);
+    const currentTime = Date.parse(current.accessed_at);
+    const isNewer = Number.isNaN(itemTime) || Number.isNaN(currentTime)
+      ? item.accessed_at > current.accessed_at
+      : itemTime > currentTime;
+
+    if (isNewer) {
+      latest.set(item.file_id, item);
+    }
+  }
+
+  return Array.from(latest.values());
+}
 
 function toRecentFile(fileId: string, accessedAt: string, file: {
   id: string;
@@ -65,8 +89,9 @@ export function useRecentAccess(client: ApiClient = defaultClient) {
       }
 
       const data = response.data;
+      const items = latestRecordsByFileId(data.items);
       return {
-        items: data.items.map((item) => ({
+        items: items.map((item) => ({
           recordId: item.id,
           fileId: item.file_id,
           accessedAt: item.accessed_at,

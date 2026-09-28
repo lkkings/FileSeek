@@ -1,0 +1,22 @@
+.document-format-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  color: var(--text-secondary, #64748b);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.document-format-icon svg {
+  display: none;
+}
+
+.document-format-icon.is-unsupported {
+  opacity: 0.55;
+}

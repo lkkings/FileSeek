@@ -83,3 +83,28 @@ class DefaultTaskManager(TaskManager):
 
         await self.task_repo.save(task)
         return task
+
+    async def delete(
+        self,
+        task_id: str,
+    ) -> None:
+        """删除任务。
+
+        处理中的任务不能删除：调度线程稍后会继续保存任务进度，
+        无条件删除会让任务通过 update_or_create 重新出现。
+        """
+        task = await self.task_repo.get_by_id(task_id)
+
+        if task is None:
+            raise TaskNotFoundError(f"任务 {task_id} 不存在")
+
+        if task.status is TaskStatus.PROCESSING:
+            raise InvalidTransitionError(f"任务 {task_id} 正在处理，不能移除")
+
+        deleted = await self.task_repo.delete(task_id)
+
+        if not deleted:
+            current = await self.task_repo.get_by_id(task_id)
+            if current is None:
+                raise TaskNotFoundError(f"任务 {task_id} 不存在")
+            raise InvalidTransitionError(f"任务 {task_id} 状态已变化，不能移除")

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
 @dataclass(frozen=True)
 class FileDTO:
     """向量命中的文件基础信息。"""
@@ -14,8 +16,8 @@ class FileDTO:
     modified: str | None
     tags: list[str]
     score: float = 0
-    metadata: dict = None
-    chunks: list = None
+    metadata: dict[str, object] = field(default_factory=dict)
+    chunks: list[object] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class SearchResultsDTO:

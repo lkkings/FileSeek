@@ -631,66 +631,6 @@
   color: #ffffff;
 }
 
-/* Tags badges in card */
-.card-tags-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  overflow: hidden;
-  flex-wrap: nowrap;
-}
-
-.card-tag-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 1px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-/* Colors based on screenshot Image #1 */
-.badge-blue {
-  background: rgba(14, 103, 244, 0.15);
-  border: 1px solid rgba(14, 103, 244, 0.35);
-  color: #21a7ff;
-}
-
-.badge-purple {
-  background: rgba(156, 39, 176, 0.15);
-  border: 1px solid rgba(156, 39, 176, 0.35);
-  color: #ab47bc;
-}
-
-.badge-violet {
-  background: rgba(103, 58, 183, 0.15);
-  border: 1px solid rgba(103, 58, 183, 0.35);
-  color: #7986cb;
-}
-
-.badge-green {
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid rgba(76, 175, 80, 0.35);
-  color: #66bb6a;
-}
-
-.badge-cyan {
-  background: rgba(0, 188, 212, 0.15);
-  border: 1px solid rgba(0, 188, 212, 0.35);
-  color: #26c6da;
-}
-
-.badge-teal {
-  background: rgba(0, 150, 136, 0.15);
-  border: 1px solid rgba(0, 150, 136, 0.35);
-  color: #1de9b6;
-}
-
-.badge-orange {
-  background: rgba(255, 87, 34, 0.15);
-  border: 1px solid rgba(255, 87, 34, 0.35);
-  color: #ff7043;
-}
-
 /* Card footer row */
 .card-footer-row {
   display: flex;
@@ -792,108 +732,6 @@
   grid-column: 1 / -1;
 }
 
-.file-list-view {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-}
-
-.file-list-header,
-.file-list-row {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) 180px 110px;
-  gap: 14px;
-  align-items: center;
-  padding: 10px 14px;
-  border: 1px solid rgba(43, 90, 158, 0.35);
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(11, 38, 82, 0.45) 0%, rgba(6, 22, 54, 0.6) 100%);
-}
-
-.file-list-header {
-  color: #a9bae1;
-  font-size: 12px;
-  font-weight: 600;
-  justify-items: center;
-  text-align: center;
-}
-
-.file-list-row {
-  color: #e7eefc;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-}
-
-.file-list-row:hover {
-  border-color: #21a7ff;
-  background: linear-gradient(135deg, rgba(15, 50, 107, 0.6) 0%, rgba(9, 31, 74, 0.75) 100%);
-}
-
-.file-list-row.is-selected {
-  border-color: #27a5ff;
-  box-shadow: 0 0 10px rgba(39, 165, 255, 0.35);
-}
-
-.file-list-preview-thumb {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 52px;
-  border: 1px solid rgba(43, 90, 158, 0.3);
-  border-radius: 8px;
-  background: rgba(3, 14, 38, 0.5);
-  color: #ccd9f0;
-}
-
-.file-list-preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.file-list-checkbox {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.file-list-checkbox.is-checked {
-  border-color: #27a5ff;
-  background: #27a5ff;
-}
-
-.file-list-tags {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  overflow: hidden;
-}
-
-.file-list-name {
-  overflow: hidden;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-list-size {
-  color: #aebedf;
-  font-size: 12px;
-  text-align: right;
-}
-
 .details-sub-actions-bar .sort-controls-wrap .sort-button,
 .details-sub-actions-bar .sort-controls-wrap .sort-menu {
   min-width: 150px;
@@ -935,12 +773,6 @@
   .app-shell.sidebar-collapsed .files-grid-container,
   .files-grid-container {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
-
-  .app-shell.sidebar-collapsed .file-list-header,
-  .app-shell.sidebar-collapsed .file-list-row {
-    grid-template-columns: 72px minmax(0, 1fr) 140px 90px;
-    gap: 10px;
   }
 
   .filter-row {
@@ -1010,20 +842,6 @@
 
   .files-grid-container {
     grid-template-columns: 1fr;
-  }
-
-  .app-shell.sidebar-collapsed .file-list-header,
-  .app-shell.sidebar-collapsed .file-list-row {
-    grid-template-columns: 64px minmax(0, 1fr) 110px 80px;
-    gap: 8px;
-    padding: 8px 10px;
-  }
-
-  .file-list-header,
-  .file-list-row {
-    grid-template-columns: 64px minmax(0, 1fr) 110px 80px;
-    gap: 8px;
-    padding: 8px 10px;
   }
 
   .details-header,

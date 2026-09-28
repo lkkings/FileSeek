@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 
 export type IconName =
   | "archive"
+  | "arrowUp"
   | "calendar"
   | "chevron"
   | "clock"
@@ -12,8 +13,12 @@ export type IconName =
   | "eye"
   | "filter"
   | "folder"
+  | "grid"
+  | "import"
   | "image"
+  | "list"
   | "more"
+  | "nas"
   | "plus"
   | "pulse"
   | "refresh"
@@ -27,6 +32,7 @@ export type IconName =
 
 const iconPaths: Record<IconName, ReactNode> = {
   archive: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 9h8M8 13h3M13 13h3" /></>,
+  arrowUp: <><path d="M12 19V5" /><path d="m7 10 5-5 5 5" /></>,
   calendar: <><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M7 3v4M17 3v4M4 9h16" /></>,
   chevron: <path d="m7 9 5 5 5-5" />,
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></>,
@@ -37,8 +43,12 @@ const iconPaths: Record<IconName, ReactNode> = {
   eye: <><path d="M2.8 12s3.3-5.2 9.2-5.2S21.2 12 21.2 12 17.9 17.2 12 17.2 2.8 12 2.8 12Z" /><circle cx="12" cy="12" r="2.5" /></>,
   filter: <path d="M4 5h16l-6.2 7.2v5.4l-3.6 1.9v-7.3L4 5Z" />,
   folder: <path d="M3.5 6.7A2.2 2.2 0 0 1 5.7 4.5h4l2 2h6.6a2.2 2.2 0 0 1 2.2 2.2v8.6a2.2 2.2 0 0 1-2.2 2.2H5.7a2.2 2.2 0 0 1-2.2-2.2V6.7Z" />,
+  grid: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></>,
+  import: <><path d="M12 3v10" /><path d="m7.5 9 4.5 4.5L16.5 9" /><path d="M4.5 17.5h15" /></>,
   image: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><circle cx="8.5" cy="9" r="1.2" /><path d="m4.5 17 4.6-4.7 3.3 3 2.1-2.1 2.1-2.1 4.9 4.8" /></>,
+  list: <><path d="M4 7h16M4 12h16M4 17h16" /><circle cx="4" cy="7" r=".5" fill="currentColor" /><circle cx="4" cy="12" r=".5" fill="currentColor" /><circle cx="4" cy="17" r=".5" fill="currentColor" /></>,
   more: <><circle cx="5" cy="12" r=".8" fill="currentColor" /><circle cx="12" cy="12" r=".8" fill="currentColor" /><circle cx="19" cy="12" r=".8" fill="currentColor" /></>,
+  nas: <><rect x="4" y="4" width="16" height="5.5" rx="1.6" /><rect x="4" y="14.5" width="16" height="5.5" rx="1.6" /><path d="M7.5 6.75h3M7.5 17.25h3" /><circle cx="16.5" cy="6.75" r=".9" fill="currentColor" /><circle cx="16.5" cy="17.25" r=".9" fill="currentColor" /><path d="M9.5 9.5v5M14.5 9.5v5" opacity=".55" /></>,
   plus: <><path d="M12 5v14M5 12h14" /></>,
   pulse: <path d="M3 12h4l2-7 4 14 2-7h6" />,
   refresh: <><path d="M20 11a8 8 0 0 0-14.8-3L4 10" /><path d="M4 5v5h5M4 13a8 8 0 0 0 14.8 3L20 14" /><path d="M20 19v-5h-5" /></>,

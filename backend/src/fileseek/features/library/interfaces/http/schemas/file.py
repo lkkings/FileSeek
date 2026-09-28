@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FileResponse(BaseModel):
@@ -18,17 +18,23 @@ class FileResponse(BaseModel):
     path: str
 
 
-class FileImportRequest(BaseModel):
-    """单文件入库请求。"""
+class BatchImportItemRequest(BaseModel):
+    path: str = Field(min_length=1)
+    storage_id: str = Field(default="local", alias="storage_id")
 
-    folder_id: str  = Field(..., alias="folder_id")
-    path: str = Field(alias="path")
+    model_config = ConfigDict(populate_by_name=True)
 
 
-class FileImportResponse(BaseModel):
-    """单文件入库响应。"""
+class BatchImportRequest(BaseModel):
+    folder_id: str = Field(min_length=1, alias="folder_id")
+    items: list[BatchImportItemRequest] = Field(min_length=1)
 
-    file_id: str = Field(alias="file_id")
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class BatchImportResponse(BaseModel):
+    import_id: str = Field(alias="import_id")
+    total: int
 
 
 class MoveFilesRequest(BaseModel):

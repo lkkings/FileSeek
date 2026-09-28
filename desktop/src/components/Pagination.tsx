@@ -22,7 +22,7 @@ export function Pagination({
   if (variant === "details") {
     return (
       <footer className="details-pagination-footer">
-        <div className="pagination-controls-group">
+        <div className="pagination-controls-group" role="group" aria-label={t("search.pagination", "分页")}>
           <button
             className="btn-pagination-action"
             type="button"
@@ -58,6 +58,7 @@ export function Pagination({
         </div>
         <span className="pagination-total-items">
           {t("folder.totalItemsPrompt", "共")} {totalItems} {t("folder.totalItemsSuffix", "条")}
+          {t("folder.totalPagesPrompt", " / ")} {totalPages} {t("folder.totalPagesSuffix", "页")}
         </span>
       </footer>
     );

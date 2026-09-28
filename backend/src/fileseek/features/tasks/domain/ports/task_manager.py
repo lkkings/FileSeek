@@ -13,9 +13,8 @@ class TaskManager(Protocol):
 
     async def create(
         self,
-        task_id:str,
-        path:str,
-    ) -> None:
+        task: Task,
+    ) -> Task:
         """创建并提交任务。"""
         ...
 
