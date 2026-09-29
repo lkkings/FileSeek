@@ -3,11 +3,40 @@ import { describe, expect, it, vi } from "vitest";
 
 import { renderWithI18n } from "../../test/test-utils";
 import { TasksPage } from "./TasksPage";
+import type { FilePreviewItem } from "../../features/file-preview";
 
 const mocks = vi.hoisted(() => ({
   reload: vi.fn(),
   retryTask: { mutateAsync: vi.fn(async () => ({ status: "success", data: null, error: null })) },
+  cancelTask: { mutateAsync: vi.fn(async () => ({ status: "success", data: null, error: null })) },
 }));
+
+vi.mock("../../features/file-preview", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../features/file-preview")>();
+
+  function MockFileViewerOverlay({
+    isOpen,
+    item,
+    onClose,
+  }: {
+    isOpen: boolean;
+    item: FilePreviewItem | null;
+    onClose: () => void;
+  }) {
+    if (!isOpen || !item) return null;
+    return (
+      <div role="dialog" aria-label="文件预览">
+        <p>{item.fileName}</p>
+        <button type="button" onClick={onClose}>关闭</button>
+      </div>
+    );
+  }
+
+  return {
+    ...actual,
+    FileViewerOverlay: MockFileViewerOverlay,
+  };
+});
 
 const task = {
   id: "task-1",
@@ -20,7 +49,9 @@ const task = {
     modified: "2026-09-28T08:00:00Z",
   },
   status: "failed",
-  progress: 45,
+  progress: "4/9",
+  completed_count: 4,
+  total_count: 9,
   stage: null,
   error_message: "OCR failed",
   created_at: "2026-09-28T08:00:00Z",
@@ -30,7 +61,7 @@ vi.mock("../../features/tasks/hooks/useTasks", () => ({
   useTasks: () => ({
     data: {
       tasks: [task],
-      counts: { queued: 1, processing: 2, completed: 3, failed: 4 },
+      counts: { queued: 1, processing: 2, completed: 3, failed: 4, cancelled: 0 },
       page: 1,
       page_size: 50,
       total: 10,
@@ -42,18 +73,28 @@ vi.mock("../../features/tasks/hooks/useTasks", () => ({
     pageSize: 50,
     reload: mocks.reload,
     retryTask: mocks.retryTask,
+    cancelTask: mocks.cancelTask,
   }),
 }));
 
 describe("TasksPage", () => {
-  it("uses the four backend statuses and retries a failed task", async () => {
+  it("uses the backend statuses and retries a failed task", async () => {
     renderWithI18n(<TasksPage />);
 
+    expect(screen.getByRole("heading", { name: "任务队列" })).toBeInTheDocument();
+    const summary = screen.getByLabelText("任务状态摘要");
+    expect(within(summary).getByText("总数")).toBeInTheDocument();
+    expect(within(summary).getByText("10")).toBeInTheDocument();
+    expect(within(summary).getByText("处理中")).toBeInTheDocument();
+    expect(within(summary).getByText("2")).toBeInTheDocument();
+    expect(within(summary).getByText("失败")).toBeInTheDocument();
+    expect(within(summary).getByText("4")).toBeInTheDocument();
     expect(screen.getByText("Task.pdf")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /等待中/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /处理中/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /已完成/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /失败/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /已终止/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /pending/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Task.pdf 重试" }));
@@ -71,7 +112,14 @@ describe("TasksPage", () => {
     expect(drawer).toBeInTheDocument();
     expect(within(drawer!).getByText("Task.pdf")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /关闭/ }));
+    fireEvent.click(within(drawer!).getByRole("button", { name: "打开" }));
+    const viewer = screen.getByRole("dialog", { name: "文件预览" });
+    expect(within(viewer).getByText("Task.pdf")).toBeInTheDocument();
+
+    fireEvent.click(within(viewer).getByRole("button", { name: "关闭" }));
+    expect(screen.queryByRole("dialog", { name: "文件预览" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("complementary")).getByRole("button", { name: "关闭" }));
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /一键重试/ }));

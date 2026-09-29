@@ -1,14 +1,16 @@
 """Library 文件的 Tortoise 仓储实现。"""
 
-from datetime import datetime, time
-from datetime import UTC
 from collections.abc import Sequence
+from datetime import UTC, datetime, time
 
-from fileseek.features.library.domain.entities import File,FileChunk
-from fileseek.features.library.domain.repositories import FileRepository
-from fileseek.infrastructure.database.models import FileModel,TagModel
-from fileseek.shared.domain.file_types import FileType, FileCategory
+from tortoise.queryset import QuerySet
 from tortoise.transactions import in_transaction
+
+from fileseek.features.library.domain.entities import File, FileChunk
+from fileseek.features.library.domain.repositories import FileRepository
+from fileseek.infrastructure.database.models import FileModel, TagModel
+from fileseek.shared.domain.file_types import FileCategory, FileType
+from fileseek.shared.domain.identifiers import generate_id
 
 
 async def _to_entity(model: FileModel) -> File:
@@ -108,6 +110,7 @@ class FileRepositoryImpl(FileRepository):
 
                 tag, _ = await TagModel.get_or_create(
                     name=tag_name,
+                    defaults={"id": generate_id("tag")},
                 )
                 tag_models.append(tag)
 
@@ -129,15 +132,6 @@ class FileRepositoryImpl(FileRepository):
         )
         return updated > 0
 
-    async def mark_unavailable_by_storage(
-        self,
-        storage_id: str,
-    ) -> int:
-        return await FileModel.filter(storage_id=storage_id).update(
-            access_state="unavailable",
-            last_checked_at=datetime.now(UTC),
-        )
-
     async def _delete(self, file_id: str) -> None:
         await FileModel.filter(
             id=file_id,
@@ -154,15 +148,32 @@ class FileRepositoryImpl(FileRepository):
             id__in=file_ids,
         ).delete()
 
-    async def count_by_category(self) -> dict[str, int]:
-        return await self._count_by_category()
-
-    async def _count_by_category(self) -> dict[str, int]:
+    async def count_by_category(
+        self,
+        *,
+        name_query: str | None = None,
+        tag: str | None = None,
+        min_size: float | None = None,
+        max_size: float | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        folder_id: str | None = None,
+        categories: list[str] | None = None,
+    ) -> dict[str, int]:
         from tortoise.functions import Count
 
+        query = self._filtered_query(
+            name_query=name_query,
+            tag=tag,
+            min_size=min_size,
+            max_size=max_size,
+            start_date=start_date,
+            end_date=end_date,
+            folder_id=folder_id,
+            categories=categories,
+        )
         rows = await (
-            FileModel
-            .filter(recycle_item__isnull=True)
+            query
             .group_by("category")
             .annotate(count=Count("id"))
             .values("category", "count")
@@ -176,10 +187,30 @@ class FileRepositoryImpl(FileRepository):
         return counts
 
 
-    async def count(self) -> int:
-        return await FileModel.filter(
-            recycle_item__isnull=True,
-        ).count()
+    async def count(
+        self,
+        *,
+        name_query: str | None = None,
+        tag: str | None = None,
+        min_size: float | None = None,
+        max_size: float | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        folder_id: str | None = None,
+        categories: list[str] | None = None,
+    ) -> int:
+        return int(
+            await self._filtered_query(
+                name_query=name_query,
+                tag=tag,
+                min_size=min_size,
+                max_size=max_size,
+                start_date=start_date,
+                end_date=end_date,
+                folder_id=folder_id,
+                categories=categories,
+            ).count(),
+        )
 
     async def query(
         self,
@@ -206,120 +237,16 @@ class FileRepositoryImpl(FileRepository):
         # 基础查询
         # =========================
 
-        query = FileModel.filter(
-            recycle_item__isnull=True,
+        query = self._filtered_query(
+            name_query=name_query,
+            tag=tag,
+            min_size=min_size,
+            max_size=max_size,
+            start_date=start_date,
+            end_date=end_date,
+            folder_id=folder_id,
+            categories=categories,
         )
-
-        # =========================
-        # 文件名模糊搜索
-        # =========================
-
-        if name_query:
-            name_query = name_query.strip()
-
-            if name_query:
-                query = query.filter(
-                    name__icontains=name_query,
-                )
-
-        # =========================
-        # Tag
-        # =========================
-
-        if tag:
-            tag = tag.strip()
-
-            if tag:
-                query = query.filter(
-                    tags__name=tag,
-                )
-
-        # =========================
-        # 文件大小
-        # =========================
-
-        if min_size is not None:
-            query = query.filter(
-                size__gte=min_size,
-            )
-
-        if max_size is not None:
-            query = query.filter(
-                size__lte=max_size,
-            )
-
-        # 防止出现无意义的范围
-        if (
-            min_size is not None
-            and max_size is not None
-            and min_size > max_size
-        ):
-            return [], 0
-
-        # =========================
-        # 文件夹
-        # =========================
-
-        if folder_id:
-            folder_id = folder_id.strip()
-
-            if folder_id:
-                query = query.filter(
-                    folder_id=folder_id,
-                )
-
-        # =========================
-        # 文件分类
-        # =========================
-
-        if categories:
-            categories = [
-                category.strip()
-                for category in categories
-                if category and category.strip()
-            ]
-
-            if categories:
-                query = query.filter(
-                    category__in=categories,
-                )
-
-        # =========================
-        # 创建时间：开始日期
-        # =========================
-
-        if start_date:
-            start_datetime = datetime.fromisoformat(
-                start_date,
-            )
-
-            query = query.filter(
-                created_at__gte=start_datetime,
-            )
-
-        # =========================
-        # 创建时间：结束日期
-        # =========================
-
-        if end_date:
-            end_datetime = datetime.fromisoformat(
-                end_date,
-            )
-
-            # 如果只传日期，例如：
-            # 2026-09-26
-            #
-            # 则表示整个 9 月 26 日，而不是：
-            # 2026-09-26 00:00:00
-            if end_datetime.time() == time.min:
-                end_datetime = datetime.combine(
-                    end_datetime.date(),
-                    time.max,
-                )
-
-            query = query.filter(
-                created_at__lte=end_datetime,
-            )
 
         # =========================
         # ManyToMany 去重
@@ -386,3 +313,68 @@ class FileRepositoryImpl(FileRepository):
             )
 
         return await _to_entities(models)
+
+    def _filtered_query(
+        self,
+        name_query: str | None,
+        tag: str | None,
+        min_size: float | None,
+        max_size: float | None,
+        start_date: str | None,
+        end_date: str | None,
+        folder_id: str | None,
+        categories: list[str] | None,
+    ) -> QuerySet[FileModel]:
+        query = FileModel.filter(recycle_item__isnull=True)
+
+        if name_query:
+            name_query = name_query.strip()
+
+            if name_query:
+                query = query.filter(name__icontains=name_query)
+
+        if tag:
+            tag = tag.strip()
+
+            if tag:
+                query = query.filter(tags__name=tag)
+
+        if min_size is not None:
+            query = query.filter(size__gte=min_size)
+
+        if max_size is not None:
+            query = query.filter(size__lte=max_size)
+
+        if folder_id:
+            folder_id = folder_id.strip()
+
+            if folder_id:
+                query = query.filter(folder_id=folder_id)
+
+        if categories:
+            categories = [
+                category.strip()
+                for category in categories
+                if category and category.strip()
+            ]
+
+            if categories:
+                query = query.filter(category__in=categories)
+
+        if start_date:
+            query = query.filter(
+                created_at__gte=datetime.fromisoformat(start_date),
+            )
+
+        if end_date:
+            end_datetime = datetime.fromisoformat(end_date)
+
+            if end_datetime.time() == time.min:
+                end_datetime = datetime.combine(
+                    end_datetime.date(),
+                    time.max,
+                )
+
+            query = query.filter(created_at__lte=end_datetime)
+
+        return query

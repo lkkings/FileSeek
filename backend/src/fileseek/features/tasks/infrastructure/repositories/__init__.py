@@ -1,13 +1,15 @@
 """Tasks feature 的 Tortoise 仓储实现。"""
 
-from tortoise.transactions import in_transaction
+from typing import cast
+
 from tortoise.functions import Count
+from tortoise.transactions import in_transaction
 
 from fileseek.features.library.domain.entities import File
 from fileseek.features.tasks.domain.entities import Task, TaskStage, TaskStatus
 from fileseek.features.tasks.domain.repositories import TaskRepository
 from fileseek.infrastructure.database.models import FileModel, TaskModel
-from fileseek.shared.domain.file_types import FileType,FileCategory
+from fileseek.shared.domain.file_types import FileCategory, FileType
 
 
 def _file_to_entity(model: FileModel) -> File:
@@ -18,19 +20,24 @@ def _file_to_entity(model: FileModel) -> File:
         size=model.size,
         modified=model.modified,
         category=FileCategory(model.category),
-        folder_id=model.folder_id,
+        folder_id=cast(str | None, getattr(model, "folder_id", None)),
         path=model.path,
         tags=[tag.name for tag in model.tags],
     )
 
 
 def _to_entity(model: TaskModel) -> Task:
+    file_model = model.file
+    if file_model is None:
+        raise ValueError(f"任务 {model.id} 缺少关联文件")
+
     return Task(
         id=model.id,
-        file=_file_to_entity(model.file) if model.file else None,
+        file=_file_to_entity(file_model),
         metadata=dict(model.metadata or {}),
         status=TaskStatus(model.status),
-        progress=model.progress,
+        completed_count=model.completed_count,
+        total_count=model.total_count,
         stage=TaskStage(model.stage) if model.stage else None,
         error_message=model.error_message,
         created_at=model.created_at,
@@ -81,10 +88,7 @@ class TaskRepositoryImpl(TaskRepository):
             .values("status", "count")
         )
 
-        counts = {
-            status: 0
-            for status in TaskStatus
-        }
+        counts = dict.fromkeys(TaskStatus, 0)
 
         for row in rows:
             status = TaskStatus(row["status"])
@@ -98,7 +102,8 @@ class TaskRepositoryImpl(TaskRepository):
             defaults={
                 "file_id": task.file.id if task.file else None,
                 "status": task.status.value,
-                "progress": task.progress,
+                "completed_count": task.completed_count,
+                "total_count": task.total_count,
                 "stage": task.stage.value if task.stage else None,
                 "error_message": task.error_message,
             },
@@ -110,14 +115,59 @@ class TaskRepositoryImpl(TaskRepository):
         }
         await task_model.save(update_fields=["metadata"])
 
+    async def cancel(self, task_id: str) -> Task | None:
+        """原子地把处理中的任务标记为已终止。"""
+        async with in_transaction() as connection:
+            model = (
+                await TaskModel
+                .filter(id=task_id)
+                .using_db(connection)
+                .select_for_update()
+                .get_or_none()
+            )
+
+            if model is None or model.status != TaskStatus.PROCESSING.value:
+                return None
+
+            model.status = TaskStatus.CANCELLED.value
+            model.error_message = "任务已终止"
+            await model.save(
+                using_db=connection,
+                update_fields=["status", "error_message", "updated_at"],
+            )
+            await model.fetch_related("file", "file__tags")
+            return _to_entity(model)
+
     async def delete(self, task_id: str) -> bool:
-        deleted = (
-            await TaskModel
-            .filter(id=task_id)
-            .exclude(status=TaskStatus.PROCESSING.value)
-            .delete()
-        )
-        return deleted > 0
+        async with in_transaction() as connection:
+            task_model = (
+                await TaskModel
+                .filter(id=task_id)
+                .using_db(connection)
+                .select_for_update()
+                .get_or_none()
+            )
+
+            if task_model is None or task_model.status == TaskStatus.PROCESSING.value:
+                return False
+
+            if task_model.status == TaskStatus.COMPLETED.value:
+                await task_model.delete(using_db=connection)
+                return True
+
+            file_model = (
+                await FileModel
+                .filter(id=cast(str, getattr(task_model, "file_id", None)))
+                .using_db(connection)
+                .get_or_none()
+            )
+
+            if file_model is not None:
+                await file_model.delete(using_db=connection)
+                return True
+
+            await task_model.delete(using_db=connection)
+            return True
 
 
     async def claim_next_queued(self) -> Task | None:

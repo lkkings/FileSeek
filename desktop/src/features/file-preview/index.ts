@@ -7,12 +7,15 @@ export { useFileViewer } from "./hooks/useFileViewer";
 export { VideoDrawerPreview } from "./components/VideoDrawerPreview";
 export {
   buildPreviewUrl,
+  buildThumbnailUrl,
   buildOriginalFileUrl,
   getDocumentFormat,
   getDocumentPreviewSupport,
+  getImagePreviewSupport,
   getFileExtension,
   getPreviewUrlOptions,
   getPreviewResourceKind,
+  resolvePreviewCategory,
   resolvePreviewEnvironment,
 } from "./preview";
 export {

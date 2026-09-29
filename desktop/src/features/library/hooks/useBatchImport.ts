@@ -38,7 +38,7 @@ export function useBatchImport(
   useEffect(() => () => streamRef.current?.close(), []);
 
   const start = useCallback(
-    async (selections: ImportFileSelection[]) => {
+    async (selections: ImportFileSelection[], targetFolderId = folderId) => {
       if (selections.length === 0) return false;
       const items: BatchImportItem[] = selections.map((selection) => ({
         path: selection.path,
@@ -46,7 +46,7 @@ export function useBatchImport(
       }));
       setState({ ...IDLE_STATE, status: "starting", items: toProgressItems(selections) });
 
-      const response = await startBatchImport({ folderId, items });
+      const response = await startBatchImport({ folderId: targetFolderId, items });
       if (response.status !== "success" || !response.data) {
         const message =
           errorText(response.error) || t("import.startFailed", "导入任务创建失败");
@@ -91,8 +91,6 @@ function toProgressItems(selections: ImportFileSelection[]): ImportProgressItem[
     storageId: selection.storageId,
     path: selection.path,
     state: "queued",
-    progress: 0,
-    stage: null,
     fileId: null,
     taskId: null,
     error: null,
@@ -108,8 +106,6 @@ function applyEvent(
   const patch = event.payload as {
     file_id?: string;
     task_id?: string;
-    progress?: number;
-    stage?: string;
     error?: string;
     total?: number;
     succeeded?: number;
@@ -122,8 +118,6 @@ function applyEvent(
               ...item,
               fileId: patch.file_id ?? item.fileId,
               taskId: patch.task_id ?? item.taskId,
-              progress: patch.progress ?? item.progress,
-              stage: patch.stage ?? item.stage,
               error: patch.error ?? item.error,
               state: nextItemState(event.type),
             }

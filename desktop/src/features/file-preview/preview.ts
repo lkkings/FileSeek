@@ -2,6 +2,7 @@ import type {
   DocumentPreviewSupport,
   FilePreviewItem,
   PreviewEnvironment,
+  PreviewCategory,
   PreviewPlatform,
   PreviewRuntimeInput,
   PreviewResourceKind,
@@ -21,7 +22,6 @@ const SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
   "html",
   "htm",
   "txt",
-  "xml",
   "json",
   "yaml",
   "yml",
@@ -47,12 +47,46 @@ const SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
   "sql",
 ]);
 
+const SUPPORTED_IMAGE_FILE_TYPES = new Set([
+  "jpg",
+  "png",
+  "gif",
+  "bmp",
+  "webp",
+  "tiff",
+  "ico",
+]);
+
+const VIDEO_FILE_TYPES = new Set([
+  "mp4",
+  "avi",
+  "mov",
+  "mkv",
+  "flv",
+  "wmv",
+  "webm",
+  "m4v",
+  "mpeg",
+  "mpg",
+  "3gp",
+  "ts",
+  "mts",
+  "m2ts",
+]);
+
 const API_PREFIX = "/api/v1";
 
 export function getFileExtension(fileName: string) {
   const normalized = fileName.trim().toLowerCase();
   const extensionStart = normalized.lastIndexOf(".");
   return extensionStart === -1 ? "" : normalized.slice(extensionStart + 1);
+}
+
+export function resolvePreviewCategory(fileType: string): PreviewCategory {
+  const normalized = fileType.trim().toLowerCase().replace(/^\./, "");
+  if (SUPPORTED_IMAGE_FILE_TYPES.has(normalized)) return "image";
+  if (VIDEO_FILE_TYPES.has(normalized)) return "video";
+  return "document";
 }
 
 export function getDocumentFormat(fileName: string) {
@@ -65,8 +99,13 @@ export function getDocumentPreviewSupport(item: FilePreviewItem): DocumentPrevie
   return SUPPORTED_DOCUMENT_EXTENSIONS.has(getFileExtension(item.fileName)) ? "supported" : "unsupported";
 }
 
+export function getImagePreviewSupport(item: FilePreviewItem): DocumentPreviewSupport | null {
+  if (item.fileType !== "image") return null;
+  return SUPPORTED_IMAGE_FILE_TYPES.has(getFileExtension(item.fileName)) ? "supported" : "unsupported";
+}
+
 export function getPreviewResourceKind(item: FilePreviewItem): PreviewResourceKind {
-  if (item.fileType === "image" || item.fileType === "video") return "thumbnail";
+  if (item.fileType === "video" || getImagePreviewSupport(item) === "supported") return "thumbnail";
   return "document";
 }
 
@@ -106,6 +145,16 @@ export function buildPreviewUrl(item: FilePreviewItem, size: PreviewSize, option
   }
 
   return `${base}${API_PREFIX}/library/files/preview/${encodedFileId}`;
+}
+
+export function buildThumbnailUrl(
+  item: FilePreviewItem,
+  size: PreviewSize,
+  options: PreviewUrlOptions = {},
+): string {
+  const base = getPreviewBaseUrl(options);
+  const encodedFileId = encodeURIComponent(item.fileId);
+  return `${base}${API_PREFIX}/library/files/${encodedFileId}/thumbnail?size=${size}`;
 }
 
 export function buildOriginalFileUrl(item: FilePreviewItem, options: PreviewUrlOptions = {}) {

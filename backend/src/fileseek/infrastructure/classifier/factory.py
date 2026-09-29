@@ -11,20 +11,6 @@ from fileseek.infrastructure.classifier.jina_clip_v2 import JinaClipV2Classifier
 from fileseek.infrastructure.embedding import get_embedding_service
 
 
-@lru_cache
-def get_classifier() -> ClassifierPort:
-    settings = get_settings()
-    return ClassifierFactory.create(
-        provider=settings.classifier_provider,
-        embedding=get_embedding_service(),
-        document_labels=settings.classifier_document_labels,
-        video_labels=settings.classifier_video_labels,
-        image_labels=settings.classifier_image_labels,
-        text_similarity_threshold=settings.classifier_text_similarity_threshold,
-        image_similarity_threshold=settings.classifier_image_similarity_threshold,
-        video_similarity_threshold=settings.classifier_video_similarity_threshold,
-        max_labels=settings.classifier_max_labels,
-    )
 
 
 @lru_cache

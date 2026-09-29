@@ -5,8 +5,10 @@ import threading
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
+
 import numpy as np
 
+from fileseek.infrastructure.embedding.base import EmbeddingPort
 from fileseek.shared.domain.exceptions import (
     InferenceError,
     ModelLoadError,
@@ -14,7 +16,6 @@ from fileseek.shared.domain.exceptions import (
 from fileseek.shared.utils.model_cache import (
     ensure_model_cached,
 )
-from fileseek.infrastructure.embedding.base import EmbeddingPort
 
 if TYPE_CHECKING:
     import onnxruntime as ort
@@ -26,6 +27,14 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+TEXT_INFERENCE_BATCH_SIZE = 32
+
+# 单批文本推理的注意力开销上限，按 `batch_size * padded_length ** 2` 计。
+# 同批文本会 padding 到最长那条，注意力内存随长度平方增长：实测 1 条 3551 token
+# 峰值约 4GB，而把它和 31 条短文本拼成一批会直接 OOM。这个预算约等于
+# 8 条 1024 token，超长文本会自动单独成批。
+TEXT_INFERENCE_MAX_ATTENTION_COST = 8 * 1024 * 1024
 
 
 def _as_numpy(pixel_values: object) -> np.ndarray:
@@ -154,28 +163,37 @@ class JinaClipV2Embedding(EmbeddingPort):
 
         session, tokenizer, _ = self._ensure_loaded()
 
-        prepared_texts = self._prepare_texts(
-            texts,
-            query=query,
-        )
-
         try:
-            encoded = tokenizer(
+            prepared_texts = self._prepare_texts(
+                texts,
+                query=query,
+            )
+            token_ids: list[list[int]] = tokenizer(
                 prepared_texts,
-                padding=True,
+                padding=False,
                 truncation=True,
                 max_length=self._get_max_sequence_length(tokenizer),
-                return_tensors="np",
-            )
+            )["input_ids"]
+            pad_token_id = getattr(tokenizer, "pad_token_id", None) or 0
+            embeddings: list[list[float] | None] = [None] * len(texts)
 
-            input_ids = encoded["input_ids"]
-
-            outputs = self._run_text_inference(
-                session=session,
-                input_ids=input_ids,
-            )
-
-            return self._to_embedding_list(outputs)
+            # 按长度分批，短文本不会被 padding 到同批最长文本的长度；
+            # 结果按原索引写回，调用方看到的顺序不变。
+            for batch in self._plan_text_batches(token_ids):
+                input_ids = self._pad_token_ids(
+                    [token_ids[index] for index in batch],
+                    pad_token_id=pad_token_id,
+                )
+                outputs = self._run_text_inference(
+                    session=session,
+                    input_ids=input_ids,
+                )
+                for index, vector in zip(
+                    batch,
+                    self._to_embedding_list(outputs),
+                    strict=True,
+                ):
+                    embeddings[index] = vector
 
         except Exception as exc:
             logger.exception(
@@ -186,6 +204,65 @@ class JinaClipV2Embedding(EmbeddingPort):
             raise InferenceError(
                 f"文本向量化推理失败: {exc}"
             ) from exc
+        else:
+            return cast("list[list[float]]", embeddings)
+
+    @staticmethod
+    def _plan_text_batches(
+        token_ids: list[list[int]],
+    ) -> list[list[int]]:
+        """按 token 长度规划文本推理批次，返回每批的原始索引。
+
+        文本按长度降序排列后贪心装箱，每批受两条约束：
+        条数不超过 TEXT_INFERENCE_BATCH_SIZE，
+        `条数 * 最长长度 ** 2` 不超过 TEXT_INFERENCE_MAX_ATTENTION_COST。
+        单条超出预算时独占一批。
+        """
+        order = sorted(
+            range(len(token_ids)),
+            key=lambda index: len(token_ids[index]),
+            reverse=True,
+        )
+        batches: list[list[int]] = []
+        current: list[int] = []
+        current_length = 0
+
+        for index in order:
+            # 降序排列，批内第一条就是最长的，决定整批 padding 长度。
+            length = current_length if current else len(token_ids[index])
+            cost = (len(current) + 1) * length * length
+            if current and (
+                len(current) >= TEXT_INFERENCE_BATCH_SIZE
+                or cost > TEXT_INFERENCE_MAX_ATTENTION_COST
+            ):
+                batches.append(current)
+                current = []
+                length = len(token_ids[index])
+            current.append(index)
+            current_length = length
+
+        if current:
+            batches.append(current)
+
+        return batches
+
+    @staticmethod
+    def _pad_token_ids(
+        token_ids: list[list[int]],
+        *,
+        pad_token_id: int,
+    ) -> np.ndarray:
+        """把一批 token ids 右侧 padding 成二维数组。"""
+        max_length = max(len(ids) for ids in token_ids)
+        input_ids = np.full(
+            (len(token_ids), max_length),
+            pad_token_id,
+            dtype=np.int64,
+        )
+        for row, ids in enumerate(token_ids):
+            input_ids[row, : len(ids)] = ids
+
+        return input_ids
 
     def embed_image(
         self,
@@ -359,6 +436,9 @@ class JinaClipV2Embedding(EmbeddingPort):
         import onnxruntime as ort
 
         options = ort.SessionOptions()
+        # 文本推理传入空 batch 的 pixel_values 时，ORT 会打印无害的
+        # "Shape mismatch attempting to re-use buffer" 警告，这里只保留 ERROR 及以上。
+        options.log_severity_level = 3
 
         if self._intra_op_num_threads is not None:
             if self._intra_op_num_threads <= 0:
@@ -443,7 +523,9 @@ class JinaClipV2Embedding(EmbeddingPort):
         """构建文本推理输入。
 
         Jina CLIP V2 当前 ONNX 模型需要 input_ids 和 pixel_values。
-        对文本推理时，为 pixel_values 提供 dummy tensor。
+        对文本推理时，为 pixel_values 提供 batch 维度为 0 的 dummy tensor。
+        两个塔在图内相互独立，空 batch 不影响文本 embedding，
+        但可避免视觉塔对 dummy 图片做无效计算（每条文本约 1 秒、数百 MB 内存）。
 
         这里不直接硬编码 input name，
         而是根据 ONNX graph 的输入名称进行检查。
@@ -466,11 +548,9 @@ class JinaClipV2Embedding(EmbeddingPort):
         }
 
         if "pixel_values" in input_names:
-            batch_size = input_ids.shape[0]
-
             inputs["pixel_values"] = np.zeros(
                 (
-                    batch_size,
+                    0,
                     3,
                     512,
                     512,

@@ -32,11 +32,16 @@ import queue
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from typing import Protocol, cast
 
 from fileseek.config.constant import QUERY_CACHE_KEY
-from fileseek.features.library.domain.repositories import FileRepository,FileChunkRepository
+from fileseek.features.library.domain.repositories import FileChunkRepository, FileRepository
+from fileseek.features.tasks.application.cancellation import (
+    TaskCancellationRegistry,
+)
 from fileseek.features.tasks.application.processor import TaskProcessor
-from fileseek.features.tasks.domain.entities import Task, TaskStatus
+from fileseek.features.tasks.domain.entities import Task, TaskProgress, TaskStatus
+from fileseek.features.tasks.domain.exceptions import TaskCancelledError
 from fileseek.features.tasks.domain.repositories import TaskRepository
 from fileseek.shared.utils.cache import TTLLRUCache
 
@@ -59,6 +64,12 @@ _PROGRESS_POLL_INTERVAL = 0.02
 _PROGRESS_FINAL_GRACE = 0.5
 
 
+class _CloseableProgressQueue(Protocol):
+    def cancel_join_thread(self) -> None: ...
+
+    def close(self) -> None: ...
+
+
 class TaskScheduler:
     """任务调度器，后台轮询并派发任务给处理器。"""
 
@@ -70,13 +81,15 @@ class TaskScheduler:
         processor: TaskProcessor,
         poll_interval: float,
         max_workers: int,
-        cache: TTLLRUCache,
+        cache: TTLLRUCache[str, object],
+        cancellation_registry: TaskCancellationRegistry,
     ) -> None:
         self.task_repo = task_repo
         self.file_repo = file_repo
         self.file_chunk_repo = file_chunk_repo
         self.processor = processor
         self.cache = cache
+        self._cancellation_registry = cancellation_registry
         self.poll_interval = poll_interval
         self._running = False
         self._task: asyncio.Task[None] | None = None
@@ -173,7 +186,7 @@ class TaskScheduler:
                 break
             for task in tasks:
                 task.release()
-                task.updated_at = datetime.now().isoformat()  # noqa: DTZ005
+                task.updated_at = datetime.now()  # noqa: DTZ005
                 await self.task_repo.save(task)
                 released.append(task.id)
             if len(released) >= total:
@@ -190,10 +203,10 @@ class TaskScheduler:
             try:
                 logger.info("等待任务")
                 await self._process_next()
-            except Exception as e:
+            except Exception:
                 import traceback
                 traceback.print_exc()
-                logger.exception(f"执行任务报错: {e}")
+                logger.exception("执行任务报错")
             finally:
                 await asyncio.sleep(self.poll_interval)
 
@@ -211,7 +224,7 @@ class TaskScheduler:
     async def _drain_progress(
         self,
         task: Task,
-        progress_queue: queue.Queue,
+        progress_queue: queue.Queue[TaskProgress],
         grace: float = 0.0,
     ) -> bool:
         """把队列里现有的进度全部取出来推进并落库。
@@ -238,6 +251,8 @@ class TaskScheduler:
         drained = False
         deadline = time.monotonic() + grace
         while True:
+            if self._cancellation_registry.is_cancelled(task.id):
+                return drained
             try:
                 progress = progress_queue.get_nowait()
             except queue.Empty:
@@ -251,7 +266,7 @@ class TaskScheduler:
             drained = True
             try:
                 task.advance_stage(progress)
-                task.updated_at = datetime.now().isoformat()  # noqa: DTZ005
+                task.updated_at = datetime.now()  # noqa: DTZ005
                 await self.task_repo.save(task)
             except Exception:
                 logger.exception(
@@ -265,9 +280,11 @@ class TaskScheduler:
 
         任务在 claim_next_queued() 中已被原子标记为 PROCESSING，此处直接执行处理器。
         """
+        self._cancellation_registry.remove(task.id)
         self._active += 1
         loop = asyncio.get_running_loop()
-        progress_queue: queue.Queue = queue.Queue()
+        progress_queue: queue.Queue[TaskProgress] = queue.Queue()
+        cancelled = False
         try:
             future = loop.run_in_executor(
                 self._executor,
@@ -280,6 +297,8 @@ class TaskScheduler:
                     if not await self._drain_progress(task, progress_queue):
                         await asyncio.sleep(_PROGRESS_POLL_INTERVAL)
                 await future
+                if self._cancellation_registry.is_cancelled(task.id):
+                    raise TaskCancelledError(task.id)
             finally:
                 await self._drain_progress(task, progress_queue, grace=_PROGRESS_FINAL_GRACE)
             task.mark_completed()
@@ -287,19 +306,28 @@ class TaskScheduler:
         except NotImplementedError as exc:
             logger.warning("任务 %s 处理器功能尚未实现: %s", task.id, exc)
             task.mark_failed(f"处理器功能尚未实现: {exc}")
+        except TaskCancelledError:
+            logger.info("任务 %s 已被用户终止", task.id)
+            task.mark_cancelled()
+            self.processor.cleanup(task)
+            cancelled = True
         except Exception as exc:  # noqa: BLE001
             logger.exception("任务 %s 处理失败", task.id)
             task.mark_failed(str(exc))
         finally:
-            task.updated_at = datetime.now().isoformat()  # noqa: DTZ005
+            task.updated_at = datetime.now()  # noqa: DTZ005
             await self.task_repo.save(task)
-            await self.file_repo.save(task.file)
-            await self.file_chunk_repo.save_batch(task.file.chunks)
+            if not cancelled:
+                await self.file_repo.save(task.file)
+                await self.file_chunk_repo.save_batch(task.file.chunks)
             self._close_progress_queue(progress_queue)
+            self._cancellation_registry.remove(task.id)
             self._active -= 1
 
     @staticmethod
-    def _close_progress_queue(progress_queue: queue.Queue) -> None:
+    def _close_progress_queue(
+        progress_queue: queue.Queue[TaskProgress],
+    ) -> None:
         """关掉这个任务的进度队列。
 
         每个任务一个队列，而一个 `queue.Queue` 背后是一根管道（两个 fd）和一个 feeder 线程。
@@ -310,7 +338,8 @@ class TaskScheduler:
         直等下去。清理失败只记日志：它不该盖掉任务本身的结果。
         """
         try:
-            progress_queue.cancel_join_thread()
-            progress_queue.close()
+            closeable_queue = cast(_CloseableProgressQueue, progress_queue)
+            closeable_queue.cancel_join_thread()
+            closeable_queue.close()
         except Exception:  # noqa: BLE001
             logger.debug("进度队列关闭失败，忽略", exc_info=True)

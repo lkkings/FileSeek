@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AdvancedFilters, SearchBar, useFileSearch } from "../../features/file-search";
 import { SearchResultsView } from "../../features/file-search/components/SearchResultsView";
 import { FileViewerOverlay, useFileViewer } from "../../features/file-preview";
@@ -7,7 +7,9 @@ import {
   FolderDialog,
   DeleteFolderDialog,
   ImportFileDialog,
+  SystemImportDialog,
   useFileLibrary,
+  useSystemImportRequest,
   FolderDetailsView,
   useBatchImport,
   useMoveFilesToFolder,
@@ -16,6 +18,7 @@ import { useSettingsPreferences } from "../../features/settings";
 import { useMoveFilesToRecycle } from "../../features/recycle";
 import { useRecordRecentAccess } from "../../features/recent";
 import type { FolderRecord, FolderFormValues } from "../../features/library";
+import { mapSystemImportPaths } from "../../features/library/services/systemImportMapping";
 import { Notice } from "../../components/Notice";
 import { useTranslate } from "../../i18n/useTranslate";
 import { errorText } from "../../services/api/client";
@@ -50,8 +53,21 @@ export function LibraryPage() {
   const [activeDialog, setActiveDialog] = useState<"create" | "edit" | "delete" | "import" | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderRecord | undefined>(undefined);
   const batchImport = useBatchImport(selectedFolder?.id ?? "", setNotice);
+  const systemImportBatch = useBatchImport("", setNotice);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [systemImportRequest, setSystemImportRequest] = useState<{
+    paths: string[];
+    errors: string[];
+  } | null>(null);
+  useSystemImportRequest(setSystemImportRequest);
+  const systemImportMapping = useMemo(
+    () =>
+      systemImportRequest
+        ? mapSystemImportPaths(systemImportRequest.paths, preferences.storageDrives)
+        : null,
+    [preferences.storageDrives, systemImportRequest],
+  );
 
   function handleResetFilters() {
     resetFilters();
@@ -84,18 +100,26 @@ export function LibraryPage() {
   };
 
   const handleOpenFile = async (file: FileItem) => {
-    const response = await recordRecentAccess.mutateAsync(file.file_id);
-    if (response.status !== "success") {
-      setNotice(errorText(response.error) || t("recent.recordFailed", "记录访问失败"));
-      return;
-    }
-
     fileViewer.openFile({
       fileId: file.file_id,
       fileName: file.file_name,
       fileType: file.category as "document" | "image" | "video",
+      ...(typeof file.metadata?.page_number === "number" && file.metadata.page_number > 0
+        ? { initialPageNumber: file.metadata.page_number }
+        : {}),
+      ...(typeof file.metadata?.start_time === "number" && Number.isFinite(file.metadata.start_time)
+        ? { startTime: file.metadata.start_time }
+        : {}),
     });
-    setNotice(`${t("recent.recorded", "已记录访问")} “${file.file_name}”`);
+
+    const response = await recordRecentAccess.mutateAsync(file.file_id);
+    if (response.status !== "success") {
+      const failedNotice = errorText(response.error) || t("recent.recordFailed", "记录访问失败");
+      setNotice(failedNotice);
+    } else {
+      const accessNotice = `${t("recent.recorded", "已记录访问")} “${file.file_name}”`;
+      setNotice(accessNotice);
+    }
   };
 
   const refreshSearch = () => {
@@ -126,6 +150,13 @@ export function LibraryPage() {
       setNotice(t("folder.created", "文件夹已创建"));
     }
   }
+
+  const handleSystemImportConfirm = async (folderId: string) => {
+    if (!systemImportMapping || systemImportMapping.selections.length === 0) {
+      return false;
+    }
+    return systemImportBatch.start(systemImportMapping.selections, folderId);
+  };
 
   async function handleEditSubmit(values: FolderFormValues) {
     if (!selectedFolder) return;
@@ -282,6 +313,24 @@ export function LibraryPage() {
           importState={batchImport.state}
           onStart={batchImport.start}
           onClose={() => setActiveDialog(null)}
+        />
+      )}
+
+      {systemImportRequest && systemImportMapping && (
+        <SystemImportDialog
+          requestPaths={systemImportRequest.paths}
+          requestErrors={systemImportRequest.errors}
+          selections={systemImportMapping.selections}
+          invalidPaths={systemImportMapping.invalidPaths}
+          unmappedPaths={systemImportMapping.unmappedPaths}
+          storageRequired={systemImportMapping.storageRequired}
+          folders={folders}
+          foldersLoading={libraryLoading}
+          foldersError={libraryError}
+          importState={systemImportBatch.state}
+          onConfirm={handleSystemImportConfirm}
+          onRetry={() => void reloadLibrary()}
+          onClose={() => setSystemImportRequest(null)}
         />
       )}
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import { BatchOperationsBar } from "../../components/BatchOperationsBar";
 import { DeleteConfirmDialog } from "../../components/DeleteConfirmDialog";
+import { Icon } from "../../components/Icon";
 import { Notice } from "../../components/Notice";
 import { Pagination } from "../../components/Pagination";
 import { RecycleRowItem } from "../../features/recycle/components/RecycleRowItem";
@@ -9,6 +10,7 @@ import { useRecycleBin } from "../../features/recycle/hooks/useRecycleBin";
 import type { RecycleItem } from "../../services/api/recycle";
 import { useTranslate } from "../../i18n/useTranslate";
 import { errorText } from "../../services/api/client";
+import "../../features/recycle/components/recycle.css";
 
 export function RecyclePage() {
   const t = useTranslate();
@@ -94,24 +96,54 @@ export function RecyclePage() {
   return (
     <>
       <main className="main-content">
-        <section className="search-results-screen" aria-label={t("nav.trash", "回收站")}>
-          <div className="results-heading">
-            <div className="results-title-group">
-              <p>
-                <strong>{t("nav.trash", "回收站")}</strong>
-              </p>
+        <section className="recycle-page" aria-label={t("nav.trash", "回收站")}>
+          <header className="recycle-page-header">
+            <div className="recycle-page-title">
+              <span className="recycle-page-icon" aria-hidden="true">
+                <Icon name="trash" size={24} />
+              </span>
+              <div>
+                <h1>{t("nav.trash", "回收站")}</h1>
+                <p>{t("recycle.subtitle", "查看待恢复文件，恢复或永久删除选中的记录。")}</p>
+              </div>
             </div>
-          </div>
+            <dl className="recycle-summary" aria-label={t("recycle.summary", "回收站摘要")}>
+              <div className="recycle-summary-item">
+                <dt>{t("recycle.totalItems", "总文件")}</dt>
+                <dd>{data?.total ?? 0}</dd>
+              </div>
+              <div className="recycle-summary-item is-selected">
+                <dt>{t("recycle.selectedItems", "已选择")}</dt>
+                <dd>{selectedItemIds.size}</dd>
+              </div>
+            </dl>
+          </header>
 
-          <div className="results-content-split sidebar-collapsed">
-            <div className="result-list-container">
-              {loading && <div className="results-loading">{t("loading.recycle", "加载中...")}</div>}
-              {error && <div className="results-error">{error}</div>}
-              {!loading && !error && (
-                <div className="result-list" aria-live="polite">
+          <div className="recycle-page-content">
+            {loading && (
+              <div className="recycle-state recycle-loading" role="status">
+                <Icon name="refresh" size={22} />
+                <span>{t("loading.recycle", "正在加载回收站...")}</span>
+              </div>
+            )}
+            {error && (
+              <div className="recycle-state recycle-error" role="alert">
+                <Icon name="close" size={22} />
+                <span>{errorText(error) || t("recycle.loadFailed", "回收站加载失败")}</span>
+              </div>
+            )}
+            {!loading && !error && (
+              <>
+                <div className="recycle-list" aria-live="polite">
                   {viewResults.length === 0 ? (
-                    <div className="empty-results">
-                      <p>{t("recycle.empty", "回收站为空")}</p>
+                    <div className="recycle-state recycle-empty" role="status">
+                      <span className="recycle-empty-icon" aria-hidden="true">
+                        <Icon name="trash" size={26} />
+                      </span>
+                      <div>
+                        <h2>{t("recycle.emptyTitle", "回收站为空")}</h2>
+                        <p>{t("recycle.emptyDescription", "没有等待恢复或永久删除的文件。")}</p>
+                      </div>
                     </div>
                   ) : (
                     viewResults.map((item) => (
@@ -126,34 +158,35 @@ export function RecyclePage() {
                     ))
                   )}
                 </div>
-              )}
-              {!loading && !error && data && data.total > 0 && (
-                <Pagination
-                  currentPage={page}
-                  totalPages={Math.ceil(data.total / pageSize)}
-                  totalItems={data.total}
-                  onPageChange={(nextPage) => {
-                    setSelectedItemIds(new Set());
-                    setPage(nextPage);
-                  }}
-                  variant="search"
-                />
-              )}
-            </div>
+                {data && data.total > 0 && (
+                  <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(data.total / pageSize)}
+                    totalItems={data.total}
+                    onPageChange={(nextPage) => {
+                      setSelectedItemIds(new Set());
+                      setPage(nextPage);
+                    }}
+                  />
+                )}
+              </>
+            )}
           </div>
         </section>
       </main>
 
       {isBatchMode && (
-        <BatchOperationsBar
-          selectedCount={selectedItemIds.size}
-          onSelectAll={handleSelectAll}
-          onInvertSelection={handleInvertSelection}
-          onRestore={handleBatchRestore}
-          onDelete={() => setConfirmDeleteOpen(true)}
-          onCancel={() => setSelectedItemIds(new Set())}
-          deleteLabel={t("recycle.deletePermanently", "永久删除")}
-        />
+        <div className="recycle-batch-layer">
+          <BatchOperationsBar
+            selectedCount={selectedItemIds.size}
+            onSelectAll={handleSelectAll}
+            onInvertSelection={handleInvertSelection}
+            onRestore={handleBatchRestore}
+            onDelete={() => setConfirmDeleteOpen(true)}
+            onCancel={() => setSelectedItemIds(new Set())}
+            deleteLabel={t("recycle.deletePermanently", "永久删除")}
+          />
+        </div>
       )}
 
       <DeleteConfirmDialog

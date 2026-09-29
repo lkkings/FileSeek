@@ -10,8 +10,9 @@ class ProgressReporter(Protocol):
 
     def report(
         self,
-        progress: int,
         stage: TaskStage,
+        completed_count: int,
+        total_count: int,
     ) -> None:
         """报告任务处理进度。"""
         ...

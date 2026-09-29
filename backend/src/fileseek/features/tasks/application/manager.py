@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from fileseek.features.tasks.application.cancellation import (
+    TaskCancellationRegistry,
+)
 from fileseek.features.tasks.domain.entities import Task, TaskStatus
 from fileseek.features.tasks.domain.exceptions import InvalidTransitionError, TaskNotFoundError
 from fileseek.features.tasks.domain.ports import TaskManager
@@ -34,16 +37,18 @@ class DefaultTaskManager(TaskManager):
     def __init__(
         self,
         task_repo: TaskRepository,
+        cancellation_registry: TaskCancellationRegistry | None = None,
     ) -> None:
         self.task_repo = task_repo
+        self.cancellation_registry = cancellation_registry
 
     async def create(
         self,
         task:Task
     ) -> Task:
         """创建任务并提交执行。"""
-        now = datetime.now().isoformat()
-        task.created_at = now,
+        now = datetime.now()
+        task.created_at = now
         task.updated_at = now
         task.status = TaskStatus.QUEUED
         await self.task_repo.save(task)
@@ -58,7 +63,7 @@ class DefaultTaskManager(TaskManager):
 
         if task is None:
             raise TaskNotFoundError(f"任务 {task_id} 不存在")
-        return Task
+        return task
 
 
     async def retry(
@@ -83,6 +88,33 @@ class DefaultTaskManager(TaskManager):
 
         await self.task_repo.save(task)
         return task
+
+    async def cancel(
+        self,
+        task_id: str,
+    ) -> Task:
+        """终止处理中的任务。"""
+        task = await self.task_repo.get_by_id(task_id)
+
+        if task is None:
+            raise TaskNotFoundError(f"任务 {task_id} 不存在")
+
+        if task.status is not TaskStatus.PROCESSING:
+            raise InvalidTransitionError(f"任务 {task_id} 不在处理中，不能终止")
+
+        if self.cancellation_registry is not None:
+            self.cancellation_registry.request(task_id)
+
+        cancelled_task = await self.task_repo.cancel(task_id)
+        if cancelled_task is None:
+            if self.cancellation_registry is not None:
+                self.cancellation_registry.clear(task_id)
+            current = await self.task_repo.get_by_id(task_id)
+            if current is None:
+                raise TaskNotFoundError(f"任务 {task_id} 不存在")
+            raise InvalidTransitionError(f"任务 {task_id} 状态已变化，不能终止")
+
+        return cancelled_task
 
     async def delete(
         self,

@@ -11,68 +11,6 @@ import sys
 from pathlib import Path
 
 
-class LibraryPaths:
-    """文件库路径管理器。"""
-
-    def __init__(self, root: Path) -> None:
-        """初始化路径管理器。
-
-        Args:
-            root: 文件库根目录
-        """
-        self.root = root
-
-    @property
-    def documents_dir(self) -> Path:
-        """文档存储目录。"""
-        return self.root / "documents"
-
-    @property
-    def images_dir(self) -> Path:
-        """图片存储目录。"""
-        return self.root / "images"
-
-    @property
-    def videos_dir(self) -> Path:
-        """视频存储目录。"""
-        return self.root / "videos"
-
-    @property
-    def recycle_dir(self) -> Path:
-        """回收站目录。"""
-        return self.root / ".recycle"
-
-    def ensure_directories(self) -> None:
-        """确保所有必需目录存在。"""
-        for directory in [
-            self.documents_dir,
-            self.images_dir,
-            self.videos_dir,
-            self.recycle_dir,
-        ]:
-            directory.mkdir(parents=True, exist_ok=True)
-
-    def get_media_dir(self, file_type: str) -> Path:
-        """根据媒体类型获取存储目录。
-
-        Args:
-            file_type: 媒体类型 ("document" | "image" | "video")
-
-        Returns:
-            对应的存储目录路径
-        """
-        match file_type:
-            case "document":
-                return self.documents_dir
-            case "image":
-                return self.images_dir
-            case "video":
-                return self.videos_dir
-            case _:
-                msg = f"Unknown media type: {file_type}"
-                raise ValueError(msg)
-
-
 class AppPaths:
     """应用级目录：配置文件、连接文件、日志。
 

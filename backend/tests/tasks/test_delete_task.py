@@ -43,6 +43,33 @@ async def test_delete_task_removes_non_processing_task(settings) -> None:
     await manager.delete("task-queued")
 
     assert await TaskModel.filter(id="task-queued").exists() is False
+    assert await FileModel.filter(id="file-task-queued").exists() is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [TaskStatus.FAILED, TaskStatus.QUEUED])
+async def test_delete_task_removes_file_for_incomplete_task(
+    settings,
+    status: TaskStatus,
+) -> None:
+    await _create_task(f"task-{status.value}", status, settings.lib_root)
+    manager = DefaultTaskManager(TaskRepositoryImpl())
+
+    await manager.delete(f"task-{status.value}")
+
+    assert await TaskModel.filter(id=f"task-{status.value}").exists() is False
+    assert await FileModel.filter(id=f"file-task-{status.value}").exists() is False
+
+
+@pytest.mark.asyncio
+async def test_delete_task_keeps_file_for_completed_task(settings) -> None:
+    await _create_task("task-completed", TaskStatus.COMPLETED, settings.lib_root)
+    manager = DefaultTaskManager(TaskRepositoryImpl())
+
+    await manager.delete("task-completed")
+
+    assert await TaskModel.filter(id="task-completed").exists() is False
+    assert await FileModel.filter(id="file-task-completed").exists() is True
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,6 @@ from tempfile import gettempdir
 import pytest
 
 from fileseek.config.settings import Settings
-from fileseek.features.library.infrastructure.repositories import FileRepositoryImpl
 from fileseek.features.settings.application.commands import (
     CreateStorageLocationCommand,
     DeleteStorageLocationCommand,
@@ -104,11 +103,9 @@ async def test_delete_storage_location_retains_file_indexes(
     settings: Settings,
 ) -> None:
     storage_repository = TortoiseStorageLocationRepository()
-    file_repository = FileRepositoryImpl()
     create_use_case = CreateStorageLocationUseCase(storage_repository)
     delete_use_case = DeleteStorageLocationUseCase(
         storage_repository,
-        file_repository,
     )
     await create_use_case.execute(
         CreateStorageLocationCommand(
@@ -136,9 +133,9 @@ async def test_delete_storage_location_retains_file_indexes(
     )
     model = await FileModel.get(id="file-1")
 
-    assert result.affected_files == 1
+    assert result.affected_files == 0
     assert model.storage_id == "nas1"
-    assert model.access_state == "unavailable"
+    assert model.access_state == "available"
     assert model.path == "/Volumes/nas1/file.txt"
 
 

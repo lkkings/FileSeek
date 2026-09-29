@@ -4,9 +4,10 @@ Domain 层定义 Protocol 接口，Infrastructure 层提供具体实现。
 """
 from __future__ import annotations
 
-from typing import Protocol,Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
-from fileseek.features.library.domain.entities import File, Folder,FileChunk
+from fileseek.features.library.domain.entities import File, FileChunk, Folder
 
 
 class FileRepository(Protocol):
@@ -21,13 +22,31 @@ class FileRepository(Protocol):
         file_id: str,
         access_state: str,
     ) -> bool: ...
-    async def mark_unavailable_by_storage(
-        self,
-        storage_id: str,
-    ) -> int: ...
     async def delete_batch(self, file_ids: list[str]) -> None: ...
-    async def count_by_category(self) -> dict[str, int]: ...
-    async def count(self) -> int: ...
+    async def count_by_category(
+        self,
+        *,
+        name_query: str | None = None,
+        tag: str | None = None,
+        min_size: float | None = None,
+        max_size: float | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        folder_id: str | None = None,
+        categories: list[str] | None = None,
+    ) -> dict[str, int]: ...
+    async def count(
+        self,
+        *,
+        name_query: str | None = None,
+        tag: str | None = None,
+        min_size: float | None = None,
+        max_size: float | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        folder_id: str | None = None,
+        categories: list[str] | None = None,
+    ) -> int: ...
     async def query(
         self,
         name_query: str | None = None,
@@ -51,7 +70,6 @@ class FolderRepository(Protocol):
     async def list_all(self) -> list[Folder]: ...
     async def save(self, folder: Folder) -> None: ...
     async def delete(self, folder_id: str) -> None: ...
-    async def increment_file_count(self, folder_id: str, delta: int) -> None: ...
 
 
 class FileChunkRepository(Protocol):

@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 from fileseek.bootstrap import connection
 from fileseek.bootstrap.container import Container, build_task_scheduler
-from fileseek.config.paths import AppPaths, LibraryPaths
+from fileseek.config.paths import AppPaths
 from fileseek.infrastructure.database.connection import close_db, init_db
 
 if TYPE_CHECKING:
@@ -42,8 +42,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     app_paths = AppPaths.resolve()
     app_paths.ensure_directories()
-
-    LibraryPaths(settings.lib_root).ensure_directories()
     await init_db()
     scheduler = build_task_scheduler(settings)
     # 捞回上次运行遗留的在飞任务，这一步和调度器开关无关：那些状态停在 processing

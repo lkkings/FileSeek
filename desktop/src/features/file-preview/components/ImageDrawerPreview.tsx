@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { useTranslate } from "../../../i18n/useTranslate";
-import { buildPreviewUrl } from "../preview";
+import { buildPreviewUrl, getImagePreviewSupport } from "../preview";
 import type { FilePreviewItem, PreviewUrlOptions } from "../types";
 import "./MediaDrawerPreview.css";
 
@@ -13,6 +13,14 @@ export interface ImageDrawerPreviewProps {
 export function ImageDrawerPreview({ item, urlOptions }: ImageDrawerPreviewProps) {
   const [hasError, setHasError] = useState(false);
   const t = useTranslate();
+
+  if (getImagePreviewSupport(item) === "unsupported") {
+    return (
+      <div className="media-drawer-preview media-drawer-preview-fallback" role="status">
+        {t("preview.unsupported", "该格式暂不支持预览")}
+      </div>
+    );
+  }
 
   if (hasError) {
     return (

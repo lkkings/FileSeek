@@ -1,6 +1,7 @@
 import { useRef } from "react";
 
 import { FilePreviewCell } from "../features/file-preview";
+import { formatDateTime } from "../i18n/formatDateTime";
 import type { FileItem } from "../services/api/search";
 import "./file-list-row.css";
 
@@ -32,14 +33,7 @@ export function FileListRow({
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formattedSize = file.size ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : "0.0 MB";
 
-  let formattedDate = timeLabel || file.modified || "-";
-  if (formattedDate.includes("T")) {
-    const date = new Date(formattedDate);
-    if (!Number.isNaN(date.getTime())) {
-      const pad = (part: number) => part.toString().padStart(2, "0");
-      formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    }
-  }
+  const formattedDate = formatDateTime(timeLabel || file.modified);
 
   const clearClickTimer = () => {
     if (clickTimer.current) {

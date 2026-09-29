@@ -18,9 +18,9 @@ describe("DocumentFormatIcon", () => {
   );
 
   it("marks unsupported legacy formats", () => {
-    renderWithI18n(<DocumentFormatIcon fileName="legacy.doc" isUnsupported />);
+    renderWithI18n(<DocumentFormatIcon fileName="document.xml" isUnsupported />);
 
-    expect(screen.getByRole("img", { name: /DOC 文档（不支持预览）/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /XML 文档（不支持预览）/ })).toBeInTheDocument();
   });
 
   it("renders localized document labels", () => {

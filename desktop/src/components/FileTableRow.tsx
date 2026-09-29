@@ -2,6 +2,7 @@ import { useRef } from "react";
 
 import { Icon } from "./Icon";
 import { useTranslate } from "../i18n/useTranslate";
+import { formatDateTime } from "../i18n/formatDateTime";
 import type { FileItem } from "../services/api/search";
 import "./file-table.css";
 
@@ -63,12 +64,7 @@ export function FileTableRow({
   };
 
   const formatDate = () => {
-    if (!file.modified) return "-";
-    if (!file.modified.includes("T")) return file.modified;
-    const date = new Date(file.modified);
-    if (Number.isNaN(date.getTime())) return file.modified;
-    const pad = (part: number) => part.toString().padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    return formatDateTime(file.modified);
   };
 
   const firstChunk = Array.isArray(file.chunks) ? file.chunks[0] : null;

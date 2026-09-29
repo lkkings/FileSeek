@@ -1,5 +1,6 @@
 import { Icon } from "../../../components/Icon";
 import { useTranslate } from "../../../i18n/useTranslate";
+import { formatDateTime } from "../../../i18n/formatDateTime";
 import type { TaskItem, TaskStage, TaskStatus } from "../../../services/api/tasks";
 import "../../file-search/components/search-results.css";
 import "./tasks.css";
@@ -7,6 +8,7 @@ import "./tasks.css";
 interface TaskRowItemProps {
   task: TaskItem;
   onRetry: (taskId: string) => void;
+  onCancel: (taskId: string) => void;
   onRemove: (taskId: string) => void;
   onOpenDetails: (task: TaskItem) => void;
 }
@@ -19,6 +21,7 @@ function statusLabel(status: TaskStatus, t: ReturnType<typeof useTranslate>) {
     processing: t("tasks.statusProcessing", "处理中"),
     completed: t("tasks.statusCompleted", "已完成"),
     failed: t("tasks.statusFailed", "失败"),
+    cancelled: t("tasks.statusCancelled", "已终止"),
   };
   return labels[status];
 }
@@ -33,17 +36,22 @@ function stageLabel(stage: TaskStage, t: ReturnType<typeof useTranslate>) {
   return labels[stage];
 }
 
-function formatDate(value: string) {
-  if (!value.includes("T")) return value;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const pad = (part: number) => part.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-export function TaskRowItem({ task, onRetry, onRemove, onOpenDetails }: TaskRowItemProps) {
+export function TaskRowItem({ task, onRetry, onCancel, onRemove, onOpenDetails }: TaskRowItemProps) {
   const t = useTranslate();
-  const progress = Math.min(100, Math.max(0, task.progress));
+  const hasCountPair =
+    task.completed_count !== null &&
+    task.total_count !== null &&
+    task.total_count > 0 &&
+    task.completed_count >= 0 &&
+    task.completed_count <= task.total_count;
+  const totalCount = hasCountPair ? (task.total_count as number) : 0;
+  const completedCount = hasCountPair ? (task.completed_count as number) : 0;
+  const progressText = hasCountPair
+    ? `${completedCount}/${totalCount}`
+    : statusLabel(task.status, t);
+  const progressPercent = hasCountPair
+    ? (completedCount / totalCount) * 100
+    : 0;
 
   return (
     <article className={`result-row task-row status-${task.status}`}>
@@ -58,14 +66,16 @@ export function TaskRowItem({ task, onRetry, onRemove, onOpenDetails }: TaskRowI
             {task.file.file_type}
           </div>
           <div className="task-row-copy">
-            <h2>{task.file.name}</h2>
-            <p className="result-path">{task.file.path}</p>
-            <p className="task-row-meta">
-              <Icon name="clock" size={14} />
-              <span>{formatDate(task.created_at)}</span>
+            <div className="task-row-title-row">
+              <h2>{task.file.name}</h2>
               <span className={`task-status task-status-${task.status}`}>
                 {statusLabel(task.status, t)}
               </span>
+            </div>
+            <p className="result-path">{task.file.path}</p>
+            <p className="task-row-meta">
+              <Icon name="clock" size={14} />
+              <span>{formatDateTime(task.created_at)}</span>
             </p>
           </div>
         </div>
@@ -73,17 +83,21 @@ export function TaskRowItem({ task, onRetry, onRemove, onOpenDetails }: TaskRowI
         <div className="task-row-progress">
           <div className="task-progress-header">
             <span>{t("tasks.progress", "进度")}</span>
-            <strong>{progress}%</strong>
+            <strong>{progressText}</strong>
           </div>
           <div
-            className="task-progress-track"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress}
-            aria-label={`${task.file.name} ${t("tasks.progress", "进度")}`}
+            className={[
+              "task-progress-track",
+              !hasCountPair && task.status === "processing" ? "is-indeterminate" : "",
+            ].join(" ")}
+            role={hasCountPair ? "progressbar" : undefined}
+            aria-valuemin={hasCountPair ? 0 : undefined}
+            aria-valuemax={hasCountPair ? totalCount : undefined}
+            aria-valuenow={hasCountPair ? completedCount : undefined}
+            aria-valuetext={hasCountPair ? progressText : undefined}
+            aria-label={hasCountPair ? `${task.file.name} ${t("tasks.progress", "进度")}` : undefined}
           >
-            <div className="task-progress-fill" style={{ width: `${progress}%` }} />
+            <div className="task-progress-fill" style={{ width: `${progressPercent}%` }} />
           </div>
           <ol className="task-stage-flow" aria-label={`${task.file.name} ${t("tasks.stageFlow", "阶段流程")}`}>
             {TASK_STAGES.map((stage) => {
@@ -114,7 +128,7 @@ export function TaskRowItem({ task, onRetry, onRemove, onOpenDetails }: TaskRowI
       </button>
 
       <div className="task-row-actions">
-        {task.status === "failed" && (
+        {(task.status === "failed" || task.status === "cancelled") && (
           <button
             type="button"
             className="task-retry-button"
@@ -123,6 +137,17 @@ export function TaskRowItem({ task, onRetry, onRemove, onOpenDetails }: TaskRowI
           >
             <Icon name="refresh" size={16} />
             <span className="task-retry-label">{t("tasks.retry", "重试")}</span>
+          </button>
+        )}
+        {task.status === "processing" && (
+          <button
+            type="button"
+            className="task-cancel-button"
+            aria-label={`${task.file.name} ${t("tasks.cancel", "终止")}`}
+            onClick={() => onCancel(task.id)}
+          >
+            <Icon name="close" size={16} />
+            <span className="task-cancel-label">{t("tasks.cancel", "终止")}</span>
           </button>
         )}
         <button

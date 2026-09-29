@@ -19,7 +19,7 @@ from fileseek.infrastructure.thumbnails import (
     ThumbnailGenerator,
 )
 from fileseek.shared.domain.exceptions import ValidationError
-from fileseek.shared.domain.file_types import FileCategory
+from fileseek.shared.domain.file_types import FileCategory, FileType
 
 
 class GetFileThumbnailUseCase:
@@ -45,8 +45,18 @@ class GetFileThumbnailUseCase:
         if file is None:
             raise FileNotFoundError(f"文件不存在: {query.file_id}")
 
-        if file.category not in (FileCategory.IMAGE, FileCategory.VIDEO):
-            raise ValidationError("仅支持图片和视频生成缩略图")
+        is_supported_thumbnail = (
+            file.file_type.is_support
+            and (
+                file.category in (FileCategory.IMAGE, FileCategory.VIDEO)
+                or (
+                    file.category is FileCategory.DOCUMENT
+                    and file.file_type is FileType.PDF
+                )
+            )
+        )
+        if not is_supported_thumbnail:
+            raise ValidationError("仅支持图片、视频和 PDF 生成缩略图")
 
         source = await self._get_source(file)
 
@@ -61,11 +71,7 @@ class GetFileThumbnailUseCase:
         if cached is not None:
             return self._to_dto(file, size, cached)
 
-        data = (
-            self._generate_image_thumbnail(source, size)
-            if file.category is FileCategory.IMAGE
-            else self._generate_video_thumbnail(source, size)
-        )
+        data = self._generate_thumbnail(file, source, size)
         self._cache.store(
             file_id=file.id,
             source_size=file.size,
@@ -76,25 +82,10 @@ class GetFileThumbnailUseCase:
         return self._to_dto(file, size, data)
 
     async def _get_source(self, file: File) -> SourceFile:
-        if file.access_state == "unavailable":
-            raise SourceUnavailableError(f"文件来源不可获取: {file.id}")
-
-        source_available = False
-        try:
-            source = await self._source_resolver.resolve(
-                file.storage_id or "local",
-                file.path,
-            )
-            source_available = source.exists() and source.is_file()
-        except SourceUnavailableError:
-            await self._file_repo.set_access_state(file.id, "unavailable")
-            raise
-        if not source_available:
-            await self._file_repo.set_access_state(file.id, "unavailable")
-            raise SourceUnavailableError(f"文件来源不可获取: {file.id}")
-
-        if file.access_state != "available":
-            await self._file_repo.set_access_state(file.id, "available")
+        source = await self._source_resolver.resolve(
+            file.storage_id or "local",
+            file.path,
+        )
         return source
 
     def _generate_image_thumbnail(self, source: SourceFile, size: PreviewSize) -> bytes:
@@ -109,6 +100,18 @@ class GetFileThumbnailUseCase:
         except ThumbnailGenerationError as exc:
             raise ThumbnailUnavailableError("图片缩略图生成失败") from exc
 
+    def _generate_thumbnail(
+        self,
+        file: File,
+        source: SourceFile,
+        size: PreviewSize,
+    ) -> bytes:
+        if file.category is FileCategory.IMAGE:
+            return self._generate_image_thumbnail(source, size)
+        if file.category is FileCategory.DOCUMENT:
+            return self._generate_pdf_thumbnail(source, size)
+        return self._generate_video_thumbnail(source, size)
+
     def _generate_video_thumbnail(
         self,
         source: SourceFile,
@@ -118,6 +121,18 @@ class GetFileThumbnailUseCase:
             return self._generator.generate_video_thumbnail(str(source), size)
         except ThumbnailGenerationError as exc:
             raise ThumbnailUnavailableError("视频缩略图生成失败") from exc
+
+    def _generate_pdf_thumbnail(self, source: SourceFile, size: PreviewSize) -> bytes:
+        try:
+            with source.open("rb") as source_file:
+                source_bytes = source_file.read()
+        except OSError as exc:
+            raise ThumbnailUnavailableError("缩略图源文件不可访问") from exc
+
+        try:
+            return self._generator.generate_pdf_thumbnail(source_bytes, size)
+        except ThumbnailGenerationError as exc:
+            raise ThumbnailUnavailableError("PDF 缩略图生成失败") from exc
 
     def _to_dto(self, file: File, size: PreviewSize, data: bytes) -> FileThumbnailDTO:
         return FileThumbnailDTO(

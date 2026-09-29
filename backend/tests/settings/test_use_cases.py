@@ -92,19 +92,6 @@ class FakeStorageLocationRepository:
         return True
 
 
-class FakeFileRepository:
-    def __init__(self) -> None:
-        self.marked: dict[str, int] = {}
-
-    async def set_access_state(self, file_id: str, access_state: str) -> bool:
-        _ = file_id, access_state
-        return True
-
-    async def mark_unavailable_by_storage(self, storage_id: str) -> int:
-        self.marked[storage_id] = self.marked.get(storage_id, 0) + 1
-        return 7
-
-
 @pytest.mark.asyncio
 async def test_replace_classifier_labels_rejects_duplicates() -> None:
     repository = FakeClassifierLabelRepository()
@@ -227,23 +214,20 @@ async def test_update_storage_location_preserves_password_when_omitted() -> None
 
 
 @pytest.mark.asyncio
-async def test_delete_storage_location_marks_bound_files() -> None:
+async def test_delete_storage_location_does_not_mark_bound_files() -> None:
     repository = FakeStorageLocationRepository()
-    file_repository = FakeFileRepository()
-    use_case = DeleteStorageLocationUseCase(repository, file_repository)
+    use_case = DeleteStorageLocationUseCase(repository)
 
     result = await use_case.execute(DeleteStorageLocationCommand(location_id="nas1"))
 
-    assert result.affected_files == 7
-    assert file_repository.marked == {"nas1": 1}
+    assert result.affected_files == 0
     assert repository.locations["nas1"].status == "deleted"
 
 
 @pytest.mark.asyncio
 async def test_delete_local_location_is_rejected() -> None:
     repository = FakeStorageLocationRepository()
-    file_repository = FakeFileRepository()
-    use_case = DeleteStorageLocationUseCase(repository, file_repository)
+    use_case = DeleteStorageLocationUseCase(repository)
 
     with pytest.raises(ValidationError):
         await use_case.execute(DeleteStorageLocationCommand(location_id="local"))

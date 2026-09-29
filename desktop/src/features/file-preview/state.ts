@@ -1,9 +1,12 @@
-import { getDocumentPreviewSupport } from "./preview";
+import { getDocumentPreviewSupport, getImagePreviewSupport } from "./preview";
 import type { FilePreviewItem, PreviewStatus } from "./types";
 
 export function getInitialPreviewStatus(item: FilePreviewItem): PreviewStatus {
   const documentSupport = getDocumentPreviewSupport(item);
-  return documentSupport === "unsupported" ? "unsupported" : "loading";
+  const imageSupport = getImagePreviewSupport(item);
+  return documentSupport === "unsupported" || imageSupport === "unsupported"
+    ? "unsupported"
+    : "loading";
 }
 
 export function getPreviewLoadSuccessStatus(): PreviewStatus {

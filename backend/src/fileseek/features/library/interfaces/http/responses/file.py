@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterator
 
 from fastapi.responses import Response, StreamingResponse
 
 from fileseek.features.library.application.ports import SourceFile
+from fileseek.features.library.domain.exceptions import SourceUnavailableError
 from fileseek.shared.utils.file_utils import detect_file_type_from_bytes
 
 _CHUNK_SIZE = 64 * 1024
@@ -14,11 +16,16 @@ _FILE_TYPE_HEADER_SIZE = 4096
 def stream_file(
     path: SourceFile,
     range_header: str | None = None,
-):
+) -> Response:
     """返回支持浏览器预览和视频 Range 的文件响应。"""
 
-    size = path.stat()["size"]
-    content_type = _detect_content_type(path)
+    try:
+        size = _source_size(path)
+        content_type = _detect_content_type(path)
+    except SourceUnavailableError:
+        raise
+    except (KeyError, TypeError, ValueError, OSError) as exc:
+        raise SourceUnavailableError("文件来源不可获取") from exc
 
     # 没有 Range，直接流式返回整个文件
     if not range_header:
@@ -45,19 +52,19 @@ def stream_file(
     if "," in value:
         return _range_not_satisfiable(size)
 
-    start, _, end = value.partition("-")
+    start_text, _, end_text = value.partition("-")
 
     try:
-        if start:
-            start = int(start)
-            end = int(end) if end else size - 1
+        if start_text:
+            start = int(start_text)
+            end = int(end_text) if end_text else size - 1
 
         else:
             # bytes=-500
-            length = int(end)
+            length = int(end_text)
 
             if length <= 0:
-                raise ValueError
+                return _range_not_satisfiable(size)
 
             start = max(
                 size - length,
@@ -97,21 +104,26 @@ def stream_file(
     )
 
 
+def _source_size(path: SourceFile) -> int:
+    size_value = path.stat()["size"]
+    if not isinstance(size_value, int):
+        raise TypeError
+    return size_value
+
+
 def _detect_content_type(
     path: SourceFile,
 ) -> str:
     """读取少量文件头检测 MIME Type。"""
 
-    try:
-        with path.open("rb") as file:
-            header = file.read(
-                _FILE_TYPE_HEADER_SIZE
-            )
+    with path.open("rb") as file:
+        header = file.read(_FILE_TYPE_HEADER_SIZE)
 
-        return detect_file_type_from_bytes(header).value
-
-    except (OSError, ValueError):
+    file_type = detect_file_type_from_bytes(header)
+    if file_type is None:
         return "application/octet-stream"
+
+    return file_type.media_type
 
 
 def _range_not_satisfiable(
@@ -131,7 +143,7 @@ def _iter_file(
     path: SourceFile,
     start: int,
     end: int,
-):
+) -> Iterator[bytes]:
     """分块读取文件。"""
 
     remaining = end - start + 1

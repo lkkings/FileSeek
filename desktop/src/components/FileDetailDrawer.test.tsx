@@ -1,6 +1,6 @@
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileSource } from "anyview";
 
 import { FileDetailDrawer } from "./FileDetailDrawer";
@@ -35,6 +35,12 @@ const imageFile: FileItem = {
   category: "image",
 };
 
+const unsupportedImageFile: FileItem = {
+  ...imageFile,
+  file_name: "Graphic.svg",
+  file_type: "svg",
+};
+
 const videoFile: FileItem = {
   ...file,
   file_name: "Clip.mp4",
@@ -44,7 +50,13 @@ const videoFile: FileItem = {
 
 const videojsMock = vi.hoisted(() => {
   const dispose = vi.fn();
-  return { dispose, create: vi.fn(() => ({ dispose })) };
+  const play = vi.fn(() => Promise.resolve());
+  const ready = vi.fn((callback: () => void) => callback());
+  return {
+    dispose,
+    play,
+    create: vi.fn(() => ({ dispose, play, ready })),
+  };
 });
 
 vi.mock("video.js", () => ({
@@ -69,6 +81,14 @@ vi.mock("anyview", () => ({
 }));
 
 describe("FileDetailDrawer", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("passes the selected file to the open callback", () => {
     const onOpenAction = vi.fn();
     renderWithI18n(
@@ -80,14 +100,14 @@ describe("FileDetailDrawer", () => {
     expect(onOpenAction).toHaveBeenCalledWith(file);
   });
 
-  it("renders the first document page with viewer chrome disabled", () => {
+  it("renders the PDF detail thumbnail instead of the document viewer", () => {
     renderWithI18n(<FileDetailDrawer isOpen onClose={() => undefined} file={file} />);
 
-    const viewer = screen.getByTestId("anyview-document");
-    expect(viewer).toHaveAttribute("data-url", "/api/v1/library/files/preview/file-1");
-    expect(viewer).toHaveAttribute("data-page", "0");
-    expect(viewer).toHaveAttribute("data-show-toolbar", "false");
-    expect(viewer).toHaveAttribute("data-show-sidebar", "false");
+    expect(screen.queryByTestId("anyview-document")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Details.pdf" })).toHaveAttribute(
+      "src",
+      "/api/v1/library/files/file-1/thumbnail?size=detail",
+    );
   });
 
   it("renders a format-specific unsupported document state", () => {
@@ -107,6 +127,15 @@ describe("FileDetailDrawer", () => {
     );
   });
 
+  it("renders an unsupported state for removed image formats", () => {
+    renderWithI18n(
+      <FileDetailDrawer isOpen onClose={() => undefined} file={unsupportedImageFile} />,
+    );
+
+    expect(screen.queryByRole("img", { name: "Graphic.svg" })).not.toBeInTheDocument();
+    expect(screen.getByText("该格式暂不支持预览")).toBeInTheDocument();
+  });
+
   it("mounts and disposes the inline video player on demand", () => {
     const { unmount } = renderWithI18n(
       <FileDetailDrawer isOpen onClose={() => undefined} file={videoFile} />,
@@ -121,7 +150,11 @@ describe("FileDetailDrawer", () => {
 
     const player = screen.getByTestId("drawer-video-player");
     expect(player).toHaveAttribute("src", "/api/v1/library/files/preview/file-1");
-    expect(videojsMock.create).toHaveBeenCalledWith(player, expect.objectContaining({ controls: true }));
+    expect(videojsMock.create).toHaveBeenCalledWith(
+      player,
+      expect.objectContaining({ autoplay: "any", controls: true }),
+    );
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
 
     unmount();
 

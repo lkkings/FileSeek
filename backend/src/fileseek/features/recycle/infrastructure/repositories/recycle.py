@@ -1,5 +1,7 @@
 """Library 回收站的 Tortoise 仓储实现。"""
 
+from datetime import datetime
+
 from fileseek.features.recycle.domain.entities import RecycleItem
 from fileseek.features.recycle.domain.repositories import RecycleRepository
 from fileseek.infrastructure.database.models import RecycleItemModel
@@ -7,14 +9,19 @@ from fileseek.shared.domain.file_types import FileType
 
 
 def _to_entity(model: RecycleItemModel) -> RecycleItem:
+    deleted_at = model.deleted_at
+    deleted_at_value = (
+        deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at
+    )
     return RecycleItem(
         id=model.id,
         original_file_id=model.file.id,
         original_name=model.file.name,
         original_folder_id=model.file.folder_id,
         original_path=model.file.path,
+        storage_id=model.file.storage_id,
         recycle_path=model.recycle_path,
-        deleted_at=model.deleted_at.isoformat() if hasattr(model.deleted_at, "isoformat") else model.deleted_at,
+        deleted_at=deleted_at_value,
         file_type=FileType(model.file.file_type),
         size=model.file.size
     )
@@ -67,4 +74,3 @@ class RecycleRepositoryImpl(RecycleRepository):
 
     async def _delete_all(self) -> None:
         await RecycleItemModel.all().delete()
-

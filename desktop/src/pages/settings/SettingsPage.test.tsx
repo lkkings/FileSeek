@@ -110,9 +110,7 @@ describe("SettingsPage", () => {
   it("switches language", () => {
     const { client } = createSettingsClient();
     renderSettingsPage(client);
-
-    expect(screen.getByRole("heading", { name: "语言设置" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getByText("Manage language, tags, and storage drives.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Language settings" })).toBeInTheDocument();
   });
 

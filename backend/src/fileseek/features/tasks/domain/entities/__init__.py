@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass,field
-from enum import Enum
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 
+from fileseek.features.library.domain.entities import File, FileChunk
 from fileseek.features.tasks.domain.exceptions import InvalidTransitionError
-from fileseek.features.library.domain.entities import File,FileChunk
 
 
 class TaskStatus(str, Enum):
@@ -17,6 +17,7 @@ class TaskStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class TaskStage(str, Enum):
@@ -28,9 +29,18 @@ class TaskStage(str, Enum):
 
 @dataclass
 class TaskProgress:
-    progress: int
     stage: TaskStage
+    completed_count: int
+    total_count: int
     message: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.completed_count < 0:
+            raise ValueError("任务完成数量不能小于 0")
+        if self.total_count <= 0:
+            raise ValueError("任务总数量必须大于 0")
+        if self.completed_count > self.total_count:
+            raise ValueError("任务完成数量不能大于总数量")
 
 
 
@@ -40,16 +50,17 @@ class Task:
     file: File
     metadata: dict[str, object] | None = None
     status: TaskStatus = TaskStatus.QUEUED
-    progress: int = 0
+    completed_count: int | None = None
+    total_count: int | None = None
     stage: TaskStage | None = None
     error_message: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
-    def add_file_tags(self,tags: list[str]):
+    def add_file_tags(self, tags: list[str]) -> None:
         self.file.add_tags(tags)
 
-    def add_file_chunks(self,chunks: list[FileChunk]):
+    def add_file_chunks(self, chunks: list[FileChunk]) -> None:
         self.file.add_chunks(chunks)
 
 
@@ -64,7 +75,8 @@ class Task:
                 f"只能在 PROCESSING 状态推进阶段，当前状态为 {self.status.value}"
             )
         self.stage = progress.stage
-        self.progress = progress.progress
+        self.completed_count = progress.completed_count
+        self.total_count = progress.total_count
 
     def mark_completed(self) -> None:
         """标记任务完成（PROCESSING → COMPLETED）。"""
@@ -72,7 +84,8 @@ class Task:
             raise InvalidTransitionError(
                 f"只能从 PROCESSING 状态标记完成，当前状态为 {self.status.value}"
             )
-        self.progress = 100
+        if self.total_count is not None:
+            self.completed_count = self.total_count
         self.status = TaskStatus.COMPLETED
         self.error_message = None
 
@@ -85,14 +98,25 @@ class Task:
         self.status = TaskStatus.FAILED
         self.error_message = error_message
 
-    def retry(self) -> None:
-        """重试失败的任务（FAILED → QUEUED）。"""
-        if self.status != TaskStatus.FAILED:
+    def mark_cancelled(self) -> None:
+        """标记任务取消（PROCESSING → CANCELLED）。"""
+        if self.status != TaskStatus.PROCESSING:
             raise InvalidTransitionError(
-                f"只能重试 FAILED 状态的任务，当前状态为 {self.status.value}"
+                f"只能取消 PROCESSING 状态的任务，当前状态为 {self.status.value}"
+            )
+        self.status = TaskStatus.CANCELLED
+        self.error_message = "任务已终止"
+
+    def retry(self) -> None:
+        """重试失败或已终止的任务（FAILED/CANCELLED → QUEUED）。"""
+        if self.status not in (TaskStatus.FAILED, TaskStatus.CANCELLED):
+            raise InvalidTransitionError(
+                f"只能重试 FAILED 或 CANCELLED 状态的任务，当前状态为 {self.status.value}"
             )
         self.status = TaskStatus.QUEUED
         self.error_message = None
+        self.completed_count = None
+        self.total_count = None
 
     def release(self) -> None:
         """把在飞任务放回队列（PROCESSING → QUEUED）。

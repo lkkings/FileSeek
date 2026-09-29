@@ -72,9 +72,10 @@ export function ImportFileDialog({
   const showProgress =
     importing || importState.status === "completed" || importState.status === "failed";
   const totalItems = importState.total || importState.items.length;
+  const completedItems = importState.succeeded + importState.failed;
   const importProgressPercent = totalItems === 0
     ? 0
-    : Math.round(((importState.succeeded + importState.failed) / totalItems) * 100);
+    : Math.round((completedItems / totalItems) * 100);
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -159,10 +160,14 @@ export function ImportFileDialog({
         }}
       >
         <header className="dialog-header import-dialog-header">
-          <div>
+          <div className="dialog-title-group import-dialog-copy">
             <p className="dialog-kicker">{t("import.kicker", "批量导入")}</p>
             <h2 id="import-dialog-title">
-              {t("import.title", "导入文件到")} {folderName}
+              {t("import.title", "导入文件到")}{" "}
+              <span className="import-dialog-destination">
+                <Icon name="folder" size={15} />
+                <span>{folderName}</span>
+              </span>
             </h2>
             <p>
               {showProgress
@@ -183,26 +188,31 @@ export function ImportFileDialog({
         {showProgress ? (
           <div className="import-progress" aria-live="polite">
             <div className="import-progress-summary">
-              <span>
-                {t("import.total", "总计")} {importState.total}
+              <span className="import-progress-metric">
+                <span>{t("import.total", "总计")}</span>
+                <strong>{importState.total}</strong>
               </span>
-              <span>
-                {t("import.succeeded", "成功")} {importState.succeeded}
+              <span className="import-progress-metric">
+                <span>{t("import.succeeded", "成功")}</span>
+                <strong>{importState.succeeded}</strong>
               </span>
-              <span>
-                {t("import.failed", "失败")} {importState.failed}
+              <span className="import-progress-metric">
+                <span>{t("import.failed", "失败")}</span>
+                <strong>{importState.failed}</strong>
               </span>
-              <span>
-                {t("import.progress", "进度")}{" "}
-                {importProgressPercent}%
+              <span className="import-progress-metric">
+                <span>{t("import.progress", "进度")}</span>
+                <strong>{completedItems}/{totalItems}</strong>
               </span>
             </div>
             <div
               className="import-progress-bar"
               role="progressbar"
               aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={importProgressPercent}
+              aria-valuemax={totalItems}
+              aria-valuenow={completedItems}
+              aria-valuetext={`${completedItems}/${totalItems}`}
+              aria-label={t("import.progress", "进度")}
             >
               <span style={{ width: `${importProgressPercent}%` }} />
             </div>
@@ -212,14 +222,16 @@ export function ImportFileDialog({
                   key={`${item.storageId}:${item.path}`}
                   className={`import-progress-item is-${item.state}`}
                 >
-                  <Icon name="document" size={16} />
-                  <span>{fileName(item.path)}</span>
-                  <span>{t(`import.state.${item.state}`, item.state)}</span>
-                  {item.stage && <span>{item.stage}</span>}
-                  {item.progress > 0 && item.state === "processing" && (
-                    <span>{item.progress}%</span>
-                  )}
-                  {item.error && <span>{item.error}</span>}
+                  <span className="import-progress-file">
+                    <Icon name="document" size={16} />
+                    <span>{fileName(item.path)}</span>
+                  </span>
+                  <span className={`import-progress-state is-${item.state}`}>
+                    {t(`import.state.${item.state}`, item.state)}
+                  </span>
+                  <div className="import-progress-details">
+                    {item.error && <span className="import-progress-error">{item.error}</span>}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -286,26 +298,28 @@ export function ImportFileDialog({
                       if (input instanceof HTMLInputElement) navigate(input.value.trim());
                     }}
                   >
-                    <button
-                      type="button"
-                      className="import-parent-button"
-                      aria-label={t("import.parentDirectory", "返回上一级")}
-                      title={t("import.parentDirectory", "返回上一级")}
-                      disabled={!canNavigateUp}
-                      onClick={() => navigate(parentPath(currentPath))}
-                    >
-                      <Icon name="arrowUp" size={16} />
-                    </button>
-                    <input
-                      name="import-path"
-                      type="text"
-                      key={`${activeStorageId}:${currentPath}`}
-                      defaultValue={currentPath}
-                      aria-label={t("import.path", "路径")}
-                      placeholder={t("import.pathPlaceholder", "粘贴路径或输入上级目录")}
-                      spellCheck={false}
-                    />
-                    <div>
+                    <div className="import-path-controls">
+                      <button
+                        type="button"
+                        className="import-parent-button"
+                        aria-label={t("import.parentDirectory", "返回上一级")}
+                        title={t("import.parentDirectory", "返回上一级")}
+                        disabled={!canNavigateUp}
+                        onClick={() => navigate(parentPath(currentPath))}
+                      >
+                        <Icon name="arrowUp" size={16} />
+                      </button>
+                      <input
+                        name="import-path"
+                        type="text"
+                        key={`${activeStorageId}:${currentPath}`}
+                        defaultValue={currentPath}
+                        aria-label={t("import.path", "路径")}
+                        placeholder={t("import.pathPlaceholder", "粘贴路径或输入上级目录")}
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div className="import-selection-utilities">
                       <button type="button" onClick={selectAll}>
                         {t("import.selectAll", "全选")}
                       </button>
@@ -367,7 +381,7 @@ export function ImportFileDialog({
 
             <div className="dialog-actions import-dialog-actions">
               <span className="import-selected-count">
-                {t("import.selectedCount", "已选择")} {selectedItems.length}
+                {t("import.selectedCount", "已选择")} <strong>{selectedItems.length}</strong>
               </span>
               <button type="button" className="dialog-secondary" onClick={onClose}>
                 {showProgress

@@ -42,6 +42,7 @@ dependencies = [
     "tortoise-orm==0.25.1",
     # Tortoise 0.25.1 calls aiosqlite.Connection.start(), removed in 0.22.
     "aiosqlite==0.21.0",
+    "defusedxml==0.7.1",
 ]
 
 [project.optional-dependencies]
@@ -96,11 +97,12 @@ ignore = ["TRY003"]
 [tool.ruff.lint.per-file-ignores]
 # Tests assert, take unused fixtures, and hardcode stand-in tokens.
 "tests/**" = ["S101", "S105", "S106", "ARG"]
+"../compatibility-tests/file-types/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fileseek"]
-# Test helper modules, imported by name from the tests directory.
-known-local-folder = ["doc_fixtures", "fake_encoders", "video_fixtures"]
+# Test helper modules imported by name from the compatibility test directory.
+known-local-folder = ["doc_fixtures", "fake_encoders", "video_fixtures", "file_type_contract"]
 
 [[tool.mypy.overrides]]
 # Ships no stubs or py.typed marker; calls into it are wrapped at one boundary.
@@ -117,9 +119,9 @@ disallow_any_generics = true
 no_implicit_reexport = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "../compatibility-tests/file-types"]
 # "." 让 tests 包可被 import：API 测试共享 tests/api/conftest.py 里的常量与假实现。
-pythonpath = ["src", "."]
+pythonpath = ["src", ".", "../compatibility-tests/file-types"]
 addopts = "-q --strict-markers --strict-config -W ignore::Warning"
 filterwarnings = [
     "ignore::DeprecationWarning",
@@ -147,4 +149,9 @@ exclude_also = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
     "@abstractmethod",
+]
+
+[dependency-groups]
+dev = [
+    "types-defusedxml==0.7.0.20260504",
 ]

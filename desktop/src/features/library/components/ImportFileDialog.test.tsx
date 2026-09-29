@@ -206,16 +206,15 @@ describe("ImportFileDialog", () => {
         failed: 1,
         error: null,
         items: [
-          { storageId: "local", path: "/first.pdf", state: "completed", progress: 100, stage: null, fileId: "file-1", taskId: "task-1", error: null },
-          { storageId: "local", path: "/missing.pdf", state: "failed", progress: 0, stage: null, fileId: null, taskId: null, error: "文件不存在" },
-          { storageId: "local", path: "/later.pdf", state: "processing", progress: 50, stage: "生成索引", fileId: "file-3", taskId: "task-3", error: null },
+          { storageId: "local", path: "/first.pdf", state: "completed", fileId: "file-1", taskId: "task-1", error: null },
+          { storageId: "local", path: "/missing.pdf", state: "failed", fileId: null, taskId: null, error: "文件不存在" },
+          { storageId: "local", path: "/later.pdf", state: "processing", fileId: "file-3", taskId: "task-3", error: null },
         ],
       },
     });
 
     expect(screen.getByText("文件不存在")).toBeInTheDocument();
-    expect(screen.getByText("生成索引")).toBeInTheDocument();
-    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("处理中")).toBeInTheDocument();
   });
 
   it("closes with the dialog button and Escape key", () => {

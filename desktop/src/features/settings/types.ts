@@ -18,3 +18,4 @@ export interface SettingsPreferences {
 }
 
 export type { ClassifierLabels, StorageConnectionResult, StorageLocation, StorageLocationInput, StorageProtocol };
+export type { SystemIntegrationStatus } from "../../services/tauri/system-integration";

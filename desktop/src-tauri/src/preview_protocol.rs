@@ -135,7 +135,9 @@ fn response_from_parts(
     body: Vec<u8>,
     headers: Vec<(String, String)>,
 ) -> Response<Vec<u8>> {
-    let mut builder = Response::builder().status(status);
+    let mut builder = Response::builder()
+        .status(status)
+        .header("Access-Control-Allow-Origin", "*");
     for (name, value) in headers {
         builder = builder.header(name, value);
     }
@@ -160,6 +162,7 @@ fn error_response(status: u16, message: &str) -> Response<Vec<u8>> {
     Response::builder()
         .status(status)
         .header("Content-Type", "text/plain; charset=utf-8")
+        .header("Access-Control-Allow-Origin", "*")
         .body(message.as_bytes().to_vec())
         .unwrap_or_else(|_| {
             Response::builder()
@@ -219,6 +222,7 @@ mod tests {
         let response = handle_preview_request(&state, &request);
 
         assert_eq!(response.status(), 503);
+        assert_eq!(response.headers()["access-control-allow-origin"], "*");
     }
 
     #[test]
@@ -243,6 +247,7 @@ mod tests {
         assert_eq!(response.headers()["content-type"], "video/mp4");
         assert_eq!(response.headers()["content-range"], "bytes 6-10/27");
         assert_eq!(response.headers()["accept-ranges"], "bytes");
+        assert_eq!(response.headers()["access-control-allow-origin"], "*");
         assert_eq!(
             response.headers()["cache-control"],
             "private, max-age=86400"

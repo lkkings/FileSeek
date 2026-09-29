@@ -65,6 +65,8 @@ class ImportTaskSnapshotDTO:
     task_id: str
     file_id: str | None
     status: str
-    progress: int
+    progress: str
+    completed_count: int | None
+    total_count: int | None
     stage: str | None
     error_message: str | None

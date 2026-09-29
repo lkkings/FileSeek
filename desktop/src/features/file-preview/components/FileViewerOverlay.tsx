@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { DocViewer } from "anyview";
-import videojs from "video.js";
+import { Component, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { AdaptiveDocViewer } from "./AdaptiveDocViewer";
 
 import { useTranslate } from "../../../i18n/useTranslate";
 import { DocumentFormatIcon } from "./DocumentFormatIcon";
-import { buildOriginalFileUrl, buildPreviewUrl, getDocumentPreviewSupport } from "../preview";
+import { buildOriginalFileUrl, buildPreviewUrl, getDocumentPreviewSupport, getImagePreviewSupport } from "../preview";
 import type { FilePreviewItem, PreviewUrlOptions } from "../types";
+import { VideoJsPlayer } from "./VideoJsPlayer";
 import "./FileViewerOverlay.css";
-
-type VideoPlayer = ReturnType<typeof videojs>;
 
 export interface FileViewerOverlayProps {
   isOpen: boolean;
@@ -72,7 +71,7 @@ function FileViewerSurface({
   urlOptions?: PreviewUrlOptions | undefined;
 }) {
   if (item.fileType === "document") {
-    return <DocumentViewerSurface item={item} urlOptions={urlOptions} />;
+    return <DocumentViewerSurface key={item.fileId} item={item} urlOptions={urlOptions} />;
   }
 
   if (item.fileType === "image") {
@@ -90,29 +89,65 @@ function DocumentViewerSurface({
   urlOptions?: PreviewUrlOptions | undefined;
 }) {
   const t = useTranslate();
+  const [hasError, setHasError] = useState(false);
   const documentSupport = getDocumentPreviewSupport(item);
 
-  if (documentSupport !== "supported") {
+  if (documentSupport !== "supported" || hasError) {
     return (
-      <div className="file-viewer-fallback">
-        <DocumentFormatIcon fileName={item.fileName} isUnsupported />
-        <p>{t("preview.unsupported", "该格式暂不支持预览")}</p>
+      <div className="file-viewer-fallback" role={hasError ? "alert" : undefined}>
+        <DocumentFormatIcon
+          fileName={item.fileName}
+          isUnsupported={documentSupport === "unsupported" || hasError}
+        />
+        <p>
+          {hasError
+            ? t("preview.documentError", "文档预览加载失败")
+            : t("preview.unsupported", "该格式暂不支持预览")}
+        </p>
       </div>
     );
   }
 
   return (
-    <DocViewer
-      source={{
-        kind: "url",
-        url: buildOriginalFileUrl(item, urlOptions),
-        filename: item.fileName,
-      }}
-      showToolbar
-      showSidebar
-      persistKey={`file-preview-${item.fileId}`}
-    />
+    <DocumentViewerErrorBoundary fallback={documentErrorFallback(item, t)}>
+      <AdaptiveDocViewer
+        source={{
+          kind: "url",
+          url: buildOriginalFileUrl(item, urlOptions),
+          filename: item.fileName,
+        }}
+        initialPageNumber={item.initialPageNumber}
+        showToolbar
+        showSidebar
+        persistKey={`file-preview-${item.fileId}`}
+        onError={() => setHasError(true)}
+      />
+    </DocumentViewerErrorBoundary>
   );
+}
+
+function documentErrorFallback(item: FilePreviewItem, t: ReturnType<typeof useTranslate>) {
+  return (
+    <div className="file-viewer-fallback" role="alert">
+      <DocumentFormatIcon fileName={item.fileName} isUnsupported />
+      <p>{t("preview.documentError", "文档预览加载失败")}</p>
+    </div>
+  );
+}
+
+class DocumentViewerErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
 }
 
 function ImageViewerSurface({
@@ -124,6 +159,10 @@ function ImageViewerSurface({
 }) {
   const [hasError, setHasError] = useState(false);
   const t = useTranslate();
+
+  if (getImagePreviewSupport(item) === "unsupported") {
+    return <div className="file-viewer-fallback" role="status">{t("preview.unsupported", "该格式暂不支持预览")}</div>;
+  }
 
   if (hasError) {
     return <div className="file-viewer-fallback" role="alert">{t("preview.error", "预览加载失败")}</div>;
@@ -145,32 +184,16 @@ function VideoViewerSurface({
   item: FilePreviewItem;
   urlOptions?: PreviewUrlOptions | undefined;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const playerRef = useRef<VideoPlayer | null>(null);
   const sourceUrl = buildOriginalFileUrl(item, urlOptions);
   const posterUrl = buildPreviewUrl(item, "detail", urlOptions);
 
-  useEffect(() => {
-    const videoElement = containerRef.current?.querySelector("video");
-    if (!videoElement) return;
-
-    const player = videojs(videoElement, {
-      controls: true,
-      preload: "auto",
-      responsive: true,
-      poster: posterUrl,
-    });
-    playerRef.current = player;
-
-    return () => {
-      playerRef.current?.dispose();
-      playerRef.current = null;
-    };
-  }, [posterUrl, sourceUrl]);
-
   return (
-    <div className="file-viewer-video" ref={containerRef}>
-      <video src={sourceUrl} controls playsInline data-testid="viewer-video-player" />
-    </div>
+    <VideoJsPlayer
+      className="file-viewer-video"
+      sourceUrl={sourceUrl}
+      startTime={item.startTime}
+      posterUrl={posterUrl}
+      testId="viewer-video-player"
+    />
   );
 }

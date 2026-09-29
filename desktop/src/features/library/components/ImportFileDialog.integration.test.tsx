@@ -113,19 +113,16 @@ describe("ImportFileDialog import flow", () => {
       callbacks.onEvent(event(3, "item_failed", { index: 0, error: "文件不存在" }));
       callbacks.onEvent(event(4, "item_started", { index: 1 }));
       callbacks.onEvent(event(5, "item_registered", { index: 1, file_id: "file-2", task_id: "task-2" }));
-      callbacks.onEvent(event(6, "task_progress", { index: 1, progress: 50, stage: "生成索引" }));
     });
 
     expect(screen.getByText("文件不存在")).toBeInTheDocument();
-    expect(screen.getByText("生成索引")).toBeInTheDocument();
-    expect(screen.getByText("50%")).toBeInTheDocument();
 
     await act(async () => {
-      callbacks.onEvent(event(7, "item_completed", { index: 1 }));
-      callbacks.onEvent(event(8, "batch_completed", { total: 2, succeeded: 1, failed: 1 }));
+      callbacks.onEvent(event(6, "item_completed", { index: 1 }));
+      callbacks.onEvent(event(7, "batch_completed", { total: 2, succeeded: 1, failed: 1 }));
     });
 
     expect(screen.getByText("已完成")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
   });
 });

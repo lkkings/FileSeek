@@ -5,7 +5,6 @@ export type ImportEventType =
   | "batch_started"
   | "item_started"
   | "item_registered"
-  | "task_progress"
   | "item_completed"
   | "item_failed"
   | "batch_completed"

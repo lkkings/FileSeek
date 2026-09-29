@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecycleRowItem } from "./RecycleRowItem";
@@ -30,12 +30,12 @@ describe("RecycleRowItem", () => {
       />,
     );
 
-    fireEvent.click(container.querySelector(".search-row-checkbox")!);
+    fireEvent.click(container.querySelector(".recycle-row-checkbox")!);
 
     expect(onToggleCheck).toHaveBeenCalledWith(item);
   });
 
-  it("activates long-press selection after 800 milliseconds", () => {
+  it("activates long-press selection after 800 milliseconds without preview actions", () => {
     vi.useFakeTimers();
     const onLongPress = vi.fn();
     const { container } = renderWithI18n(
@@ -53,5 +53,6 @@ describe("RecycleRowItem", () => {
     fireEvent.mouseUp(container.querySelector(".recycle-row")!);
 
     expect(onLongPress).toHaveBeenCalledWith("item-1");
+    expect(screen.queryByRole("button", { name: /预览文件/ })).not.toBeInTheDocument();
   });
 });

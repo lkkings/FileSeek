@@ -15,7 +15,8 @@
       {
         "title": "desktop",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "visible": false
       }
     ],
     "security": {
@@ -25,6 +26,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "macOS": {
+      "signingIdentity": "-",
+      "files": {
+        "PlugIns/FileSeekFinderSync.appex": "PlugIns/FileSeekFinderSync.appex"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

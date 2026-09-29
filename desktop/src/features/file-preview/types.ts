@@ -14,6 +14,8 @@ export interface FilePreviewItem {
   fileId: string;
   fileName: string;
   fileType: PreviewCategory;
+  initialPageNumber?: number | undefined;
+  startTime?: number | undefined;
 }
 
 export interface PreviewUrlOptions {

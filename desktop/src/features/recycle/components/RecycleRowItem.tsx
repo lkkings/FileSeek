@@ -2,8 +2,8 @@ import { useRef } from "react";
 
 import { Icon } from "../../../components/Icon";
 import { useTranslate } from "../../../i18n/useTranslate";
+import { formatDateTime } from "../../../i18n/formatDateTime";
 import type { RecycleItem } from "../../../services/api/recycle";
-import "../../file-search/components/search-results.css";
 import "./recycle.css";
 
 interface RecycleRowItemProps {
@@ -12,14 +12,6 @@ interface RecycleRowItemProps {
   isRowChecked: boolean;
   onToggleCheck: (item: RecycleItem) => void;
   onLongPress: (itemId: string) => void;
-}
-
-function formatDate(value: string) {
-  if (!value.includes("T")) return value;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const pad = (part: number) => part.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function formatSize(value: string) {
@@ -55,7 +47,7 @@ export function RecycleRowItem({
 
   return (
     <article
-      className={`result-row recycle-row ${isBatchMode ? "in-batch-mode" : ""} ${isRowChecked ? "is-row-selected" : ""}`}
+      className={`recycle-row ${isBatchMode ? "in-batch-mode" : ""} ${isRowChecked ? "is-row-selected" : ""}`}
       onClick={() => {
         if (suppressNextClick.current) {
           suppressNextClick.current = false;
@@ -72,7 +64,7 @@ export function RecycleRowItem({
       {isBatchMode && (
         <button
           type="button"
-          className={`search-row-checkbox ${isRowChecked ? "is-checked" : ""}`}
+          className={`recycle-row-checkbox ${isRowChecked ? "is-checked" : ""}`}
           aria-label={t("recycle.toggleSelection", "切换选择")}
           aria-pressed={isRowChecked}
           onClick={(event) => {
@@ -84,16 +76,16 @@ export function RecycleRowItem({
         </button>
       )}
 
-      <div className="result-file recycle-file">
-        <div className={`file-type-icon file-type-${item.file_type.toLowerCase()}`} aria-hidden="true">
+      <div className="recycle-file">
+        <div className={`recycle-file-type recycle-file-type-${item.file_type.toLowerCase()}`} aria-hidden="true">
           {item.file_type}
         </div>
-        <div className="result-file-copy">
+        <div className="recycle-file-copy">
           <h2>{item.original_name}</h2>
-          <p className="result-path">{item.original_path}</p>
-          <p className="result-meta recycle-meta">
+          <p className="recycle-file-path">{item.original_path}</p>
+          <p className="recycle-file-meta">
             <Icon name="clock" size={15} />
-            <span>{formatDate(item.deleted_at)}</span>
+            <span>{formatDateTime(item.deleted_at)}</span>
             <span>{formatSize(item.size)}</span>
           </p>
         </div>

@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import urlparse
 
-from fileseek.features.library.domain.repositories import FileRepository
 from fileseek.features.settings.application.commands import (
     CreateStorageLocationCommand,
     DeleteStorageLocationCommand,
@@ -136,13 +135,8 @@ class UpdateStorageLocationUseCase:
 
 
 class DeleteStorageLocationUseCase:
-    def __init__(
-        self,
-        repository: StorageLocationRepository,
-        file_repository: FileRepository,
-    ) -> None:
+    def __init__(self, repository: StorageLocationRepository) -> None:
         self.repository = repository
-        self.file_repository = file_repository
 
     async def execute(
         self,
@@ -157,9 +151,6 @@ class DeleteStorageLocationUseCase:
         if location.is_system:
             raise ValidationError("系统存储位置不能删除")
 
-        affected_files = await self.file_repository.mark_unavailable_by_storage(
-            location.id
-        )
         deleted = await self.repository.mark_deleted(location.id)
         if not deleted:
             raise ValidationError(f"存储位置已删除: {location.id}")
@@ -167,7 +158,7 @@ class DeleteStorageLocationUseCase:
         return StorageLocationDeletionDTO(
             id=location.id,
             status="deleted",
-            affected_files=affected_files,
+            affected_files=0,
         )
 
 

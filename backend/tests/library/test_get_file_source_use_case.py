@@ -72,7 +72,9 @@ def _file(path: Path, access_state: str) -> File:
 
 
 @pytest.mark.asyncio
-async def test_get_file_source_marks_failure_unavailable(tmp_path: Path) -> None:
+async def test_get_file_source_keeps_state_when_resolver_fails(
+    tmp_path: Path,
+) -> None:
     file = _file(tmp_path / "source.txt", "available")
     use_case = GetFileSourceUseCase(
         FakeFileRepository(file),
@@ -82,7 +84,23 @@ async def test_get_file_source_marks_failure_unavailable(tmp_path: Path) -> None
     with pytest.raises(SourceUnavailableError):
         await use_case.execute(GetFileQuery(file_id="file-1"))
 
-    assert file.access_state == "unavailable"
+    assert file.access_state == "available"
+
+
+@pytest.mark.asyncio
+async def test_get_file_source_does_not_preflight_missing_source(
+    tmp_path: Path,
+) -> None:
+    file = _file(tmp_path / "missing.txt", "available")
+    use_case = GetFileSourceUseCase(
+        FakeFileRepository(file),
+        FakeSourceResolver(tmp_path / "missing.txt"),
+    )
+
+    result = await use_case.execute(GetFileQuery(file_id="file-1"))
+
+    assert isinstance(result, LocalSourceFile)
+    assert file.access_state == "available"
 
 
 @pytest.mark.asyncio
@@ -98,7 +116,37 @@ async def test_get_file_source_restores_unknown_state(tmp_path: Path) -> None:
     result = await use_case.execute(GetFileQuery(file_id="file-1"))
 
     assert result is not None
-    assert file.access_state == "available"
+    assert file.access_state == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_get_file_source_reads_file_uri_when_state_was_unavailable(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.txt"
+    source.write_text("file uri source", encoding="utf-8")
+    file = _file(Path(source.as_uri()), "unavailable")
+    file.storage_id = "external"
+    use_case = GetFileSourceUseCase(
+        FakeFileRepository(file),
+        StorageSourceResolver(
+            FakeStorageLocationRepository(
+                StorageLocation(
+                    id="external",
+                    type="external",
+                    name="External",
+                    protocol="http",
+                    endpoint="",
+                )
+            )
+        ),
+    )
+
+    result = await use_case.execute(GetFileQuery(file_id="file-1"))
+
+    with result.open("rb") as source_file:
+        assert source_file.read() == b"file uri source"
+    assert file.access_state == "unavailable"
 
 
 @pytest.mark.asyncio

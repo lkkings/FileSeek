@@ -327,9 +327,14 @@ class TaskModel(Model):
         max_length=32,
     )
 
-    # 任务执行进度
-    progress = fields.IntField(
-        default=0,
+    # 任务当前阶段的完成数量；任务进度以该列与 total_count 为准
+    completed_count = fields.IntField(
+        null=True,
+    )
+
+    # 任务当前阶段的总数量
+    total_count = fields.IntField(
+        null=True,
     )
 
     # 任务当前执行阶段

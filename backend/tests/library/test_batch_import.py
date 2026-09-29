@@ -10,10 +10,7 @@ from fileseek.features.library.application.commands import (
     BatchImportCommand,
     BatchImportItemCommand,
 )
-from fileseek.features.library.application.dto import (
-    AddFileResult,
-    ImportTaskSnapshotDTO,
-)
+from fileseek.features.library.application.dto import AddFileResult
 from fileseek.features.library.application.use_cases import (
     BatchImportSessionManager,
 )
@@ -40,28 +37,6 @@ class FakeAddFileUseCase:
         )
 
 
-class FakeTaskProgress:
-    def __init__(self) -> None:
-        self.calls = 0
-
-    async def get_snapshots(
-        self,
-        task_ids: tuple[str, ...],
-    ) -> dict[str, ImportTaskSnapshotDTO]:
-        self.calls += 1
-        return {
-            task_id: ImportTaskSnapshotDTO(
-                task_id=task_id,
-                file_id=f"file-{task_id.removeprefix('task-')}",
-                status="completed",
-                progress=100,
-                stage="indexed",
-                error_message=None,
-            )
-            for task_id in task_ids
-        }
-
-
 async def collect_events(manager: BatchImportSessionManager, import_id: str, last_id: int = 0):
     return [event async for event in manager.subscribe(import_id, last_id)]
 
@@ -69,8 +44,7 @@ async def collect_events(manager: BatchImportSessionManager, import_id: str, las
 @pytest.mark.asyncio
 async def test_batch_import_continues_after_item_failure() -> None:
     add_file = FakeAddFileUseCase()
-    progress = FakeTaskProgress()
-    manager = BatchImportSessionManager(add_file, progress, progress_poll_interval=0)
+    manager = BatchImportSessionManager(add_file)
     command = BatchImportCommand(
         folder_id="folder-1",
         items=(
@@ -89,18 +63,17 @@ async def test_batch_import_continues_after_item_failure() -> None:
         "batch_started",
         "item_started",
         "item_registered",
-        "task_progress",
         "item_completed",
         "item_started",
         "item_failed",
         "item_started",
         "item_registered",
-        "task_progress",
         "item_completed",
         "batch_completed",
     ]
     assert events[-1].payload == {"total": 3, "succeeded": 2, "failed": 1}
-    assert events[6].payload["error"] == "文件已经存在"
+    failed_event = next(event for event in events if event.type == "item_failed")
+    assert failed_event.payload["error"] == "文件已经存在"
     assert [command.path for command in add_file.commands] == [
         "first.pdf",
         "duplicate.pdf",
@@ -111,7 +84,7 @@ async def test_batch_import_continues_after_item_failure() -> None:
 @pytest.mark.asyncio
 async def test_batch_import_completes_when_every_item_fails() -> None:
     add_file = FakeAddFileUseCase()
-    manager = BatchImportSessionManager(add_file, FakeTaskProgress())
+    manager = BatchImportSessionManager(add_file)
     command = BatchImportCommand(
         folder_id="folder-1",
         items=(
@@ -130,11 +103,7 @@ async def test_batch_import_completes_when_every_item_fails() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_import_replays_after_disconnect() -> None:
-    manager = BatchImportSessionManager(
-        FakeAddFileUseCase(),
-        FakeTaskProgress(),
-        progress_poll_interval=0,
-    )
+    manager = BatchImportSessionManager(FakeAddFileUseCase())
     command = BatchImportCommand(
         folder_id="folder-1",
         items=(BatchImportItemCommand(path="first.pdf"),),
@@ -159,8 +128,6 @@ async def test_batch_import_replays_after_disconnect() -> None:
 async def test_batch_import_expires_completed_sessions() -> None:
     manager = BatchImportSessionManager(
         FakeAddFileUseCase(),
-        FakeTaskProgress(),
-        progress_poll_interval=0,
         session_retention_seconds=0,
     )
     command = BatchImportCommand(
@@ -193,7 +160,8 @@ async def test_task_repository_progress_port_maps_task_snapshot() -> None:
         id="task-1",
         file=file,
         status=TaskStatus.PROCESSING,
-        progress=50,
+        completed_count=3,
+        total_count=10,
         stage=TaskStage.ENCODED,
     )
 
@@ -209,7 +177,9 @@ async def test_task_repository_progress_port_maps_task_snapshot() -> None:
         "task_id": "task-1",
         "file_id": "file-1",
         "status": "processing",
-        "progress": 50,
+        "progress": "3/10",
+        "completed_count": 3,
+        "total_count": 10,
         "stage": "encoded",
         "error_message": None,
     }

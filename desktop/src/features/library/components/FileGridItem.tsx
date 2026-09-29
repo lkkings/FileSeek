@@ -2,6 +2,7 @@ import { useRef } from "react";
 
 import { Icon } from "../../../components/Icon";
 import { FilePreviewCell } from "../../file-preview";
+import { formatDateTime } from "../../../i18n/formatDateTime";
 import { FileItem } from "../../../services/api/search";
 
 interface FileGridItemProps {
@@ -71,14 +72,7 @@ export function FileGridItem({
     ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
     : "0.0 MB";
 
-  let formattedDate = file.modified || "";
-  if (formattedDate && formattedDate.includes("T")) {
-    const date = new Date(formattedDate);
-    if (!Number.isNaN(date.getTime())) {
-      const pad = (part: number) => part.toString().padStart(2, "0");
-      formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-  }
+  const formattedDate = formatDateTime(file.modified, "");
 
   return (
     <article

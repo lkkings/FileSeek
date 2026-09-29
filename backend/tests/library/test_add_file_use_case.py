@@ -7,7 +7,6 @@ import pytest
 
 from fileseek.config.settings import Settings
 from fileseek.features.library.application.commands import AddFileCommand
-from fileseek.features.library.application.dto import AddFileResult
 from fileseek.features.library.application.ports import SourceMetadata
 from fileseek.features.library.application.use_cases.add_file import AddFileUseCase
 from fileseek.features.library.domain.entities import File
@@ -21,7 +20,8 @@ from fileseek.features.tasks.domain.entities import Task
 from fileseek.features.tasks.domain.ports import (
     ClassifierLabelSnapshot,
 )
-from fileseek.shared.domain.exceptions import FileAlreadyExistsError
+from fileseek.shared.domain.exceptions import FileAlreadyExistsError, FileNotSupportError
+from fileseek.shared.domain.file_types import FileType
 
 
 class FakeFileSource:
@@ -76,10 +76,6 @@ class FakeFolderRepository:
     async def get_by_id(self, folder_id: str):
         _ = folder_id
         return
-
-    async def increment_file_count(self, folder_id: str, delta: int) -> None:
-        _ = folder_id, delta
-
 
 class FakeTaskManager:
     def __init__(self) -> None:
@@ -145,12 +141,87 @@ async def test_add_file_registers_source_without_library_copy(
     assert file.path == str(source)
     assert file.storage_id == "local"
     assert file.access_state == "available"
-    assert not list(settings.lib_root.rglob("*.txt"))
+    assert not list((settings.lib_root / "documents").rglob("*.txt"))
     assert len(task_manager.tasks) == 1
     assert task_manager.tasks[0].id == result.task_id
     assert task_manager.tasks[0].metadata["temp_path"]
     assert task_manager.tasks[0].metadata["classifier_label_version"] == "version-1"
     assert task_manager.tasks[0].metadata["classifier_labels"]["document"] == ["合同"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("filename", "content", "file_type"),
+    [
+        ("source.md", "# Indexed content\n", FileType.MARKDOWN),
+        ("source.pdf", b"%PDF-1.4\n%%EOF\n", FileType.PDF),
+    ],
+)
+async def test_add_file_preserves_document_extension_for_parser(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    filename: str,
+    content: str | bytes,
+    file_type: FileType,
+) -> None:
+    source = tmp_path / filename
+    if isinstance(content, str):
+        source.write_text(content, encoding="utf-8")
+    else:
+        source.write_bytes(content)
+    settings = _settings(tmp_path / "library")
+    monkeypatch.setattr(
+        "fileseek.features.library.application.use_cases.add_file.get_settings",
+        lambda: settings,
+    )
+    file_repository = FakeFileRepository()
+    task_manager = FakeTaskManager()
+    use_case = AddFileUseCase(
+        file_repository,
+        FakeFolderRepository(),
+        task_manager,
+        FakeFileSource(),
+        FakeLabelProvider(),
+    )
+
+    result = await use_case.execute(
+        AddFileCommand(folder_id="", path=str(source), storage_id="local")
+    )
+
+    temp_path = Path(task_manager.tasks[0].metadata["temp_path"])
+    assert temp_path.suffix == Path(filename).suffix
+    assert file_repository.files[result.file_id].file_type is file_type
+
+
+@pytest.mark.asyncio
+async def test_add_file_rejects_removed_document_types(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source.rtf"
+    source.write_bytes(b"{\\rtf1}")
+    settings = _settings(tmp_path / "library")
+    monkeypatch.setattr(
+        "fileseek.features.library.application.use_cases.add_file.get_settings",
+        lambda: settings,
+    )
+    file_repository = FakeFileRepository()
+    task_manager = FakeTaskManager()
+    use_case = AddFileUseCase(
+        file_repository,
+        FakeFolderRepository(),
+        task_manager,
+        FakeFileSource(),
+        FakeLabelProvider(),
+    )
+
+    with pytest.raises(FileNotSupportError):
+        await use_case.execute(
+            AddFileCommand(folder_id="", path=str(source), storage_id="local")
+        )
+
+    assert not file_repository.files
+    assert not task_manager.tasks
 
 
 @pytest.mark.asyncio
@@ -199,7 +270,7 @@ async def test_add_file_registers_mounted_nas_relative_path(
     assert file.storage_id == "nas1"
     assert file.access_state == "available"
     assert source.read_text(encoding="utf-8") == "nas indexed content"
-    assert not list(settings.lib_root.rglob("*.txt"))
+    assert not list((settings.lib_root / "documents").rglob("*.txt"))
     assert len(task_manager.tasks) == 1
     assert task_manager.tasks[0].id == result.task_id
 

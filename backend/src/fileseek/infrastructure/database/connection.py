@@ -27,6 +27,8 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("files", "storage_id", "VARCHAR(64)"),
     ("files", "access_state", "VARCHAR(32)"),
     ("files", "last_checked_at", "TIMESTAMP"),
+    ("tasks", "completed_count", "INT"),
+    ("tasks", "total_count", "INT"),
 )
 
 

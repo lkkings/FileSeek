@@ -35,7 +35,7 @@ class TaskManager(Protocol):
     async def cancel(
         self,
         task_id: str,
-    ) -> None:
+    ) -> Task:
         """取消任务。"""
         ...
 

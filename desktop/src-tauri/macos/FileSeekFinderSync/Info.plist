@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>FileSeekFinderSync</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.fileseek.desktop.FinderSync</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>FileSeek Finder Sync</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>XPCService</key>
+    <dict>
+        <key>ServiceType</key>
+        <string>Application</string>
+        <key>RunLoopType</key>
+        <string>_NSApplicationMain</string>
+        <key>JoinExistingSession</key>
+        <true/>
+        <key>_MultipleInstances</key>
+        <true/>
+        <key>_AdditionalSubServices</key>
+        <dict>
+            <key>apple-extension-service</key>
+            <true/>
+        </dict>
+    </dict>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.FinderSync</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>FileSeekFinderSync.FileSeekFinderSync</string>
+    </dict>
+</dict>
+</plist>

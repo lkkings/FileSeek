@@ -64,7 +64,7 @@ class AddFileUseCase:
             raise FileAlreadyExistsError(f"文件已经存在：{command.path}")
 
         temp_root = self.settings.temp_dir or Path(gettempdir())
-        temp_path = temp_root / file_id
+        temp_path = temp_root / f"{file_id}{Path(command.path).suffix}"
         temp_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             with source_file.open("rb") as source, temp_path.open("wb") as target:
@@ -91,10 +91,6 @@ class AddFileUseCase:
             tags=[],
         )
         await self.file_repo.save(file)
-        await self.folder_repo.increment_file_count(
-            command.folder_id,
-            1,
-        )
         label_snapshot = await self.label_provider.get_snapshot()
         task_id = generate_id("t")
         task = Task(

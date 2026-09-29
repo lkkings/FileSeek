@@ -12,8 +12,12 @@ The system SHALL render a preview cell for every visible file according to its c
 - **THEN** the system SHALL show an icon or compact visual that identifies its specific document format rather than a generic simulated media scene
 
 #### Scenario: Image list preview
-- **WHEN** an image file is visible in a list or grid
+- **WHEN** a supported image file is visible in a list or grid
 - **THEN** the system SHALL request and display an image thumbnail for that file
+
+#### Scenario: Unsupported image list preview
+- **WHEN** a HEIF, HEIC, or SVG file is visible in a list or grid
+- **THEN** the system SHALL show an unsupported-preview state without requesting a thumbnail
 
 #### Scenario: Video list preview
 - **WHEN** a video file is visible in a list or grid
@@ -31,8 +35,12 @@ The file detail drawer SHALL render a preview appropriate to the selected file's
 - **THEN** the system SHALL render the first page or first logical document view without leaving the drawer
 
 #### Scenario: Image detail preview
-- **WHEN** the drawer is opened for an image
+- **WHEN** the drawer is opened for a supported image
 - **THEN** the system SHALL display the image preview within the drawer
+
+#### Scenario: Unsupported image detail preview
+- **WHEN** the drawer is opened for a HEIF, HEIC, or SVG file
+- **THEN** the system SHALL show an unsupported-preview state without displaying the image
 
 #### Scenario: Video detail preview
 - **WHEN** the drawer is opened for a video
@@ -52,8 +60,12 @@ The system SHALL open files in an application-internal full-screen or page viewe
 - **THEN** the system SHALL open the document in the in-app document viewer with navigation and document controls
 
 #### Scenario: Open image
-- **WHEN** the open action is activated for an image
+- **WHEN** the open action is activated for a supported image
 - **THEN** the system SHALL open the image in the in-app image viewer
+
+#### Scenario: Open unsupported image
+- **WHEN** the open action is activated for a HEIF, HEIC, or SVG file
+- **THEN** the system SHALL remain in the application and show an unsupported-format state
 
 #### Scenario: Open video
 - **WHEN** the open action is activated for a video

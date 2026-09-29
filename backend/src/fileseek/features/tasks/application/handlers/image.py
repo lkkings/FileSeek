@@ -40,7 +40,7 @@ class ImageHandler(FileHandler):
         self,
         file_type: FileType,
     ) -> bool:
-        return file_type.is_image
+        return file_type.is_image and file_type.is_support
 
     def process(
         self,
@@ -66,8 +66,9 @@ class ImageHandler(FileHandler):
         # 1. OCR
         # --------------------------------------------------
         progress.report(
-            progress=0,
             stage=TaskStage.EXTRACTED,
+            completed_count=0,
+            total_count=1,
         )
         ocr_text = self._ocr_service.extract_text(
             path
@@ -77,15 +78,18 @@ class ImageHandler(FileHandler):
             ocr_text=ocr_text,
         )
         progress.report(
-            progress=100,
             stage=TaskStage.EXTRACTED,
+            completed_count=1,
+            total_count=1,
         )
         # --------------------------------------------------
         # 2. 图片 Embedding
         # --------------------------------------------------
+        total_count = 1 + int(bool(content.ocr_text))
         progress.report(
-            progress=0,
             stage=TaskStage.ENCODED,
+            completed_count=0,
+            total_count=total_count,
         )
         image_bytes = path.read_bytes()
         image_embeddings = (
@@ -121,8 +125,9 @@ class ImageHandler(FileHandler):
                 text_embedding
             )
         progress.report(
-            progress=100,
             stage=TaskStage.ENCODED,
+            completed_count=total_count,
+            total_count=total_count,
         )
         # --------------------------------------------------
         # 4. 图片分类
@@ -130,8 +135,9 @@ class ImageHandler(FileHandler):
         if not embeddings:
             return []
         progress.report(
-            progress=0,
             stage=TaskStage.CLASSIFY,
+            completed_count=0,
+            total_count=1,
         )
         classifier = self._classifier.get_classifier(
             ClassifierLabelSnapshot.from_metadata(task.metadata)
@@ -145,21 +151,24 @@ class ImageHandler(FileHandler):
         ]
         task.add_file_tags(tags)
         progress.report(
-            progress=100,
             stage=TaskStage.CLASSIFY,
+            completed_count=1,
+            total_count=1,
         )
         # ==================================================
         # 5. 建立索引
         # ==================================================
         progress.report(
-            0,
             TaskStage.INDEXED,
+            completed_count=0,
+            total_count=len(embeddings),
         )
         ids = [f"{task.file.id}_{i}" for i in range(len(embeddings))]
         self._vector_index.add_batch(ids,vectors=embeddings)
         progress.report(
-            100,
             TaskStage.INDEXED,
+            completed_count=len(embeddings),
+            total_count=len(embeddings),
         )
         # ==================================================
         # 6. 更新文件块状态

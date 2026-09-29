@@ -4,6 +4,7 @@ from pathlib import Path
 import av
 import pytest
 from PIL import Image
+from pypdf import PdfWriter
 
 from fileseek.infrastructure.thumbnails import (
     PREVIEW_DIMENSIONS,
@@ -17,6 +18,14 @@ def create_image(width: int, height: int) -> bytes:
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def create_pdf(width: int = 200, height: int = 100) -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=width, height=height)
+    stream = BytesIO()
+    writer.write(stream)
+    return stream.getvalue()
 
 
 def test_image_thumbnail_is_resized_and_encoded_as_webp():
@@ -39,6 +48,16 @@ def test_detail_image_thumbnail_uses_the_larger_bound():
         assert image.size == (640, 360)
 
 
+def test_pdf_thumbnail_renders_the_first_page():
+    generator = ThumbnailGenerator()
+
+    thumbnail = generator.generate_pdf_thumbnail(create_pdf(), "list")
+
+    with Image.open(BytesIO(thumbnail)) as image:
+        assert image.format == "WEBP"
+        assert image.size == (96, 48)
+
+
 def test_video_thumbnail_uses_the_first_decodable_frame(tmp_path: Path):
     video_path = tmp_path / "sample.mp4"
     write_video(video_path, 320, 240)
@@ -56,6 +75,13 @@ def test_invalid_image_raises_a_thumbnail_generation_error():
 
     with pytest.raises(ThumbnailGenerationError, match="image"):
         generator.generate_image_thumbnail(b"not an image")
+
+
+def test_invalid_pdf_raises_a_thumbnail_generation_error():
+    generator = ThumbnailGenerator()
+
+    with pytest.raises(ThumbnailGenerationError, match="PDF"):
+        generator.generate_pdf_thumbnail(b"not a pdf")
 
 
 def test_missing_video_raises_a_thumbnail_generation_error(tmp_path: Path):

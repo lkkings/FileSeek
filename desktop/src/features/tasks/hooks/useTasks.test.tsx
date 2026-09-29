@@ -16,7 +16,9 @@ const task: TaskItem = {
     modified: "2026-09-28T08:00:00Z",
   },
   status: "failed",
-  progress: 45,
+  progress: "4/9",
+  completed_count: 4,
+  total_count: 9,
   stage: null,
   error_message: "OCR failed",
   created_at: "2026-09-28T08:00:00Z",
@@ -24,7 +26,7 @@ const task: TaskItem = {
 
 const taskList: TaskListResponse = {
   tasks: [task],
-  counts: { queued: 0, processing: 0, completed: 0, failed: 1 },
+  counts: { queued: 0, processing: 0, completed: 0, failed: 1, cancelled: 0 },
   page: 1,
   page_size: 50,
   total: 1,
@@ -64,6 +66,25 @@ describe("useTasks", () => {
 
     expect(response.status).toBe("success");
     expect(transport).toHaveBeenCalledWith("POST", "/api/v1/tasks/task-1/retry", undefined);
+    expect(transport).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
+  it("cancels a running task and invalidates the list", async () => {
+    vi.useFakeTimers();
+    const transport = vi.fn(async (method: string, path: string): Promise<RawResponse> => {
+      const data = method === "POST" && path === "/api/v1/tasks/task-1/cancel" ? task : taskList;
+      return { status: 200, body: JSON.stringify({ status: "success", data, error: null }) };
+    });
+    const client = new ApiClient(transport);
+    const { result } = renderHookWithProviders(() => useTasks(null, client));
+
+    await vi.advanceTimersByTimeAsync(0);
+    const response = await result.current.cancelTask.mutateAsync("task-1");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(response.status).toBe("success");
+    expect(transport).toHaveBeenCalledWith("POST", "/api/v1/tasks/task-1/cancel", undefined);
     expect(transport).toHaveBeenCalledTimes(3);
     vi.useRealTimers();
   });

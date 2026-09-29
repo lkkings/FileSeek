@@ -4,6 +4,9 @@ import logging
 import queue
 from pathlib import Path
 
+from fileseek.features.tasks.application.cancellation import (
+    TaskCancellationRegistry,
+)
 from fileseek.features.tasks.application.handlers import (
     FileHandlerRegistry,
 )
@@ -37,10 +40,12 @@ class TaskProcessor:
     def __init__(
         self,
         handler_registry: FileHandlerRegistry,
-        vector_index: VectorIndexPort
+        vector_index: VectorIndexPort,
+        cancellation_registry: TaskCancellationRegistry | None = None,
     ) -> None:
         self._handler_registry = handler_registry
         self._vector_index = vector_index
+        self._cancellation_registry = cancellation_registry
 
     def process(
         self,
@@ -57,7 +62,9 @@ class TaskProcessor:
         # 1. 创建进度上报器
         # --------------------------------------------------
         progress = self._create_progress_reporter(
-            progress_queue
+            progress_queue,
+            self._cancellation_registry,
+            task.id,
         )
         # --------------------------------------------------
         # 2. 获取 Handler
@@ -74,24 +81,30 @@ class TaskProcessor:
         # 3. Handler 完整处理
         # --------------------------------------------------
         temp_path = task.metadata.get("temp_path") if task.metadata else None
-        handler.process(
-            task,
-            progress,
-        )
+        try:
+            handler.process(
+                task,
+                progress,
+            )
+        finally:
+            if isinstance(temp_path, str):
+                Path(temp_path).unlink(missing_ok=True)
 
         logger.info(
             "任务处理完成: task_id=%s",
             task.id,
         )
-        # --------------------------------------------------
-        # 4. 删除缓存文件
-        # --------------------------------------------------
-        if isinstance(temp_path, str):
-            Path(temp_path).unlink(missing_ok=True)
+    def cleanup(self, task: Task) -> None:
+        """删除终止前已写入的部分向量。"""
+        ids = [chunk.id for chunk in task.file.chunks]
+        if ids:
+            self._vector_index.delete_batch(ids)
 
     @staticmethod
     def _create_progress_reporter(
         progress_queue: queue.Queue[TaskProgress],
+        cancellation_registry: TaskCancellationRegistry | None,
+        task_id: str,
     ) -> ProgressReporter:
         """创建进度上报器。
 
@@ -99,5 +112,7 @@ class TaskProcessor:
         中出现大量 None 判断。
         """
         return QueueProgressReporter(
-            progress_queue
+            progress_queue,
+            cancellation_registry,
+            task_id,
         )

@@ -15,6 +15,7 @@ from fileseek.features.recycle.application.commands import AddFiles2RecycleComma
 from fileseek.features.recycle.application.use_cases.add_files2recycle import (
     AddFiles2RecycleUseCase,
 )
+from fileseek.features.settings.infrastructure.source_access import LocalSourceFile
 from fileseek.infrastructure.database.models import (
     FileModel,
     RecentAccessModel,
@@ -33,17 +34,18 @@ class FakeFileRepository:
         return self.file if file_id == self.file.id else None
 
 
-class FakeFolderRepository:
-    async def increment_file_count(self, folder_id: str, delta: int) -> None:
-        return None
-
-
 class FakeRecycleRepository:
     def __init__(self) -> None:
         self.items: dict[str, object] = {}
 
     async def save(self, item: object) -> None:
         self.items[item.id] = item
+
+
+class FakeSourceResolver:
+    async def resolve(self, storage_id: str, source_path: str):
+        _ = storage_id
+        return LocalSourceFile(Path(source_path))
 
 
 def _recycle_settings(root: Path) -> Settings:
@@ -136,12 +138,13 @@ async def test_add_files_to_recycle_clears_cached_search_results(
                     "modified": datetime.now(UTC),
                     "path": str(source),
                     "folder_id": None,
+                    "storage_id": "local",
                 },
             )(),
         ),
-        FakeFolderRepository(),
         FakeRecycleRepository(),
         cache,
+        FakeSourceResolver(),
     ).execute(AddFiles2RecycleCommand(file_ids=["file-1"]))
 
     assert await cache.get(QUERY_CACHE_KEY, "query") is None

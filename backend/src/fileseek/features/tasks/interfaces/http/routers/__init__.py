@@ -4,18 +4,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
+from fileseek.features.tasks.application.queries import ListTasksQuery
 from fileseek.features.tasks.application.use_cases import (
+    CancelTaskUseCase,
     DeleteTaskUseCase,
     ListTasksUseCase,
     RetryTaskUseCase,
 )
-from fileseek.features.tasks.application.queries import ListTasksQuery
 from fileseek.features.tasks.interfaces.http.dependencies import (
+    get_cancel_task_use_case,
     get_delete_task_use_case,
     get_list_tasks_use_case,
     get_retry_task_use_case,
 )
 from fileseek.features.tasks.interfaces.http.mappers import (
+    cancel_task_to_command,
     delete_task_to_command,
     retry_task_to_command,
     task_list_to_schema,
@@ -57,6 +60,22 @@ async def retry_task(
 ) -> dict[str, object]:
     """重试失败的任务。"""
     task = await use_case.execute(retry_task_to_command(task_id))
+
+    return success_response(
+        task_to_schema(task),
+    )
+
+
+@router.post("/{task_id}/cancel")
+async def cancel_task(
+    task_id: str,
+    use_case: Annotated[
+        CancelTaskUseCase,
+        Depends(get_cancel_task_use_case),
+    ],
+) -> dict[str, object]:
+    """终止处理中的任务。"""
+    task = await use_case.execute(cancel_task_to_command(task_id))
 
     return success_response(
         task_to_schema(task),

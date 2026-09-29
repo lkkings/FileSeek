@@ -72,8 +72,28 @@ async def test_availability_check_restores_available_source(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
-async def test_availability_check_keeps_unavailable_source(tmp_path: Path) -> None:
+async def test_availability_check_marks_missing_file_unavailable(
+    tmp_path: Path,
+) -> None:
     file = _file(tmp_path / "source.txt")
+    file.access_state = "available"
+    use_case = CheckFileAvailabilityUseCase(
+        FakeFileRepository(file),
+        FakeSourceResolver(available=True),
+    )
+
+    result = await use_case.execute(CheckFileAvailabilityQuery(file_id="file-1"))
+
+    assert result.access_state == "unavailable"
+    assert file.access_state == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_availability_check_keeps_state_when_resolver_fails(
+    tmp_path: Path,
+) -> None:
+    file = _file(tmp_path / "source.txt")
+    file.access_state = "available"
     use_case = CheckFileAvailabilityUseCase(
         FakeFileRepository(file),
         FakeSourceResolver(available=False),
@@ -81,5 +101,5 @@ async def test_availability_check_keeps_unavailable_source(tmp_path: Path) -> No
 
     result = await use_case.execute(CheckFileAvailabilityQuery(file_id="file-1"))
 
-    assert result.access_state == "unavailable"
-    assert file.access_state == "unavailable"
+    assert result.access_state == "available"
+    assert file.access_state == "available"

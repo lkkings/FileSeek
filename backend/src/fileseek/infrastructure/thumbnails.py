@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, cast
 
 import av
+import pypdfium2 as pdfium
 from PIL import Image, ImageOps
 
 PreviewSize = Literal["list", "detail"]
@@ -48,6 +49,30 @@ class ThumbnailGenerator:
             container.close()
 
         raise ThumbnailGenerationError("The video does not contain a decodable frame")
+
+    def generate_pdf_thumbnail(self, source: bytes, size: PreviewSize = "list") -> bytes:
+        try:
+            document = pdfium.PdfDocument(source, autoclose=True)
+        except (pdfium.PdfiumError, OSError, ValueError) as exc:
+            raise ThumbnailGenerationError("Unable to open the PDF file") from exc
+
+        try:
+            page = document[0]
+            page_width, page_height = page.get_size()
+            target_width, target_height = PREVIEW_DIMENSIONS[size]
+            scale = min(
+                target_width / max(page_width, 1),
+                target_height / max(page_height, 1),
+            )
+            bitmap = page.render(scale=scale)
+            try:
+                return self._encode_webp(bitmap.to_pil(), size)
+            finally:
+                bitmap.close()
+        except (IndexError, pdfium.PdfiumError, OSError, ValueError) as exc:
+            raise ThumbnailGenerationError("Unable to render the first PDF page") from exc
+        finally:
+            document.close()
 
     def _encode_webp(self, image: Image.Image, size: PreviewSize) -> bytes:
         try:

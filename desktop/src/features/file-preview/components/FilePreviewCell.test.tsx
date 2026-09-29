@@ -11,10 +11,21 @@ function createItem(fileType: FilePreviewItem["fileType"], fileName: string): Fi
 }
 
 describe("FilePreviewCell", () => {
-  it("renders a PDF format document icon", () => {
+  it("lazy-loads a PDF first-page thumbnail", () => {
     renderWithI18n(<FilePreviewCell item={createItem("document", "report.pdf")} />);
 
+    const image = screen.getByRole("img", { name: "report.pdf" });
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("src", "/api/v1/library/files/file-1/thumbnail?size=list");
+  });
+
+  it("falls back to the PDF document icon when the thumbnail fails", () => {
+    renderWithI18n(<FilePreviewCell item={createItem("document", "report.pdf")} />);
+
+    fireEvent.error(screen.getByRole("img", { name: "report.pdf" }));
+
     expect(screen.getByRole("img", { name: "PDF 文档" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("预览加载失败");
   });
 
   it("renders an unsupported legacy document state", () => {
@@ -22,6 +33,13 @@ describe("FilePreviewCell", () => {
 
     expect(screen.getByRole("img", { name: /DOC 文档（不支持预览）/ })).toBeInTheDocument();
     expect(screen.getByText("该格式暂不支持预览")).toBeInTheDocument();
+  });
+
+  it("renders unsupported image formats without requesting a thumbnail", () => {
+    renderWithI18n(<FilePreviewCell item={createItem("image", "graphic.svg")} />);
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("该格式暂不支持预览");
   });
 
   it("lazy-loads an image thumbnail", () => {

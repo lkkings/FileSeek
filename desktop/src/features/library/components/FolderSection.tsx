@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "../../../components/Icon";
 import { useTranslate } from "../../../i18n/useTranslate";
+import { formatDateTime } from "../../../i18n/formatDateTime";
 import type { FolderRecord } from "../types";
 import "./library.css";
 
@@ -14,22 +15,6 @@ interface FolderSectionProps {
   onRequestDeleteFolder: (folder: FolderRecord) => void;
   onImportFiles: (folder: FolderRecord) => void;
   onRetry: () => void;
-}
-
-function formatModifiedDate(dateStr: string): string {
-  if (!dateStr) return "";
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    const hr = String(date.getHours()).padStart(2, "0");
-    const min = String(date.getMinutes()).padStart(2, "0");
-    return `${y}-${m}-${d} ${hr}:${min}`;
-  } catch {
-    return dateStr;
-  }
 }
 
 export function FolderSection({ folders, loading, error, onCreateFolder, onEditFolder, onRequestDeleteFolder, onImportFiles, onRetry, onEnterFolder }: FolderSectionProps) {
@@ -86,7 +71,7 @@ export function FolderSection({ folders, loading, error, onCreateFolder, onEditF
               <h3>{folder.name}</h3>
               <p>{folder.description}</p>
               <div className="folder-meta-row">
-                <time><Icon name="clock" size={14} />{formatModifiedDate(folder.modified)}</time>
+                <time><Icon name="clock" size={14} />{formatDateTime(folder.modified, "")}</time>
                 <span className="folder-files-count">
                   <Icon name="document" size={14} />
                   <span>{folder.fileCount} {t("folder.filesCountUnit", "个文件")}</span>
@@ -96,7 +81,7 @@ export function FolderSection({ folders, loading, error, onCreateFolder, onEditF
             </article>
           );
         })}
-        {!loading && !error && folders.length === 0 && <div className="empty-state"><Icon name="search" size={28} /><p>{t("library.empty", "没有找到匹配的文件夹")}</p><button type="button" onClick={onCreateFolder}>{t("library.emptyAction", "新建文件夹")}</button></div>}
+        {!loading && !error && folders.length === 0 && <div className="empty-state"><Icon name="search" size={28} /><p>{t("library.empty", "文件夹为空")}</p></div>}
       </div>
     </section>
   );

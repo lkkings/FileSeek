@@ -32,12 +32,13 @@ import logging
 from dataclasses import dataclass
 
 from fileseek.config.settings import Settings
-
 from fileseek.features.library.infrastructure.repositories import (
+    FileChunkRepositoryImpl,
     FileRepositoryImpl,
-    FileChunkRepositoryImpl
 )
-
+from fileseek.features.tasks.application.cancellation import (
+    get_task_cancellation_registry,
+)
 from fileseek.features.tasks.application.handlers import (
     DocumentHandler,
     FileHandlerRegistry,
@@ -50,7 +51,6 @@ from fileseek.features.tasks.application.processor import (
 from fileseek.features.tasks.application.scheduler import (
     TaskScheduler,
 )
-
 from fileseek.features.tasks.infrastructure.file_processor import (
     DocumentParser,
     VideoSampler,
@@ -58,7 +58,6 @@ from fileseek.features.tasks.infrastructure.file_processor import (
 from fileseek.features.tasks.infrastructure.repositories import (
     TaskRepositoryImpl,
 )
-
 from fileseek.infrastructure.classifier import (
     SnapshotClassifierProvider,
 )
@@ -71,7 +70,6 @@ from fileseek.infrastructure.ocr import (
 from fileseek.infrastructure.vector_store import (
     get_vector_store,
 )
-
 from fileseek.shared.utils.cache import (
     get_cache_service,
 )
@@ -100,12 +98,16 @@ def build_task_scheduler(
     classifier_provider = SnapshotClassifierProvider()
     ocr_service = get_ocr_service()
     cache = get_cache_service()
+    cancellation_registry = get_task_cancellation_registry()
 
     # ==================================================
     # 文件处理基础服务
     # ==================================================
 
-    document_parser = DocumentParser()
+    document_parser = DocumentParser(
+        chunk_size=settings.document_chunk_size,
+        overlap=settings.document_overlap,
+    )
 
     video_sampler = VideoSampler(
         sample_every_n_frames=(
@@ -125,6 +127,7 @@ def build_task_scheduler(
         embedding_service=embedding_service,
         vector_index=vector_index,
         classifier=classifier_provider,
+        batch_size=settings.task_document_batch_size,
     )
 
     image_handler = ImageHandler(
@@ -139,6 +142,7 @@ def build_task_scheduler(
         embedding_service=embedding_service,
         vector_index=vector_index,
         classifier=classifier_provider,
+        batch_size=settings.task_video_batch_size,
     )
 
     # ==================================================
@@ -160,6 +164,7 @@ def build_task_scheduler(
     processor = TaskProcessor(
         handler_registry=handler_registry,
         vector_index=vector_index,
+        cancellation_registry=cancellation_registry,
     )
 
     # ==================================================
@@ -182,6 +187,7 @@ def build_task_scheduler(
         poll_interval=settings.task_poll_interval,
         max_workers=settings.task_max_workers,
         cache=cache,
+        cancellation_registry=cancellation_registry,
     )
 
 

@@ -9,6 +9,7 @@ import { MoveToFolderDialog } from "../../../components/MoveToFolderDialog";
 import { Pagination } from "../../../components/Pagination";
 import { SortControls } from "../../../components/SortControls";
 import { useTranslate } from "../../../i18n/useTranslate";
+import { formatSearchMatchNotice } from "../utils/searchMatch";
 import type { FileItem, SearchResponseData } from "../../../services/api/search";
 import "./search-results.css";
 
@@ -298,6 +299,7 @@ export function SearchResultsView({
         onClose={() => setDetailFile(null)}
         file={detailFile}
         onOpenAction={handleOpenFile}
+        matchInfo={formatSearchMatchNotice(detailFile?.metadata, t)}
       />
     </div>
   );

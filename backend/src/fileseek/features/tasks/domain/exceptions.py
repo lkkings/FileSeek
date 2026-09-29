@@ -13,6 +13,10 @@ class InvalidTransitionError(ApplicationError):
     """非法状态转换。"""
 
 
+class TaskCancelledError(ApplicationError):
+    """任务被用户终止。"""
+
+
 class DocumentParseError(RuntimeError):
     """文档损坏或无法解析。"""
 

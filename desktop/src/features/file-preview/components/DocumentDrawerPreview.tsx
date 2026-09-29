@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { DocViewer } from "anyview";
+import { AdaptiveDocViewer } from "./AdaptiveDocViewer";
 
 import { useTranslate } from "../../../i18n/useTranslate";
 import { DocumentFormatIcon } from "./DocumentFormatIcon";
-import { buildPreviewUrl, getDocumentPreviewSupport } from "../preview";
+import { buildPreviewUrl, buildThumbnailUrl, getFileExtension, getDocumentPreviewSupport } from "../preview";
 import type { FilePreviewItem, PreviewUrlOptions } from "../types";
 import "./DocumentDrawerPreview.css";
 
@@ -16,6 +16,7 @@ export function DocumentDrawerPreview({ item, urlOptions }: DocumentDrawerPrevie
   const [hasError, setHasError] = useState(false);
   const t = useTranslate();
   const documentSupport = getDocumentPreviewSupport(item);
+  const isPdf = getFileExtension(item.fileName) === "pdf";
 
   if (documentSupport !== "supported" || hasError) {
     return (
@@ -35,17 +36,27 @@ export function DocumentDrawerPreview({ item, urlOptions }: DocumentDrawerPrevie
 
   return (
     <div className="document-drawer-preview">
-      <DocViewer
-        source={{
-          kind: "url",
-          url: buildPreviewUrl(item, "list", urlOptions),
-          filename: item.fileName,
-        }}
-        page={0}
-        showToolbar={false}
-        showSidebar={false}
-        onError={() => setHasError(true)}
-      />
+      {isPdf ? (
+        <img
+          src={buildThumbnailUrl(item, "detail", urlOptions)}
+          alt={item.fileName}
+          loading="lazy"
+          decoding="async"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <AdaptiveDocViewer
+          source={{
+            kind: "url",
+            url: buildPreviewUrl(item, "list", urlOptions),
+            filename: item.fileName,
+          }}
+          page={0}
+          showToolbar={false}
+          showSidebar={false}
+          onError={() => setHasError(true)}
+        />
+      )}
     </div>
   );
 }

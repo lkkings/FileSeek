@@ -135,6 +135,9 @@ export default defineConfig(async () => {
       port: 1420,
       strictPort: true,
       host: host || false,
+      fs: {
+        allow: [path.resolve(process.cwd(), "..")],
+      },
       hmr: host
         ? {
             protocol: "ws",
@@ -190,7 +193,7 @@ export default defineConfig(async () => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
-      include: ["src/**/*.test.{ts,tsx}"],
+      include: ["src/**/*.test.{ts,tsx}", "../compatibility-tests/file-types/**/*.test.ts"],
       css: true,
     },
   };

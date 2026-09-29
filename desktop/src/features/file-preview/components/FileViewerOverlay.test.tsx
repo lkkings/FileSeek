@@ -1,23 +1,29 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { FileSource } from "anyview";
+import { I18nProvider } from "@lingui/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { FileViewerOverlay } from "./FileViewerOverlay";
 import type { FilePreviewItem } from "../types";
 import { renderWithI18n } from "../../../test/test-utils";
 import { activateLocale, defaultLocale } from "../../../i18n/i18n";
+import { i18n } from "../../../i18n/i18n";
 
 const anyviewMock = vi.hoisted(() => ({
-  DocViewer: ({
+  DocViewer: vi.fn(({
     source,
     showToolbar,
     showSidebar,
     persistKey,
+    page,
+    onError,
   }: {
     source?: FileSource;
     showToolbar?: boolean;
     showSidebar?: boolean;
     persistKey?: string;
+    page?: number;
+    onError?: () => void;
   }) => (
     <div
       data-testid="anyview-document"
@@ -25,20 +31,40 @@ const anyviewMock = vi.hoisted(() => ({
       data-show-toolbar={showToolbar}
       data-show-sidebar={showSidebar}
       data-persist-key={persistKey}
-    />
-  ),
+      data-page={page}
+    >
+      <button type="button" data-testid="trigger-document-error" onClick={onError}>
+        trigger error
+      </button>
+    </div>
+  )),
 }));
 
 const videojsMock = vi.hoisted(() => {
   const dispose = vi.fn();
-  return { dispose, create: vi.fn(() => ({ dispose })) };
+  const currentTime = vi.fn();
+  return {
+    dispose,
+    currentTime,
+    create: vi.fn(() => ({
+      dispose,
+      currentTime,
+      ready: (callback: () => void) => {
+        callback();
+      },
+    })),
+  };
 });
 
 vi.mock("anyview", () => anyviewMock);
 vi.mock("video.js", () => ({ default: videojsMock.create }));
 
-function createItem(fileType: FilePreviewItem["fileType"], fileName: string): FilePreviewItem {
-  return { fileId: "file-1", fileName, fileType };
+function createItem(
+  fileType: FilePreviewItem["fileType"],
+  fileName: string,
+  overrides: Partial<FilePreviewItem> = {},
+): FilePreviewItem {
+  return { fileId: "file-1", fileName, fileType, ...overrides };
 }
 
 describe("FileViewerOverlay", () => {
@@ -54,6 +80,18 @@ describe("FileViewerOverlay", () => {
     expect(viewer).toHaveAttribute("data-persist-key", "file-preview-file-1");
   });
 
+  it("passes the search hit page to AnyView", () => {
+    renderWithI18n(
+      <FileViewerOverlay
+        isOpen
+        item={createItem("document", "report.pdf", { initialPageNumber: 2 })}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(screen.getByTestId("anyview-document")).toHaveAttribute("data-page", "1");
+  });
+
   it("opens the original image in a full-screen viewer", () => {
     renderWithI18n(
       <FileViewerOverlay isOpen item={createItem("image", "photo.jpg")} onClose={() => undefined} />,
@@ -63,6 +101,40 @@ describe("FileViewerOverlay", () => {
       "src",
       "/api/v1/library/files/preview/file-1",
     );
+  });
+
+  it("shows a fallback when the document viewer reports an error", () => {
+    renderWithI18n(
+      <FileViewerOverlay isOpen item={createItem("document", "report.pdf")} onClose={() => undefined} />,
+    );
+
+    fireEvent.click(screen.getByTestId("trigger-document-error"));
+
+    expect(screen.queryByTestId("anyview-document")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("文档预览加载失败");
+    expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
+  });
+
+  it("keeps the overlay usable when the document viewer throws during render", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const defaultDocViewer = anyviewMock.DocViewer.getMockImplementation();
+    anyviewMock.DocViewer.mockImplementation(() => {
+      throw new Error("PDF render failed");
+    });
+
+    try {
+      expect(() =>
+        renderWithI18n(
+          <FileViewerOverlay isOpen item={createItem("document", "report.pdf")} onClose={() => undefined} />,
+        ),
+      ).not.toThrow();
+
+      expect(screen.getByRole("alert")).toHaveTextContent("文档预览加载失败");
+      expect(screen.getByRole("button", { name: "关闭" })).toBeInTheDocument();
+    } finally {
+      anyviewMock.DocViewer.mockImplementation(defaultDocViewer);
+      consoleError.mockRestore();
+    }
   });
 
   it("opens videos with video.js and disposes the player on unmount", () => {
@@ -76,8 +148,50 @@ describe("FileViewerOverlay", () => {
       player,
       expect.objectContaining({
         controls: true,
+        fill: true,
         poster: "/api/v1/library/files/file-1/thumbnail?size=detail",
       }),
+    );
+
+    unmount();
+
+    expect(videojsMock.dispose).toHaveBeenCalled();
+  });
+
+  it("seeks videos to the search hit start time", () => {
+    renderWithI18n(
+      <FileViewerOverlay
+        isOpen
+        item={createItem("video", "clip.mp4", { startTime: 191.191 })}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(videojsMock.currentTime).toHaveBeenCalledWith(191.191);
+  });
+
+  it("recreates the video player after the viewer remounts", () => {
+    videojsMock.create.mockClear();
+    videojsMock.dispose.mockClear();
+
+    const viewer = (key: string) => (
+      <I18nProvider i18n={i18n}>
+        <FileViewerOverlay
+          key={key}
+          isOpen
+          item={createItem("video", "clip.mp4")}
+          onClose={() => undefined}
+        />
+      </I18nProvider>
+    );
+    const { rerender, unmount } = render(viewer("first"));
+
+    rerender(viewer("second"));
+
+    expect(videojsMock.create).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("viewer-video-player")).toHaveAttribute(
+      "src",
+      "/api/v1/library/files/preview/file-1",
     );
 
     unmount();
@@ -92,6 +206,15 @@ describe("FileViewerOverlay", () => {
 
     expect(screen.queryByTestId("anyview-document")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /DOC 文档（不支持预览）/ })).toBeInTheDocument();
+  });
+
+  it("shows an unsupported state for removed image formats", () => {
+    renderWithI18n(
+      <FileViewerOverlay isOpen item={createItem("image", "graphic.svg")} onClose={() => undefined} />,
+    );
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("该格式暂不支持预览");
   });
 
   it("renders localized viewer controls", () => {

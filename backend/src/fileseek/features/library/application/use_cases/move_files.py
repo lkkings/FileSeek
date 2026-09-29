@@ -35,20 +35,11 @@ class MoveFilesUseCase:
                 raise FileNotFoundError(f"文件 {file_id} 不存在")
             files.append(file)
 
-        source_counts: dict[str | None, int] = {}
         for file in files:
-            source_counts[file.folder_id] = source_counts.get(file.folder_id, 0) + 1
             file.move_to_folder(command.target_folder_id)
 
         try:
             await self.file_repo.save_batch(files)
-            for source_folder_id, count in source_counts.items():
-                if source_folder_id is not None:
-                    await self.folder_repo.increment_file_count(source_folder_id, -count)
-            await self.folder_repo.increment_file_count(
-                command.target_folder_id,
-                len(files),
-            )
         finally:
             await self.search_cache.clear(QUERY_CACHE_KEY)
 

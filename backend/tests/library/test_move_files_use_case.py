@@ -51,8 +51,6 @@ async def test_moves_all_files_and_updates_counts():
     assert moved_count == 2
     assert [file.folder_id for file in files] == ["folder-2", "folder-2"]
     file_repo.save_batch.assert_awaited_once_with(files)
-    folder_repo.increment_file_count.assert_any_await("folder-1", -2)
-    folder_repo.increment_file_count.assert_any_await("folder-2", 2)
     assert await cache.get(QUERY_CACHE_KEY, "query") is None
 
 

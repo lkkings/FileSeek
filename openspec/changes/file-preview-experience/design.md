@@ -33,13 +33,13 @@ Add `anyview` and the optional peer dependencies needed for the formats the prod
 - Detail drawer: controlled first page, no toolbar/sidebar.
 - Full-screen viewer: toolbar, sidebar, search, zoom, and navigation enabled.
 
-Formats unsupported by AnyView, including legacy `.doc`/`.xls`/`.ppt`, ODF formats, and RTF, use a format-specific fallback and explanatory state. Existing `pdfjs-dist` and `xlsx` versions should satisfy AnyView's peer ranges after dependency installation.
+Formats outside the preview support list, including `.doc`, `.xls`, `.ppt`, `.xml`, `.odp`, `.ods`, and `.rtf`, use a format-specific fallback and explanatory state. Existing `pdfjs-dist` and `xlsx` versions should satisfy AnyView's peer ranges after dependency installation.
 
 Alternative considered: separate `pdfjs-dist`, `docx-preview`, and `xlsx` renderers. AnyView provides one source API and a unified viewer, reducing per-format integration code.
 
 ### Image and video rendering
 
-Use thumbnail resources for list and drawer image previews. Use `video.js` for inline detail playback and the full-screen player, with the original-file preview endpoint as the source. The drawer initially renders the video thumbnail; activating playback swaps the thumbnail for the player and preserves the file context.
+Use thumbnail resources for list and drawer previews of JPG, PNG, GIF, BMP, WebP, TIFF, and ICO images. HEIF, HEIC, and SVG show an unsupported-preview state. Use `video.js` for inline detail playback and the full-screen player, with the original-file preview endpoint as the source. The drawer initially renders the video thumbnail; activating playback swaps the thumbnail for the player and preserves the file context.
 
 Alternative considered: using the original image directly in lists. This risks large network and memory usage for high-resolution files and NAS-backed sources.
 

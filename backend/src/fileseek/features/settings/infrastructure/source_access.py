@@ -6,7 +6,7 @@ from http.client import HTTPResponse
 from pathlib import Path
 from typing import IO, cast
 from urllib.error import URLError
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 
 from fileseek.features.library.application.ports import (
@@ -34,6 +34,9 @@ class LocalSourceFile(SourceFile):
 
     def open(self, mode: str = "rb") -> IO[bytes]:
         return self.path.open(mode)
+
+    def unlink(self, missing_ok: bool = False) -> None:
+        self.path.unlink(missing_ok=missing_ok)
 
     def __str__(self) -> str:
         return str(self.path)
@@ -131,6 +134,10 @@ class ExternalUriSourceFile(SourceFile):
         except (OSError, URLError) as exc:
             raise SourceUnavailableError(f"来源文件不可访问: {self.uri}") from exc
 
+    def unlink(self, missing_ok: bool = False) -> None:
+        _ = missing_ok
+        raise OSError("远程来源不支持删除")
+
     def __str__(self) -> str:
         return self.uri
 
@@ -142,19 +149,27 @@ def _open_remote(request: Request) -> HTTPResponse:
     return cast(HTTPResponse, urlopen(request))  # noqa: S310
 
 
+
+def _mounted_source(root_value: str, source_path: str) -> SourceFile:
+    return NasSourceFile(Path(root_value), source_path)
+
+
+def _local_source(source_path: str) -> SourceFile:
+    parsed = urlparse(source_path)
+    if parsed.scheme == "file":
+        return LocalSourceFile(Path(unquote(parsed.path)))
+    return LocalSourceFile(Path(source_path))
+
+
 def _external_source(source_path: str) -> SourceFile:
     parsed = urlparse(source_path)
     if parsed.scheme == "file":
-        return LocalSourceFile(Path(parsed.path))
+        return _local_source(source_path)
     if parsed.scheme in {"http", "https"}:
         if ".." in parsed.path.split("/"):
             raise SourceUnavailableError("来源路径不能包含上级目录")
         return ExternalUriSourceFile(source_path)
     raise SourceUnavailableError(f"不支持的外部来源协议: {parsed.scheme or 'local'}")
-
-
-def _mounted_source(root_value: str, source_path: str) -> SourceFile:
-    return NasSourceFile(Path(root_value), source_path)
 
 
 class StorageSourceResolver(FileSourcePort):
@@ -176,7 +191,7 @@ class StorageSourceResolver(FileSourcePort):
         if location.type in {"local", "external"}:
             if location.type == "external":
                 return _external_source(source_path)
-            return LocalSourceFile(Path(source_path))
+            return _local_source(source_path)
 
         if location.protocol != "mounted":
             raise SourceUnavailableError(

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     task_poll_interval: float = 2.0  # 秒
     task_max_workers: int = 1
     task_max_retries: int = 3
+    task_document_batch_size: int = Field(default=32, ge=1)
+    task_video_batch_size: int = Field(default=2, ge=1)
 
     # 关闭时等待在飞任务落地的时限（秒），超时仍在跑的任务放回 queued。
     task_drain_timeout: float = 10.0
@@ -69,6 +71,10 @@ class Settings(BaseSettings):
     video_sample_every_n_frames: int = 30
     video_perceptual_hash_threshold: int = 10  # hamming distance
 
+    # 文档处理配置
+    document_chunk_size: int = 4096
+    document_overlap: int = 256
+
     # OCR配置
     ocr_provider: Literal["rapidocr"] = "rapidocr"
 
@@ -87,7 +93,7 @@ class Settings(BaseSettings):
 
     temp_dir: Path | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """初始化配置。"""
         super().__init__(**data)
         # 设置默认派生路径

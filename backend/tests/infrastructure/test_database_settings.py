@@ -44,6 +44,31 @@ async def test_init_db_creates_settings_tables(
 
 
 @pytest.mark.asyncio
+async def test_init_db_seeds_default_classifier_labels(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _test_settings(tmp_path)
+    monkeypatch.setattr(connection, "get_settings", lambda: settings)
+
+    try:
+        await connection.init_db()
+        database = Tortoise.get_connection("default")
+        rows = await database.execute_query_dict(
+            "SELECT category, label FROM classifier_labels ORDER BY category, label"
+        )
+    finally:
+        await connection.close_db()
+
+    assert rows == [
+        {"category": "document", "label": "document"},
+        {"category": "image", "label": "image"},
+        {"category": "image", "label": "photo"},
+        {"category": "video", "label": "video"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_init_db_adds_file_source_columns(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

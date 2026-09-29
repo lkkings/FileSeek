@@ -5,7 +5,9 @@ from typing import Any
 from zipfile import ZipFile
 
 from fileseek.config.constant import QUERY_CACHE_KEY
-from fileseek.features.library.domain.repositories import FileRepository, FolderRepository
+from fileseek.features.library.application.ports import FileSourcePort
+from fileseek.features.library.domain.exceptions import SourceUnavailableError
+from fileseek.features.library.domain.repositories import FileRepository
 from fileseek.features.recycle.application.commands import RestoreItemsCommand
 from fileseek.features.recycle.domain.exceptions import (
     RecycleItemNotFoundError,
@@ -19,13 +21,13 @@ class RestoreRecycleUseCase:
         self,
         recycle_repo: RecycleRepository,
         file_repo: FileRepository,
-        folder_repo: FolderRepository,
         search_cache: TTLLRUCache[str, Any],
+        source_resolver: FileSourcePort,
     ) -> None:
         self.recycle_repo = recycle_repo
         self.file_repo = file_repo
-        self.folder_repo = folder_repo
         self.search_cache = search_cache
+        self.source_resolver = source_resolver
 
     async def execute(self, command: RestoreItemsCommand) -> None:
         try:
@@ -40,30 +42,26 @@ class RestoreRecycleUseCase:
         if item is None:
             raise RecycleItemNotFoundError(f"回收站条目 {item_id} 不存在")
 
-        # 1. 检查原父文件夹
-        folder = None
-
-        if item.original_folder_id:
-            folder = await self.folder_repo.get_by_id(item.original_folder_id)
-
         if item.recycle_path is None:
             raise ValueError(f"回收站条目缺少压缩包路径: {item.id}")
         recycle_path = Path(item.recycle_path)
-        restore_path = Path(item.original_path)
         with ZipFile(recycle_path) as archive:
             members = archive.namelist()
             if len(members) != 1:
                 raise ValueError(f"回收站压缩包格式无效: {item.id}")
-            restore_path.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(members[0]) as source, restore_path.open("wb") as target:
+            if item.storage_id is None:
+                raise SourceUnavailableError(f"回收站条目缺少存储位置: {item.id}")
+            source_file = await self.source_resolver.resolve(
+                item.storage_id,
+                item.original_path,
+            )
+            with (
+                archive.open(members[0]) as source,
+                source_file.open("wb") as target,
+            ):
                 while chunk := source.read(1024 * 1024):
                     target.write(chunk)
         recycle_path.unlink(missing_ok=True)
 
-        # 6. 更新 Folder
-        if folder:
-            folder.increase_file_count()
-            await self.folder_repo.save(folder)
-
-        # 7. 删除回收站记录
+        # 删除回收站记录；文件记录未删除，文件夹计数由查询实时统计。
         await self.recycle_repo.delete(item.id)

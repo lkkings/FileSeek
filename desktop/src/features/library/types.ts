@@ -29,8 +29,6 @@ export interface ImportProgressItem {
   storageId: string;
   path: string;
   state: ImportProgressItemState;
-  progress: number;
-  stage: string | null;
   fileId: string | null;
   taskId: string | null;
   error: string | null;

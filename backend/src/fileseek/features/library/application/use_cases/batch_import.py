@@ -4,7 +4,6 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 
 from fileseek.features.library.application.commands import (
     AddFileCommand,
@@ -13,11 +12,8 @@ from fileseek.features.library.application.commands import (
 from fileseek.features.library.application.dto import (
     BatchImportStartedDTO,
     ImportEventDTO,
-    ImportTaskSnapshotDTO,
 )
-from fileseek.features.library.application.ports import ImportTaskProgressPort
 from fileseek.features.library.application.use_cases.add_file import AddFileUseCase
-from fileseek.features.library.application.dto import AddFileResult
 from fileseek.shared.domain.exceptions import ApplicationError
 
 logger = logging.getLogger(__name__)
@@ -38,14 +34,10 @@ class BatchImportSessionManager:
     def __init__(
         self,
         add_file_use_case: AddFileUseCase,
-        task_progress: ImportTaskProgressPort,
         *,
-        progress_poll_interval: float = 0.25,
         session_retention_seconds: float = 300,
     ) -> None:
         self.add_file_use_case = add_file_use_case
-        self.task_progress = task_progress
-        self.progress_poll_interval = progress_poll_interval
         self.session_retention_seconds = session_retention_seconds
         self._sessions: dict[str, _ImportSession] = {}
 
@@ -143,29 +135,16 @@ class BatchImportSessionManager:
                             "task_id": result.task_id,
                         },
                     )
-                    completed, error = await self._wait_for_task(
+                    succeeded += 1
+                    self._emit(
                         session,
-                        index,
-                        result,
+                        "item_completed",
+                        {
+                            "index": index,
+                            "file_id": result.file_id,
+                            "task_id": result.task_id,
+                        },
                     )
-                    if completed:
-                        succeeded += 1
-                        self._emit(
-                            session,
-                            "item_completed",
-                            {
-                                "index": index,
-                                "file_id": result.file_id,
-                                "task_id": result.task_id,
-                            },
-                        )
-                    else:
-                        failed += 1
-                        self._emit(
-                            session,
-                            "item_failed",
-                            self._failure_payload(index, item, error),
-                        )
                 except ApplicationError as exc:
                     failed += 1
                     self._emit(
@@ -200,52 +179,6 @@ class BatchImportSessionManager:
             )
         finally:
             session.completed_at = time.monotonic()
-
-    async def _wait_for_task(
-        self,
-        session: _ImportSession,
-        index: int,
-        result: AddFileResult,
-    ) -> tuple[bool, str | None]:
-        last_key: tuple[object, ...] | None = None
-        while True:
-            snapshots = await self.task_progress.get_snapshots((result.task_id,))
-            snapshot = snapshots.get(result.task_id)
-            if snapshot is None:
-                return False, "导入任务不存在"
-            key = (
-                snapshot.status,
-                snapshot.progress,
-                snapshot.stage,
-                snapshot.error_message,
-            )
-            if key != last_key:
-                last_key = key
-                self._emit(
-                    session,
-                    "task_progress",
-                    self._task_progress_payload(index, result, snapshot),
-                )
-            if snapshot.status == "completed":
-                return True, None
-            if snapshot.status == "failed":
-                return False, snapshot.error_message or "任务处理失败"
-            await asyncio.sleep(self.progress_poll_interval)
-
-    @staticmethod
-    def _task_progress_payload(
-        index: int,
-        result: AddFileResult,
-        snapshot: ImportTaskSnapshotDTO,
-    ) -> dict[str, object]:
-        return {
-            "index": index,
-            "file_id": result.file_id,
-            "task_id": result.task_id,
-            "status": snapshot.status,
-            "progress": snapshot.progress,
-            "stage": snapshot.stage,
-        }
 
     @staticmethod
     def _failure_payload(

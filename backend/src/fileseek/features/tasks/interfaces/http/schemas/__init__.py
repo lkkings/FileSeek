@@ -7,7 +7,9 @@ class TaskResponse(BaseModel):
     id: str
     file: FileDTO
     status: str
-    progress: int
+    progress: str
+    completed_count: int | None
+    total_count: int | None
     stage: str | None
     error_message: str | None
     created_at: str
@@ -19,4 +21,3 @@ class TaskListResponse(BaseModel):
     page: int
     page_size: int
     total: int
-

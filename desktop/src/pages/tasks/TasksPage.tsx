@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 
+import { Icon } from "../../components/Icon";
 import { FileDetailDrawer } from "../../components/FileDetailDrawer";
 import { Notice } from "../../components/Notice";
 import { Pagination } from "../../components/Pagination";
+import { FileViewerOverlay, useFileViewer, resolvePreviewCategory } from "../../features/file-preview";
 import { TaskRowItem } from "../../features/tasks/components/TaskRowItem";
 import { useTasks } from "../../features/tasks/hooks/useTasks";
 import { useTranslate } from "../../i18n/useTranslate";
@@ -10,7 +12,9 @@ import { errorText } from "../../services/api/client";
 import type { FileItem } from "../../services/api/search";
 import type { TaskStatus } from "../../services/api/tasks";
 
-const STATUS_FILTERS: Array<TaskStatus | null> = [null, "queued", "processing", "completed", "failed"];
+import "../../features/tasks/components/tasks.css";
+
+const STATUS_FILTERS: Array<TaskStatus | null> = [null, "queued", "processing", "completed", "failed", "cancelled"];
 
 export function TasksPage() {
   const t = useTranslate();
@@ -19,7 +23,8 @@ export function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [retryingAll, setRetryingAll] = useState(false);
-  const { data, loading, error, page, setPage, pageSize, reload, retryTask, removeTask } = useTasks(statusFilter);
+  const { data, loading, error, page, setPage, pageSize, reload, retryTask, cancelTask, removeTask } = useTasks(statusFilter);
+  const fileViewer = useFileViewer();
 
   const viewResults = useMemo(() => data?.tasks ?? [], [data]);
   const failedTasks = useMemo(() => viewResults.filter((task) => task.status === "failed"), [viewResults]);
@@ -33,7 +38,7 @@ export function TasksPage() {
       file_id: selectedTask.file.id,
       file_name: selectedTask.file.name,
       file_type: selectedTask.file.file_type,
-      category: "document",
+      category: resolvePreviewCategory(selectedTask.file.file_type),
       path: selectedTask.file.path,
       size: selectedTask.file.size,
       modified: selectedTask.file.modified,
@@ -61,6 +66,16 @@ export function TasksPage() {
       void reload();
     } else {
       setNotice(errorText(response.error) || t("tasks.removeFailed", "移除任务失败"));
+    }
+  };
+
+  const handleCancel = async (taskId: string) => {
+    const response = await cancelTask.mutateAsync(taskId);
+    if (response.status === "success") {
+      setNotice(t("tasks.cancelSuccess", "任务终止请求已提交"));
+      void reload();
+    } else {
+      setNotice(errorText(response.error) || t("tasks.cancelFailed", "终止任务失败"));
     }
   };
 
@@ -104,6 +119,14 @@ export function TasksPage() {
     setSelectedTaskId(null);
   };
 
+  const handleOpenFile = (file: FileItem) => {
+    fileViewer.openFile({
+      fileId: file.file_id,
+      fileName: file.file_name,
+      fileType: resolvePreviewCategory(file.file_type),
+    });
+  };
+
   const filterLabel = (status: TaskStatus | null) => {
     if (status === null) return t("tasks.all", "全部");
     const labels: Record<TaskStatus, string> = {
@@ -111,6 +134,7 @@ export function TasksPage() {
       processing: t("tasks.statusProcessing", "处理中"),
       completed: t("tasks.statusCompleted", "已完成"),
       failed: t("tasks.statusFailed", "失败"),
+      cancelled: t("tasks.statusCancelled", "已终止"),
     };
     return labels[status];
   };
@@ -123,49 +147,58 @@ export function TasksPage() {
   return (
     <>
       <main className="main-content">
-        <section className="search-results-screen" aria-label={t("nav.tasks", "任务队列")}>
-          <div className="results-heading task-results-heading">
-            <div className="results-title-group">
-              <p>
-                <strong>{t("nav.tasks", "任务队列")}</strong>
-              </p>
-              <div className="task-summary">
-                <span>
-                  {t("tasks.total", "总数")} {filterCount(null)}
-                </span>
-                <span className="is-processing">
-                  {t("tasks.statusProcessing", "处理中")} {filterCount("processing")}
-                </span>
-                <span className="is-failed">
-                  {t("tasks.statusFailed", "失败")} {filterCount("failed")}
-                </span>
+        <section className="search-results-screen tasks-page" aria-label={t("nav.tasks", "任务队列")}>
+          <header className="tasks-page-header">
+            <div className="tasks-page-title">
+              <span className="tasks-page-icon" aria-hidden="true">
+                <Icon name="pulse" size={24} />
+              </span>
+              <div>
+                <h1>{t("nav.tasks", "任务队列")}</h1>
+                <p>{t("tasks.subtitle", "查看文件处理进度，并快速处理失败任务。")}</p>
               </div>
             </div>
-            <div className="task-toolbar">
-              <div className="task-filters" role="group" aria-label={t("tasks.statusFilter", "任务状态筛选")}>
-                {STATUS_FILTERS.map((status) => (
-                  <button
-                    key={status ?? "all"}
-                    type="button"
-                    className={`task-filter ${statusFilter === status ? "is-active" : ""}`}
-                    aria-pressed={statusFilter === status}
-                    onClick={() => handleFilterChange(status)}
-                  >
-                    <span>{filterLabel(status)}</span>
-                    <span className="task-filter-count">{filterCount(status)}</span>
-                  </button>
-                ))}
+            <dl className="task-summary" aria-label={t("tasks.summary", "任务状态摘要")}>
+              <div className="task-summary-item">
+                <dt>{t("tasks.total", "总数")}</dt>
+                <dd>{filterCount(null)}</dd>
               </div>
-              <button
-                type="button"
-                className="task-retry-all"
-                onClick={handleRetryAll}
-                disabled={retryingAll || failedTasks.length === 0}
-              >
-                {t("tasks.retryAll", "一键重试")}
-                <span>{failedTasks.length}</span>
-              </button>
+              <div className="task-summary-item is-processing">
+                <dt>{t("tasks.statusProcessing", "处理中")}</dt>
+                <dd>{filterCount("processing")}</dd>
+              </div>
+              <div className="task-summary-item is-failed">
+                <dt>{t("tasks.statusFailed", "失败")}</dt>
+                <dd>{filterCount("failed")}</dd>
+              </div>
+            </dl>
+          </header>
+
+          <div className="task-toolbar">
+            <div className="task-filters" role="group" aria-label={t("tasks.statusFilter", "任务状态筛选")}>
+              {STATUS_FILTERS.map((status) => (
+                <button
+                  key={status ?? "all"}
+                  type="button"
+                  className={`task-filter ${statusFilter === status ? "is-active" : ""}`}
+                  aria-pressed={statusFilter === status}
+                  onClick={() => handleFilterChange(status)}
+                >
+                  <span>{filterLabel(status)}</span>
+                  <span className="task-filter-count">{filterCount(status)}</span>
+                </button>
+              ))}
             </div>
+            <button
+              type="button"
+              className="task-retry-all"
+              onClick={handleRetryAll}
+              disabled={retryingAll || failedTasks.length === 0}
+            >
+              <Icon name="refresh" size={16} />
+              <span>{t("tasks.retryAll", "一键重试")}</span>
+              <span className="task-retry-count">{failedTasks.length}</span>
+            </button>
           </div>
 
           <div className={`results-content-split ${sidebarOpen && selectedFile ? "sidebar-expanded" : "sidebar-collapsed"}`}>
@@ -180,11 +213,19 @@ export function TasksPage() {
                   ))}
                 </div>
               )}
-              {error && <div className="results-error">{error}</div>}
+              {error && (
+                <div className="results-error task-error-state" role="alert">
+                  <Icon name="pulse" size={20} />
+                  <span>{error}</span>
+                </div>
+              )}
               {!loading && !error && (
                 <div className="result-list" aria-live="polite">
                   {viewResults.length === 0 ? (
                     <div className="task-empty">
+                      <span className="task-empty-icon" aria-hidden="true">
+                        <Icon name="pulse" size={26} />
+                      </span>
                       <h2>{t("tasks.emptyTitle", "没有符合条件的任务")}</h2>
                       <p>{t("tasks.emptyHint", "切换状态筛选，或返回文件库创建新的处理任务。")}</p>
                     </div>
@@ -194,6 +235,7 @@ export function TasksPage() {
                         key={task.id}
                         task={task}
                         onRetry={handleRetry}
+                        onCancel={handleCancel}
                         onRemove={handleRemove}
                         onOpenDetails={(selected) => handleOpenDetails(selected.id)}
                       />
@@ -214,11 +256,18 @@ export function TasksPage() {
                 isOpen={sidebarOpen}
                 onClose={handleCloseDetails}
                 file={selectedFile}
+                onOpenAction={handleOpenFile}
               />
             </div>
           </div>
         </section>
       </main>
+
+      <FileViewerOverlay
+        isOpen={fileViewer.isOpen}
+        item={fileViewer.item}
+        onClose={fileViewer.onClose}
+      />
 
       {notice && <Notice message={notice} onClose={() => setNotice("")} />}
     </>

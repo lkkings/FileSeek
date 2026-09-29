@@ -1,6 +1,6 @@
 import { defaultClient, type ApiClient, type ApiResponse } from "./client";
 
-export type TaskStatus = "queued" | "processing" | "completed" | "failed";
+export type TaskStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
 export type TaskStage = "extracted" | "encoded" | "classify" | "indexed";
 
 export interface TaskFile {
@@ -16,7 +16,9 @@ export interface TaskItem {
   id: string;
   file: TaskFile;
   status: TaskStatus;
-  progress: number;
+  progress: string;
+  completed_count: number | null;
+  total_count: number | null;
   stage: TaskStage | null;
   error_message: string | null;
   created_at: string;
@@ -46,6 +48,10 @@ export function listTasks(
 
 export function retryTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<TaskItem>> {
   return client.post<TaskItem>(`/tasks/${encodeURIComponent(taskId)}/retry`);
+}
+
+export function cancelTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<TaskItem>> {
+  return client.post<TaskItem>(`/tasks/${encodeURIComponent(taskId)}/cancel`);
 }
 
 export function deleteTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<null>> {

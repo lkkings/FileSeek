@@ -80,7 +80,24 @@ class FileType(str, Enum):
 
     @property
     def is_support(self) -> bool:
-        return self.is_document or self.is_video or self.is_image
+        return self not in UNSUPPORTED_FILE_TYPES
+
+
+UNSUPPORTED_FILE_TYPES: frozenset[FileType] = frozenset(
+    {
+        FileType.DOC,
+        FileType.XLS,
+        FileType.PPT,
+        FileType.XML,
+        FileType.ODT,
+        FileType.ODP,
+        FileType.ODS,
+        FileType.RTF,
+        FileType.SVG,
+        FileType.HEIC,
+        FileType.HEIF,
+    }
+)
 
 
 FILE_TYPE_MEDIA_TYPES: dict[FileType, str] = {

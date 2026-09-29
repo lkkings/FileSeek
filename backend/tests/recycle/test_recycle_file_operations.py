@@ -24,6 +24,9 @@ from fileseek.features.recycle.application.use_cases.restore_recycle import (
     RestoreRecycleUseCase,
 )
 from fileseek.features.recycle.domain.entities import RecycleItem
+from fileseek.features.settings.domain.entities import StorageLocation
+from fileseek.features.settings.infrastructure import StorageSourceResolver
+from fileseek.features.settings.infrastructure.source_access import LocalSourceFile
 from fileseek.shared.domain.file_types import FileCategory, FileType
 from fileseek.shared.utils.cache import TTLLRUCache
 
@@ -39,21 +42,6 @@ class FakeFileRepository:
     async def delete_batch(self, file_ids: list[str]) -> int:
         self.deleted.extend(file_ids)
         return len(file_ids)
-
-
-class FakeFolderRepository:
-    def __init__(self) -> None:
-        self.file_count = 0
-
-    async def get_by_id(self, folder_id: str):
-        return None if folder_id == "missing" else object()
-
-    async def increment_file_count(self, folder_id: str, delta: int) -> None:
-        _ = folder_id
-        self.file_count += delta
-
-    async def save(self, folder) -> None:
-        self.file_count = folder.file_count
 
 
 class FakeRecycleRepository:
@@ -76,6 +64,26 @@ class FakeVectorIndex:
 
     def delete_batch(self, chunk_ids: list[str]) -> None:
         self.deleted_ids.extend(chunk_ids)
+
+
+class FakeStorageLocationRepository:
+    def __init__(self, location: StorageLocation) -> None:
+        self.location = location
+
+    async def get_by_id(
+        self,
+        location_id: str,
+        *,
+        include_deleted: bool = False,
+    ) -> StorageLocation | None:
+        _ = include_deleted
+        return self.location if location_id == self.location.id else None
+
+
+class FakeSourceResolver:
+    async def resolve(self, storage_id: str, source_path: str):
+        _ = storage_id
+        return LocalSourceFile(Path(source_path))
 
 
 def _settings(root: Path) -> Settings:
@@ -119,14 +127,13 @@ async def test_recycle_compresses_restores_and_permanently_deletes(
         lambda: settings,
     )
     file_repository = FakeFileRepository(file)
-    folder_repository = FakeFolderRepository()
     recycle_repository = FakeRecycleRepository()
 
     await AddFiles2RecycleUseCase(
         file_repository,
-        folder_repository,
         recycle_repository,
         TTLLRUCache(),
+        FakeSourceResolver(),
     ).execute(AddFiles2RecycleCommand(file_ids=["file-1"]))
 
     item = next(iter(recycle_repository.items.values()))
@@ -140,8 +147,8 @@ async def test_recycle_compresses_restores_and_permanently_deletes(
     await RestoreRecycleUseCase(
         recycle_repository,
         file_repository,
-        folder_repository,
         restore_cache,
+        FakeSourceResolver(),
     ).execute(RestoreItemsCommand(item_ids=[item.id]))
     assert await restore_cache.get(QUERY_CACHE_KEY, "query") is None
 
@@ -163,3 +170,53 @@ async def test_recycle_compresses_restores_and_permanently_deletes(
     assert not Path(item.recycle_path or "").exists()
     assert file_repository.deleted == ["file-1"]
     assert item.id not in recycle_repository.items
+
+
+@pytest.mark.asyncio
+async def test_recycle_resolves_and_restores_mounted_nas_relative_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    nas_root = tmp_path / "nas"
+    source = nas_root / "source.txt"
+    source.parent.mkdir()
+    source.write_text("nas recycle content", encoding="utf-8")
+    file = _file(source)
+    file.path = "source.txt"
+    file.storage_id = "nas1"
+    monkeypatch.setattr(
+        "fileseek.features.recycle.application.use_cases.add_files2recycle.get_settings",
+        lambda: _settings(tmp_path / "library"),
+    )
+    resolver = StorageSourceResolver(
+        FakeStorageLocationRepository(
+            StorageLocation(
+                id="nas1",
+                type="nas",
+                name="NAS 1",
+                protocol="mounted",
+                endpoint=str(nas_root),
+                root_path=str(nas_root),
+            )
+        )
+    )
+    recycle_repository = FakeRecycleRepository()
+
+    await AddFiles2RecycleUseCase(
+        FakeFileRepository(file),
+        recycle_repository,
+        TTLLRUCache(),
+        resolver,
+    ).execute(AddFiles2RecycleCommand(file_ids=["file-1"]))
+
+    item = next(iter(recycle_repository.items.values()))
+    assert not source.exists()
+
+    await RestoreRecycleUseCase(
+        recycle_repository,
+        FakeFileRepository(file),
+        TTLLRUCache(),
+        resolver,
+    ).execute(RestoreItemsCommand(item_ids=[item.id]))
+
+    assert source.read_text(encoding="utf-8") == "nas recycle content"

@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPreviewUrl,
+  buildThumbnailUrl,
   buildOriginalFileUrl,
   getDocumentPreviewSupport,
+  getImagePreviewSupport,
   getPreviewUrlOptions,
   getPreviewResourceKind,
+  resolvePreviewCategory,
   resolvePreviewEnvironment,
 } from "./preview";
 import type { FilePreviewItem } from "./types";
@@ -22,7 +25,7 @@ describe("document preview classification", () => {
     },
   );
 
-  it.each(["legacy.doc", "legacy.xls", "legacy.ppt", "document.odt", "document.rtf"])(
+  it.each(["legacy.doc", "legacy.xls", "legacy.ppt", "document.xml", "document.odt", "document.odp", "document.ods", "document.rtf"])(
     "identifies %s as unsupported",
     (fileName) => {
       expect(getDocumentPreviewSupport(createItem("document", fileName))).toBe("unsupported");
@@ -40,6 +43,26 @@ describe("preview resource selection", () => {
     expect(getPreviewResourceKind(createItem("document", "file.pdf"))).toBe("document");
     expect(getPreviewResourceKind(createItem("image", "photo.jpg"))).toBe("thumbnail");
     expect(getPreviewResourceKind(createItem("video", "clip.mp4"))).toBe("thumbnail");
+  });
+
+  it.each(["photo.heic", "photo.heif", "graphic.svg"])(
+    "identifies %s as unsupported without requesting thumbnails",
+    (fileName) => {
+      const item = createItem("image", fileName);
+      expect(getImagePreviewSupport(item)).toBe("unsupported");
+      expect(getPreviewResourceKind(item)).toBe("document");
+    },
+  );
+});
+
+describe("preview category resolution", () => {
+  it("maps backend file types to preview categories", () => {
+    expect(resolvePreviewCategory("pdf")).toBe("document");
+    expect(resolvePreviewCategory("jpg")).toBe("image");
+    expect(resolvePreviewCategory("mp4")).toBe("video");
+    expect(resolvePreviewCategory(".PNG")).toBe("image");
+    expect(resolvePreviewCategory("svg")).toBe("document");
+    expect(resolvePreviewCategory("heic")).toBe("document");
   });
 });
 
@@ -81,6 +104,17 @@ describe("preview URL construction", () => {
 
     expect(buildOriginalFileUrl({ ...item, fileId: "file/1" })).toBe(
       "/api/v1/library/files/preview/file%2F1",
+    );
+  });
+
+  it("builds a thumbnail URL without changing PDF preview URLs", () => {
+    const item = createItem("document", "report.pdf");
+
+    expect(buildThumbnailUrl(item, "list", { environment: "browser" })).toBe(
+      "/api/v1/library/files/file-1/thumbnail?size=list",
+    );
+    expect(buildPreviewUrl(item, "list", { environment: "browser" })).toBe(
+      "/api/v1/library/files/preview/file-1",
     );
   });
 });

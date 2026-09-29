@@ -18,6 +18,12 @@ export interface FileMetadata {
   scene?: string;
   duration?: string;
   description?: string;
+  text?: string;
+  start_time?: number;
+  end_time?: number;
+  page_number?: number;
+  line_number?: number;
+  chunk_index?: number;
   [key: string]: unknown;
 }
 

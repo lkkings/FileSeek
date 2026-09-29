@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from pypdf import PdfWriter
 
 from fileseek.features.library.application.queries import GetFileThumbnailQuery
 from fileseek.features.library.application.use_cases.get_file_thumbnail import (
@@ -38,12 +39,12 @@ class FakeFileRepository:
 
 
 class FakeSourceResolver:
-    def __init__(self, missing: bool = False) -> None:
-        self.missing = missing
+    def __init__(self, resolve_error: bool = False) -> None:
+        self.resolve_error = resolve_error
 
     async def resolve(self, storage_id: str, source_path: str):
         _ = storage_id
-        if self.missing:
+        if self.resolve_error:
             raise SourceUnavailableError("文件来源不可获取: file-1")
         return LocalSourceFile(Path(source_path))
 
@@ -51,6 +52,13 @@ class FakeSourceResolver:
 def create_image(path: Path, width: int = 320, height: int = 180) -> None:
     image = Image.new("RGB", (width, height), "#3366aa")
     image.save(path, format="PNG")
+
+
+def create_pdf(path: Path, width: int = 200, height: int = 100) -> None:
+    writer = PdfWriter()
+    writer.add_blank_page(width=width, height=height)
+    with path.open("wb") as pdf_file:
+        writer.write(pdf_file)
 
 
 def create_file(
@@ -96,10 +104,32 @@ async def test_generates_and_caches_an_image_thumbnail(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_rejects_documents_for_thumbnail_generation(tmp_path: Path):
+async def test_generates_a_pdf_thumbnail(tmp_path: Path):
     source = tmp_path / "document.pdf"
-    source.write_bytes(b"%PDF-1.4")
+    create_pdf(source)
     file = create_file(source, FileCategory.DOCUMENT)
+    file.file_type = FileType.PDF
+    use_case = GetFileThumbnailUseCase(
+        FakeFileRepository(file),
+        ThumbnailGenerator(),
+        ThumbnailCache(tmp_path / "cache"),
+        FakeSourceResolver(),
+    )
+    query = GetFileThumbnailQuery(file_id="file-1", size="list")
+
+    thumbnail = await use_case.execute(query)
+
+    with Image.open(BytesIO(thumbnail.data)) as image:
+        assert image.format == "WEBP"
+        assert image.size == (96, 48)
+
+
+@pytest.mark.asyncio
+async def test_rejects_non_pdf_documents_for_thumbnail_generation(tmp_path: Path):
+    source = tmp_path / "document.docx"
+    source.write_bytes(b"not a docx")
+    file = create_file(source, FileCategory.DOCUMENT)
+    file.file_type = FileType.DOCX
     use_case = GetFileThumbnailUseCase(
         FakeFileRepository(file),
         ThumbnailGenerator(),
@@ -107,7 +137,26 @@ async def test_rejects_documents_for_thumbnail_generation(tmp_path: Path):
         FakeSourceResolver(),
     )
 
-    with pytest.raises(ValidationError, match="图片和视频"):
+    with pytest.raises(ValidationError, match="图片、视频和 PDF"):
+        await use_case.execute(GetFileThumbnailQuery(file_id="file-1", size="list"))
+
+
+@pytest.mark.asyncio
+async def test_rejects_removed_image_types_for_thumbnail_generation(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "graphic.svg"
+    source.write_text("<svg xmlns='http://www.w3.org/2000/svg'></svg>")
+    file = create_file(source)
+    file.file_type = FileType.SVG
+    use_case = GetFileThumbnailUseCase(
+        FakeFileRepository(file),
+        ThumbnailGenerator(),
+        ThumbnailCache(tmp_path / "cache"),
+        FakeSourceResolver(),
+    )
+
+    with pytest.raises(ValidationError, match="图片、视频和 PDF"):
         await use_case.execute(GetFileThumbnailQuery(file_id="file-1", size="list"))
 
 
@@ -119,12 +168,28 @@ async def test_reports_inaccessible_source_without_path_details(tmp_path: Path):
         FakeFileRepository(file),
         ThumbnailGenerator(),
         ThumbnailCache(tmp_path / "cache"),
-        FakeSourceResolver(missing=True),
+        FakeSourceResolver(),
     )
 
     with pytest.raises(SourceUnavailableError, match="不可获取"):
         await use_case.execute(GetFileThumbnailQuery(file_id="file-1", size="list"))
     assert file.access_state == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_keeps_state_when_resolver_fails(tmp_path: Path):
+    source = tmp_path / "missing.png"
+    file = create_file(source, size=100)
+    use_case = GetFileThumbnailUseCase(
+        FakeFileRepository(file),
+        ThumbnailGenerator(),
+        ThumbnailCache(tmp_path / "cache"),
+        FakeSourceResolver(resolve_error=True),
+    )
+
+    with pytest.raises(SourceUnavailableError, match="文件来源不可获取"):
+        await use_case.execute(GetFileThumbnailQuery(file_id="file-1", size="list"))
+    assert file.access_state == "available"
 
 
 @pytest.mark.asyncio

@@ -15,11 +15,16 @@ const file: TaskFile = {
 };
 
 function createTask(status: TaskStatus): TaskItem {
+  const completedCount =
+    status === "completed" ? 9 : status === "failed" ? 4 : status === "processing" ? 5 : 0;
+
   return {
     id: `task-${status}`,
     file,
     status,
-    progress: status === "completed" ? 100 : status === "failed" ? 45 : status === "processing" ? 60 : 0,
+    progress: `${completedCount}/9`,
+    completed_count: completedCount,
+    total_count: 9,
     stage: status === "processing" || status === "failed" ? "classify" : null,
     error_message: status === "failed" ? "OCR failed" : null,
     created_at: "2026-09-28T08:00:00Z",
@@ -27,23 +32,32 @@ function createTask(status: TaskStatus): TaskItem {
 }
 
 describe("TaskRowItem", () => {
-  it.each(["queued", "processing", "completed", "failed"] as TaskStatus[])(
+  it.each(["queued", "processing", "completed", "failed", "cancelled"] as TaskStatus[])(
     "renders status, progress, stages, and retry behavior for %s",
     (status) => {
       const onRetry = vi.fn();
+      const onCancel = vi.fn();
       const onRemove = vi.fn();
       const onOpenDetails = vi.fn();
       const { unmount } = renderWithI18n(
         <TaskRowItem
           task={createTask(status)}
           onRetry={onRetry}
+          onCancel={onCancel}
           onRemove={onRemove}
           onOpenDetails={onOpenDetails}
         />,
       );
 
       expect(screen.getByText("Task.pdf")).toBeInTheDocument();
-      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(status === "completed" ? 100 : status === "failed" ? 45 : status === "processing" ? 60 : 0));
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        String(status === "completed" ? 9 : status === "failed" ? 4 : status === "processing" ? 5 : 0),
+      );
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuetext",
+        `${status === "completed" ? 9 : status === "failed" ? 4 : status === "processing" ? 5 : 0}/9`,
+      );
       expect(screen.getByText("提取")).toBeInTheDocument();
       expect(screen.getByText("编码")).toBeInTheDocument();
       expect(screen.getByText("分类")).toBeInTheDocument();
@@ -60,10 +74,18 @@ describe("TaskRowItem", () => {
         expect(within(stageFlow).getAllByRole("listitem").every((item) => item.className.includes("is-complete"))).toBe(true);
       }
 
-      if (status === "failed") {
+      if (status === "failed" || status === "cancelled") {
         expect(screen.getByRole("button", { name: "Task.pdf 重试" })).toBeInTheDocument();
       } else {
         expect(screen.queryByRole("button", { name: "Task.pdf 重试" })).not.toBeInTheDocument();
+      }
+
+      if (status === "processing") {
+        const cancelButton = screen.getByRole("button", { name: "Task.pdf 终止" });
+        fireEvent.click(cancelButton);
+        expect(onCancel).toHaveBeenCalledWith(`task-${status}`);
+      } else {
+        expect(screen.queryByRole("button", { name: "Task.pdf 终止" })).not.toBeInTheDocument();
       }
 
       const removeButton = screen.getByRole("button", { name: "Task.pdf 移除" });
@@ -79,4 +101,27 @@ describe("TaskRowItem", () => {
       unmount();
     },
   );
+});
+
+it("renders a processing fallback when count data is unavailable", () => {
+  const task: TaskItem = {
+    ...createTask("processing"),
+    progress: "processing",
+    completed_count: null,
+    total_count: null,
+  };
+
+  renderWithI18n(
+    <TaskRowItem
+      task={task}
+      onRetry={vi.fn()}
+      onCancel={vi.fn()}
+      onRemove={vi.fn()}
+      onOpenDetails={vi.fn()}
+    />,
+  );
+
+  expect(screen.getAllByText("处理中")).toHaveLength(2);
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  expect(screen.getByText("Task.pdf")).toBeInTheDocument();
 });

@@ -30,6 +30,22 @@ async def test_resolver_reads_local_absolute_path(
 
 
 @pytest.mark.asyncio
+async def test_resolver_reads_local_file_uri(
+    settings,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "中文 文件.txt"
+    source.write_bytes(b"local uri")
+    repository = TortoiseStorageLocationRepository()
+    resolver = StorageSourceResolver(repository)
+
+    resolved = await resolver.resolve("local", source.as_uri())
+
+    with resolved.open("rb") as file:
+        assert file.read() == b"local uri"
+
+
+@pytest.mark.asyncio
 async def test_resolver_reads_external_uri(settings, tmp_path: Path) -> None:
     source = tmp_path / "source.txt"
     source.write_bytes(b"external")

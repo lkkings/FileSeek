@@ -1,5 +1,6 @@
 import { Icon } from "./Icon";
 import { useTranslate } from "../i18n/useTranslate";
+import { formatDateTime } from "../i18n/formatDateTime";
 import {
   DocumentDrawerPreview,
   ImageDrawerPreview,
@@ -12,6 +13,7 @@ interface FileDetailDrawerProps {
   onClose: () => void;
   file: FileItem | null;
   onOpenAction?: (file: FileItem) => void;
+  matchInfo?: string | null;
 }
 
 export function FileDetailDrawer({
@@ -19,6 +21,7 @@ export function FileDetailDrawer({
   onClose,
   file,
   onOpenAction,
+  matchInfo,
 }: FileDetailDrawerProps) {
   const t = useTranslate();
 
@@ -34,14 +37,7 @@ export function FileDetailDrawer({
     ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
     : "0.0 MB";
 
-  let formattedDate = file.modified || "";
-  if (formattedDate && formattedDate.includes("T")) {
-    const date = new Date(formattedDate);
-    if (!Number.isNaN(date.getTime())) {
-      const pad = (part: number) => part.toString().padStart(2, "0");
-      formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-  }
+  const formattedDate = formatDateTime(file.modified, "");
 
   const handleOpenAction = onOpenAction ? () => onOpenAction(file) : undefined;
 
@@ -82,6 +78,10 @@ export function FileDetailDrawer({
                   fileId: file.file_id,
                   fileName: file.file_name,
                   fileType: "video",
+                  startTime: typeof file.metadata?.start_time === "number"
+                    && Number.isFinite(file.metadata.start_time)
+                    ? file.metadata.start_time
+                    : undefined,
                 }}
               />
             ) : scene ? (
@@ -111,6 +111,7 @@ export function FileDetailDrawer({
               <span className="sidebar-meta-label">{t("search.fileSize", "大小")}</span>
               <span className="sidebar-meta-value">{formattedSize}</span>
             </div>
+            {matchInfo && <p className="sidebar-desc">{matchInfo}</p>}
             {file.tags && file.tags.length > 0 && (
               <div className="sidebar-tags-container">
                 {file.tags.map((tag, idx) => (

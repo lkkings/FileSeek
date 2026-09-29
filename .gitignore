@@ -72,6 +72,8 @@ tmp/
 temp/
 *.tmp
 *.bak
+test.mp4
+desktop/src-tauri/PlugIns/
 
 # =========================
 # OS

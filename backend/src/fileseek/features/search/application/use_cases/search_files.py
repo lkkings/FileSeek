@@ -15,12 +15,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 from dataclasses import asdict
 from typing import cast
-import asyncio
 
 from fileseek.config.constant import (
     BYTES_PER_MB,
@@ -28,26 +28,17 @@ from fileseek.config.constant import (
     QUERY_CACHE_KEY,
 )
 from fileseek.features.library.domain.repositories import FileRepository
-from fileseek.features.search.application.dto import (
-    FileDTO,
-    SearchResultsDTO
-)
-from fileseek.features.search.application.queries import (
-    SearchFilesQuery,
-    FileSortBy,
-    SortOrder
-)
-from fileseek.features.search.application.mappers import (
-    file_to_dto,
-)
+from fileseek.features.search.application.dto import FileDTO, SearchResultsDTO
+from fileseek.features.search.application.mappers import file_to_dto
+from fileseek.features.search.application.queries import FileSortBy, SearchFilesQuery, SortOrder
 from fileseek.infrastructure.embedding import EmbeddingPort
-from fileseek.infrastructure.vector_store import (
-    VectorIndexPort
-)
-from fileseek.shared.domain.file_types import FileCategory, FileType
+from fileseek.infrastructure.vector_store import VectorIndexPort
 from fileseek.shared.utils.cache import TTLLRUCache
 
 logger = logging.getLogger(__name__)
+
+IMAGE_FEATURE_WEIGHT = 1.0
+TEXT_FEATURE_WEIGHT = 0.4
 
 
 def _query_cache_key(query: SearchFilesQuery) -> str:
@@ -91,9 +82,28 @@ class SearchFilesUseCase:
             items = await self._search_by_db(request)
         else:
             items = await self._search_by_vectors(request)
-        counter = await self.file_repo.count_by_category()
+        categories = [category.value for category in request.categories or []]
+        min_size = (
+            request.min_size_m * BYTES_PER_MB
+            if request.min_size_m is not None
+            else None
+        )
+        max_size = (
+            request.max_size_m * BYTES_PER_MB
+            if request.max_size_m is not None
+            else None
+        )
+        counter = await self.file_repo.count_by_category(
+            name_query=request.name_query,
+            tag=request.tag,
+            min_size=min_size,
+            max_size=max_size,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            folder_id=request.folder_id,
+            categories=categories,
+        )
         total = sum(counter.values())
-        total = await self.file_repo.count()
         result = SearchResultsDTO(
             items=items,
             counter=counter,
@@ -105,7 +115,7 @@ class SearchFilesUseCase:
         return result
 
     async def _search_by_db(self,request:SearchFilesQuery) -> list[FileDTO]:
-        categories = [category.value for category in request.categories]
+        categories = [category.value for category in request.categories or []]
         files = await self.file_repo.query(
             name_query=request.name_query,
             tag=request.tag,
@@ -120,8 +130,7 @@ class SearchFilesUseCase:
             sort_order=request.sort_order.value,
             sort_by=request.sort_by.value
         )
-        items = [file_to_dto(file) for file in files]
-        return items
+        return [file_to_dto(file) for file in files]
 
     async def _search_by_vectors(self,request: SearchFilesQuery) ->  list[FileDTO]:
         query_str = request.query.strip()
@@ -135,7 +144,7 @@ class SearchFilesUseCase:
             )
             query_vector = cast("list[list[float]]", batch)[0]
             await self.cache.set(EMBEDDING_CACHE_KEY, query_str, query_vector)
-        categories = [category.value for category in request.categories]
+        categories = [category.value for category in request.categories or []]
         files = await self.file_repo.query(
             name_query=request.name_query,
             tag=request.tag,
@@ -152,11 +161,26 @@ class SearchFilesUseCase:
             for chunk in file.chunks
         ]
         hits =  await asyncio.to_thread(self.vector_store.search,query_vector,ids=chunk_ids)
-        chunk_hit_map = {hit.id:hit.score for hit in hits}
+        chunk_hit_map = {hit.id: hit.score for hit in hits}
         for file in files:
             for chunk in file.chunks:
-                score = chunk_hit_map.get(chunk.id,0.0)
-                chunk.set_score(score)
+                raw_score = chunk_hit_map.get(chunk.id, 0.0)
+                metadata = dict(chunk.metadata or {})
+                metadata["raw_score"] = raw_score
+
+                if file.file_type.is_image:
+                    is_ocr = metadata.get("feature_type") == "ocr"
+                    weighted_score = raw_score * (
+                        TEXT_FEATURE_WEIGHT if is_ocr else IMAGE_FEATURE_WEIGHT
+                    )
+                    metadata["match_type"] = "ocr" if is_ocr else "image"
+                elif file.file_type.is_document:
+                    weighted_score = raw_score * TEXT_FEATURE_WEIGHT
+                else:
+                    weighted_score = raw_score * IMAGE_FEATURE_WEIGHT
+
+                chunk.metadata = metadata
+                chunk.set_score(weighted_score)
         items = [file_to_dto(file) for file in files]
         if request.sort_order == SortOrder.ASC:
             items.sort(key=lambda item: item.score)
@@ -168,5 +192,4 @@ class SearchFilesUseCase:
         start = (request.page_number - 1) * request.page_size
         end = start + request.page_size
 
-        items = items[start:end]
-        return items
+        return items[start:end]

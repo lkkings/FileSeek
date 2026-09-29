@@ -329,24 +329,6 @@ class MixedBatchAddFileUseCase:
         )
 
 
-class CompletedTaskProgress:
-    async def get_snapshots(
-        self,
-        task_ids: tuple[str, ...],
-    ) -> dict[str, ImportTaskSnapshotDTO]:
-        return {
-            task_id: ImportTaskSnapshotDTO(
-                task_id=task_id,
-                file_id=f"file-{task_id.removeprefix('task-')}",
-                status="completed",
-                progress=100,
-                stage="indexed",
-                error_message=None,
-            )
-            for task_id in task_ids
-        }
-
-
 class ExistingFolderRepository:
     async def get_by_id(self, folder_id: str):
         return object() if folder_id == "folder-1" else None
@@ -355,11 +337,7 @@ class ExistingFolderRepository:
 @pytest.mark.asyncio
 async def test_import_stream_continues_after_item_failure(app):
     add_file = MixedBatchAddFileUseCase()
-    manager = BatchImportSessionManager(
-        add_file,
-        CompletedTaskProgress(),
-        progress_poll_interval=0,
-    )
+    manager = BatchImportSessionManager(add_file)
     app.state.dependencies["batch_import_session_manager"] = manager
     app.state.dependencies["start_batch_import_use_case"] = StartBatchImportUseCase(
         ExistingFolderRepository(),
@@ -455,7 +433,12 @@ def test_preview_file_not_found(auth_client: TestClient, app):
     assert json_data["status"] == "error"
     assert "不存在" in json_data["error"]
 
-def test_preview_file_normal(auth_client: TestClient, app, tmp_path):
+def test_preview_file_normal(
+    auth_client: TestClient,
+    app,
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     # Setup a dummy file on local filesystem to stream.
     # We must use a valid image signature like PNG so that _detect_content_type can detect it without crashing!
     # In file_utils.py, _detect_from_bytes(data):
@@ -479,7 +462,11 @@ def test_preview_file_normal(auth_client: TestClient, app, tmp_path):
     # Yes! In our test, we can mock `detect_file_type_from_bytes` inside `fileseek.features.library.interfaces.http.responses.file` to return a mock `FileType` or just mock the entire function to avoid the AttributeError!
     # Let's do that! That's incredibly elegant and avoids changing any business logic.
     import fileseek.features.library.interfaces.http.responses.file as response_file
-    response_file.detect_file_type_from_bytes = MagicMock(return_value=MagicMock(value="image/png"))
+    monkeypatch.setattr(
+        response_file,
+        "detect_file_type_from_bytes",
+        MagicMock(return_value=MagicMock(media_type="image/png")),
+    )
 
     dummy_file = tmp_path / "dummy.png"
     dummy_file.write_bytes(b"hello world preview content")
@@ -492,9 +479,38 @@ def test_preview_file_normal(auth_client: TestClient, app, tmp_path):
     assert response.status_code == 200
     assert response.content == b"hello world preview content"
 
-def test_preview_file_range_request(auth_client: TestClient, app, tmp_path):
+
+def test_preview_file_uses_media_type(
+    auth_client: TestClient,
+    app,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "video.mp4"
+    source.write_bytes(
+        (16).to_bytes(4, "big") + b"ftypisom" + b"\x00\x00\x02\x00"
+    )
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = LocalSourceFile(source)
+    app.state.dependencies["get_file_source_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/files/preview/f100")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "video/mp4"
+
+
+def test_preview_file_range_request(
+    auth_client: TestClient,
+    app,
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     import fileseek.features.library.interfaces.http.responses.file as response_file
-    response_file.detect_file_type_from_bytes = MagicMock(return_value=MagicMock(value="image/png"))
+    monkeypatch.setattr(
+        response_file,
+        "detect_file_type_from_bytes",
+        MagicMock(return_value=MagicMock(media_type="image/png")),
+    )
 
     dummy_file = tmp_path / "dummy.png"
     dummy_file.write_bytes(b"hello world preview content")
@@ -515,11 +531,14 @@ def test_preview_file_range_request_mounted_source(
     auth_client: TestClient,
     app,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import fileseek.features.library.interfaces.http.responses.file as response_file
 
-    response_file.detect_file_type_from_bytes = MagicMock(
-        return_value=MagicMock(value="image/png")
+    monkeypatch.setattr(
+        response_file,
+        "detect_file_type_from_bytes",
+        MagicMock(return_value=MagicMock(media_type="image/png")),
     )
     mounted_root = tmp_path / "nas1"
     mounted_root.mkdir()
@@ -550,7 +569,7 @@ def test_preview_file_streams_every_chunk(
     monkeypatch.setattr(
         response_file,
         "detect_file_type_from_bytes",
-        MagicMock(return_value=MagicMock(value="image/png")),
+        MagicMock(return_value=MagicMock(media_type="image/png")),
     )
     monkeypatch.setattr(response_file, "_CHUNK_SIZE", 8)
     content = b"0123456789abcdefghij"
@@ -587,6 +606,23 @@ def test_preview_file_source_unavailable(auth_client: TestClient, app):
 
     assert response.status_code == 410
     assert response.json()["status"] == "error"
+
+
+def test_preview_file_read_failure_is_source_unavailable(
+    auth_client: TestClient,
+    app,
+    tmp_path: Path,
+) -> None:
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = LocalSourceFile(
+        tmp_path / "missing.png",
+    )
+    app.state.dependencies["get_file_source_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/files/preview/f100")
+
+    assert response.status_code == 410
+    assert response.json()["error"] == "文件来源不可获取"
 
 
 def test_check_file_availability(auth_client: TestClient, app):

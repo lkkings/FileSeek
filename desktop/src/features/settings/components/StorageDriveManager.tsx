@@ -136,7 +136,7 @@ export function StorageDriveManager({
               </div>
               <div className="settings-drive-actions">
                 {connectionResult?.locationId === drive.id && (
-                  <span className="settings-drive-status">
+                  <span className={`settings-drive-status ${connectionResult.success ? "is-success" : "is-error"}`}>
                     {connectionResult.message || (connectionResult.success
                       ? t("settings.connectionSuccess", "连接正常")
                       : t("settings.connectionFailed", "连接失败"))}

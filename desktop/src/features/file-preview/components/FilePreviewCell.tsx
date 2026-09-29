@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useTranslate } from "../../../i18n/useTranslate";
 import { DocumentFormatIcon } from "./DocumentFormatIcon";
-import { buildPreviewUrl, getDocumentPreviewSupport } from "../preview";
+import { buildThumbnailUrl, getDocumentPreviewSupport, getFileExtension, getImagePreviewSupport } from "../preview";
 import { getInitialPreviewStatus } from "../state";
 import type { FilePreviewItem, PreviewSize, PreviewStatus, PreviewUrlOptions } from "../types";
 import "./FilePreviewCell.css";
@@ -16,26 +16,28 @@ export interface FilePreviewCellProps {
 export function FilePreviewCell({ item, size = "list", urlOptions }: FilePreviewCellProps) {
   const [status, setStatus] = useState<PreviewStatus>(() => getInitialPreviewStatus(item));
   const t = useTranslate();
-  const isImage = item.fileType === "image";
+  const isImagePreviewSupported = getImagePreviewSupport(item) === "supported";
   const isVideo = item.fileType === "video";
   const isDocument = item.fileType === "document";
+  const isPdfThumbnail = isDocument && getFileExtension(item.fileName) === "pdf";
   const documentSupport = getDocumentPreviewSupport(item);
   const thumbnailUrl =
-    isImage || isVideo
-      ? buildPreviewUrl(item, size, urlOptions)
+    isImagePreviewSupported || isVideo || isPdfThumbnail
+      ? buildThumbnailUrl(item, size, urlOptions)
       : undefined;
+  const usesThumbnail = thumbnailUrl !== undefined;
 
   return (
     <div
       className={`file-preview-cell file-preview-${item.fileType}`}
-      data-state={isDocument && documentSupport === "supported" ? "loaded" : status}
+      data-state={isDocument && !isPdfThumbnail && documentSupport === "supported" ? "loaded" : status}
       aria-busy={status === "loading"}
     >
-      {isDocument && (
+      {isDocument && (!isPdfThumbnail || status === "error") && (
         <DocumentFormatIcon fileName={item.fileName} isUnsupported={documentSupport === "unsupported"} />
       )}
 
-      {(isImage || isVideo) && thumbnailUrl && status !== "error" && (
+      {usesThumbnail && thumbnailUrl && status !== "error" && (
         <img
           key={thumbnailUrl}
           src={thumbnailUrl}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fileseek.config.settings import Settings
@@ -11,9 +12,9 @@ from fileseek.features.library.application.use_cases import (
     CheckFileAvailabilityUseCase,
     CreateFolderUseCase,
     DeleteFolderUseCase,
+    GetFileSourceUseCase,
     GetFileThumbnailUseCase,
     GetFileUseCase,
-    GetFileSourceUseCase,
     ListFoldersUseCase,
     ListTagsUseCase,
     MoveFilesUseCase,
@@ -23,9 +24,6 @@ from fileseek.features.library.application.use_cases import (
 from fileseek.features.library.infrastructure.repositories import (
     FileRepositoryImpl,
     FolderRepositoryImpl,
-)
-from fileseek.features.library.infrastructure import (
-    TaskRepositoryImportProgressPort,
 )
 from fileseek.features.recent.application.use_cases import (
     DeleteRecentAccessUseCase,
@@ -46,21 +44,25 @@ from fileseek.features.settings.application.use_cases import (
     CreateStorageLocationUseCase,
     DeleteStorageLocationUseCase,
     GetClassifierLabelsUseCase,
+    ListStorageDirectoryUseCase,
     ListStorageLocationsUseCase,
     ReplaceClassifierLabelsUseCase,
     TestStorageConnectionUseCase,
     UpdateStorageLocationUseCase,
-    ListStorageDirectoryUseCase,
 )
 from fileseek.features.settings.infrastructure import (
-    TortoiseClassifierLabelProvider,
-    StorageSourceResolver,
     FilesystemStorageDirectoryBrowser,
+    StorageSourceResolver,
+    TortoiseClassifierLabelProvider,
     TortoiseClassifierLabelRepository,
     TortoiseStorageLocationRepository,
 )
+from fileseek.features.tasks.application.cancellation import (
+    get_task_cancellation_registry,
+)
 from fileseek.features.tasks.application.manager import DefaultTaskManager
 from fileseek.features.tasks.application.use_cases import (
+    CancelTaskUseCase,
     DeleteTaskUseCase,
     ListTasksUseCase,
     RetryTaskUseCase,
@@ -87,8 +89,14 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
     embedder = get_embedding_service()
     cache = get_cache_service()
 
-    task_manager = DefaultTaskManager(task_repo)
-    thumbnail_cache = ThumbnailCache(settings.temp_dir / "thumbnails")
+    task_manager = DefaultTaskManager(
+        task_repo,
+        get_task_cancellation_registry(),
+    )
+    thumbnail_dir = settings.temp_dir
+    if thumbnail_dir is None:
+        thumbnail_dir = Path.cwd() / ".fileseek-thumbnails"
+    thumbnail_cache = ThumbnailCache(thumbnail_dir / "thumbnails")
     storage_location_repo = TortoiseStorageLocationRepository()
     classifier_label_repo = TortoiseClassifierLabelRepository()
     add_file_use_case = AddFileUseCase(
@@ -100,7 +108,6 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
     )
     batch_import_session_manager = BatchImportSessionManager(
         add_file_use_case,
-        TaskRepositoryImportProgressPort(task_repo),
     )
     # settings 表还没有行时回退到配置里的库根目录，而不是报错。
 
@@ -139,16 +146,16 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
         # 回收站管理
         "add_files2recycle_use_case": AddFiles2RecycleUseCase(
             file_repo,
-            folder_repo,
             recycle_repo,
             cache,
+            StorageSourceResolver(storage_location_repo),
         ),
         "list_recycle_items_use_case": ListRecycleItemsUseCase(recycle_repo),
         "restore_recycle_use_case": RestoreRecycleUseCase(
             recycle_repo,
             file_repo,
-            folder_repo,
             cache,
+            StorageSourceResolver(storage_location_repo),
         ),
         "delete_recycle_use_case": DeleteRecycleUseCase(
             recycle_repo, file_repo, vector_store
@@ -187,7 +194,6 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
         ),
         "delete_storage_location_use_case": DeleteStorageLocationUseCase(
             storage_location_repo,
-            file_repo,
         ),
         "test_storage_connection_use_case": TestStorageConnectionUseCase(
             storage_location_repo
@@ -196,5 +202,6 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
         # 任务管理
         "list_tasks_use_case": ListTasksUseCase(task_repo),
         "retry_task_use_case": RetryTaskUseCase(task_manager),
+        "cancel_task_use_case": CancelTaskUseCase(task_manager),
         "delete_task_use_case": DeleteTaskUseCase(task_manager),
     }

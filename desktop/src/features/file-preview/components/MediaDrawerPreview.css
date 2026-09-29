@@ -23,7 +23,7 @@
   font-size: 12px;
 }
 
-.media-drawer-video button {
+.media-drawer-video:not(.is-playing) button {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -34,4 +34,11 @@
   color: #fff;
   background: rgb(15 23 42 / 82%);
   cursor: pointer;
+}
+
+.media-drawer-video .video-js .vjs-big-play-button {
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
 }

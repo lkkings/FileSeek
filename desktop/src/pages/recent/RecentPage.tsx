@@ -93,13 +93,14 @@ export function RecentPage() {
   };
 
   const handleOpenFile = async (file: FileItem) => {
+    fileViewer.openFile({
+      fileId: file.file_id,
+      fileName: file.file_name,
+      fileType: file.category as "document" | "image" | "video",
+    });
+
     const response = await recordAccess.mutateAsync(file.file_id);
     if (response.status === "success") {
-      fileViewer.openFile({
-        fileId: file.file_id,
-        fileName: file.file_name,
-        fileType: file.category as "document" | "image" | "video",
-      });
       setNotice(`${t("recent.recorded", "已记录访问")} “${file.file_name}”`);
       void reload();
     } else {

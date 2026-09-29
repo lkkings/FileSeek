@@ -17,6 +17,7 @@ class RecycleItem:
     file_type: FileType
     size: int
     original_folder_id: str | None = None
+    storage_id: str | None = None
     recycle_path: str | None = None
 
 __all__ = ["RecycleItem"]

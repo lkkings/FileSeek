@@ -57,7 +57,7 @@ describe("SearchResultsView", () => {
     const rows = document.querySelectorAll(".result-list > .file-list-row");
     expect(rows).toHaveLength(1);
     expect(within(rows[0]!).getByText("Result.pdf")).toBeInTheDocument();
-    expect(within(rows[0]!).getByText("2026-09-28")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("2026-09-28 16:00:00")).toBeInTheDocument();
     expect(within(rows[0]!).getByText("0.0 MB")).toBeInTheDocument();
     expect(within(rows[0]!).getByText("旅行")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "分页" })).toBeInTheDocument();
@@ -97,6 +97,39 @@ describe("SearchResultsView", () => {
     const drawer = screen.getByRole("button", { name: /打开/ }).closest("aside")!;
     expect(within(drawer).getByText("文件详情")).toBeInTheDocument();
     expect(within(drawer).getByText("Result.pdf")).toBeInTheDocument();
+  });
+
+  it("shows the search hit in the detail drawer", async () => {
+    vi.useFakeTimers();
+    renderWithI18n(
+      <SearchResultsView
+        query="result"
+        onNotice={() => undefined}
+        data={{
+          ...data,
+          items: [
+            {
+              ...file,
+              metadata: {
+                text: "命中文本",
+                page_number: 1,
+                line_number: 1,
+                chunk_index: 0,
+              },
+            },
+          ],
+        }}
+        status="success"
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Result.pdf").closest(".file-list-row")!);
+    await act(async () => {
+      vi.advanceTimersByTime(220);
+    });
+
+    const drawer = screen.getByRole("button", { name: /打开/ }).closest("aside")!;
+    expect(within(drawer).getByText("命中：命中文本（第 1 页，第 1 行，片段 0）")).toBeInTheDocument();
   });
 
   it("moves selected search results to the recycle callback and refreshes", async () => {

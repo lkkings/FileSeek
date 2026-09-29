@@ -139,4 +139,26 @@ describe("RecentPage", () => {
     expect(screen.queryByRole("dialog", { name: "文件预览" })).not.toBeInTheDocument();
     expect(mocks.recordAccess.mutateAsync).toHaveBeenCalledWith("file-42");
   });
+
+  it("still opens the viewer when recording recent access fails", async () => {
+    vi.useFakeTimers();
+    mocks.recordAccess.mutateAsync.mockResolvedValueOnce({
+      status: "error",
+      data: null,
+      error: { code: "INTERNAL_ERROR", message: "记录失败" },
+    });
+    renderWithI18n(<RecentPage />);
+
+    fireEvent.click(screen.getByText("Recent.pdf").closest(".file-list-row")!);
+    await act(async () => {
+      vi.advanceTimersByTime(220);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /打开/ }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("dialog", { name: "文件预览" })).toBeInTheDocument();
+    expect(screen.getByText(/记录失败/)).toBeInTheDocument();
+  });
 });

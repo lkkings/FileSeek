@@ -488,6 +488,7 @@
 .import-dialog {
   width: min(100%, 760px);
   max-height: min(88vh, 780px);
+  padding: clamp(20px, 4vw, 30px);
   display: flex;
   flex-direction: column;
 }
@@ -497,11 +498,48 @@
   outline-offset: 4px;
 }
 
+.import-dialog-header {
+  margin-bottom: 20px;
+}
+
+.import-dialog-copy p {
+  max-width: 560px;
+}
+
+.import-dialog-destination {
+  min-width: 0;
+  max-width: min(100%, 360px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 3px 10px;
+  border: 1px solid rgba(72, 169, 255, .48);
+  border-radius: 999px;
+  background: rgba(24, 100, 201, .22);
+  color: #dcecff;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+.import-dialog-destination span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .import-storage-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   margin-bottom: 14px;
+  padding: 6px;
+  border: 1px solid rgba(59, 112, 190, .24);
+  border-radius: 14px;
+  background: rgba(8, 28, 64, .55);
+  scrollbar-width: thin;
 }
 
 .import-storage-tabs button {
@@ -509,18 +547,30 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0 14px;
-  border: 1px solid rgba(66, 128, 213, .55);
-  border-radius: 999px;
-  background: rgba(11, 37, 79, .72);
-  color: #cfe1ff;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #a9bcdf;
   cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
   white-space: nowrap;
 }
 
+.import-storage-tabs button:hover {
+  color: #dcecff;
+  background: rgba(28, 89, 171, .18);
+}
+
+.import-storage-tabs button:focus-visible {
+  border-color: rgba(72, 169, 255, .82);
+  outline: 0;
+}
+
 .import-storage-tabs button.is-active {
-  border-color: #48a9ff;
-  background: rgba(24, 100, 201, .85);
+  border-color: rgba(72, 169, 255, .48);
+  background: linear-gradient(180deg, rgba(31, 108, 210, .92), rgba(18, 74, 163, .92));
+  box-shadow: inset 0 1px 0 rgba(184, 226, 255, .16);
   color: #fff;
 }
 
@@ -528,20 +578,39 @@
   min-height: 260px;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 12px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(59, 112, 190, .22);
+  border-radius: 15px;
+  background: rgba(5, 20, 49, .48);
+  box-shadow: inset 0 1px 0 rgba(154, 199, 255, .05);
 }
 
 .import-directory-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+}
+
+.import-path-controls {
+  min-width: 0;
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-selection-utilities {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .import-parent-button {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -551,15 +620,16 @@
 .import-directory-toolbar input {
   min-width: 0;
   flex: 1;
-  height: 36px;
+  height: 40px;
   border: 1px solid rgba(60, 117, 191, .74);
-  border-radius: 8px;
+  border-radius: 10px;
   outline: 0;
-  background: rgba(3, 18, 46, .68);
+  background: rgba(3, 18, 46, .76);
   color: #eaf1ff;
   padding: 0 12px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 
 .import-directory-toolbar input:focus {
@@ -567,19 +637,21 @@
   box-shadow: 0 0 0 3px rgba(33, 144, 255, .15);
 }
 
-.import-directory-toolbar > div {
-  display: flex;
-  gap: 8px;
-}
-
 .import-directory-toolbar button {
-  min-height: 34px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid #295ca1;
-  border-radius: 8px;
-  background: rgba(12, 39, 82, .78);
+  border-radius: 10px;
+  background: rgba(12, 39, 82, .72);
   color: #d9e8ff;
   cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.import-directory-toolbar button:hover:not(:disabled) {
+  border-color: #3f81d4;
+  background: rgba(24, 77, 155, .85);
+  color: #eaf3ff;
 }
 
 .import-entry-list,
@@ -592,6 +664,7 @@
 
 .import-entry-list {
   max-height: 350px;
+  border-radius: 11px;
 }
 
 .import-entry-list li,
@@ -601,14 +674,16 @@
 
 .import-entry-list label,
 .import-directory-button {
-  min-height: 44px;
+  min-height: 48px;
   width: 100%;
   display: grid;
-  grid-template-columns: 18px 18px minmax(0, 1fr);
+  grid-template-columns: 19px 19px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
-  padding: 0 10px;
+  gap: 12px;
+  padding: 0 12px;
+  border-radius: 9px;
   color: #e2ecff;
+  transition: background .16s ease, box-shadow .16s ease, color .16s ease;
 }
 
 .import-directory-button {
@@ -617,12 +692,37 @@
   cursor: pointer;
   text-align: left;
   grid-template-columns: 18px minmax(0, 1fr);
+  font-weight: 550;
 }
 
-.import-directory-button:hover,
-.import-entry-list label:hover,
+.import-entry-list input[type="checkbox"] {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  accent-color: #35b0ff;
+}
+
+.import-directory-button:hover {
+  background: rgba(28, 89, 171, .16);
+}
+
+.import-directory-button:focus-visible {
+  outline: 2px solid rgba(62, 165, 255, .7);
+  outline-offset: -2px;
+}
+
+.import-entry-list label:hover {
+  background: rgba(28, 89, 171, .16);
+}
+
+.import-entry-list label:focus-within {
+  box-shadow: inset 0 0 0 1px rgba(72, 169, 255, .72);
+}
+
 .import-entry-list label.is-selected {
-  background: rgba(28, 89, 171, .24);
+  background: rgba(28, 89, 171, .28);
+  box-shadow: inset 3px 0 0 #48a9ff;
+  color: #f4f8ff;
 }
 
 .import-entry-list label span,
@@ -658,21 +758,43 @@
 .import-progress {
   display: grid;
   gap: 14px;
+  padding: 12px;
+  border: 1px solid rgba(59, 112, 190, .22);
+  border-radius: 15px;
+  background: rgba(5, 20, 49, .48);
   overflow-y: auto;
 }
 
 .import-progress-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  color: #c7d8f8;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.import-progress-metric {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid rgba(59, 112, 190, .22);
+  border-radius: 11px;
+  background: rgba(8, 29, 64, .55);
+  color: #a9bcdf;
+  font-size: 12px;
+}
+
+.import-progress-metric strong {
+  color: #f0f6ff;
+  font-size: 18px;
+  line-height: 1.15;
 }
 
 .import-progress-bar {
-  height: 8px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(12, 38, 80, .95);
+  background: rgba(12, 38, 80, .92);
+  box-shadow: inset 0 0 0 1px rgba(59, 112, 190, .24);
 }
 
 .import-progress-bar span {
@@ -685,32 +807,158 @@
 
 .import-progress-list {
   max-height: 350px;
+  border-radius: 11px;
 }
 
 .import-progress-item {
-  min-height: 44px;
+  min-height: 52px;
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) 110px 50px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "file state"
+    "details details";
   align-items: center;
-  gap: 10px;
-  padding: 0 8px;
+  gap: 8px 12px;
+  padding: 8px 10px;
 }
 
-.import-progress-item span:nth-of-type(1),
-.import-progress-item span:nth-of-type(2),
-.import-progress-item span:nth-of-type(3) {
+.import-progress-file {
+  min-width: 0;
+  grid-area: file;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #dcecff;
+}
+
+.import-progress-file span {
   overflow: hidden;
-  color: #c7d8f8;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.import-progress-item.is-completed {
+.import-progress-state {
+  grid-area: state;
+  min-width: 68px;
+  padding: 4px 9px;
+  border: 1px solid rgba(59, 112, 190, .3);
+  border-radius: 999px;
+  background: rgba(12, 38, 80, .72);
+  color: #b8cdf1;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.import-progress-details {
+  grid-area: details;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 10px;
+  color: #a9bcdf;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.import-progress-details span {
+  min-width: 0;
+}
+
+.import-progress-error {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: #ff9ba7;
+}
+
+.import-progress-state.is-queued {
+  color: #a9bcdf;
+}
+
+.import-progress-state.is-registered,
+.import-progress-state.is-processing {
+  border-color: rgba(72, 169, 255, .44);
+  background: rgba(24, 100, 201, .24);
+  color: #bfe1ff;
+}
+
+.import-progress-state.is-completed {
+  border-color: rgba(87, 208, 164, .46);
+  background: rgba(32, 124, 96, .22);
   color: #7ff0c6;
 }
 
-.import-progress-item.is-failed {
+.import-progress-state.is-failed {
+  border-color: rgba(208, 87, 106, .5);
+  background: rgba(140, 38, 59, .26);
   color: #ff9ba7;
+}
+
+.import-dialog-actions {
+  align-items: center;
+  margin-top: 20px;
+}
+
+.import-selected-count {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+  padding: 0 12px;
+  border: 1px solid rgba(59, 112, 190, .26);
+  border-radius: 999px;
+  background: rgba(8, 29, 64, .58);
+  color: #b8cdf1;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.import-selected-count strong {
+  color: #f0f6ff;
+  font-size: 15px;
+}
+
+@media (max-width: 560px) {
+  .import-dialog {
+    max-height: min(92vh, 760px);
+  }
+
+  .import-dialog-header {
+    gap: 12px;
+  }
+
+  .import-dialog-destination {
+    max-width: calc(100% - 32px);
+    margin-left: 0;
+  }
+
+  .import-selection-utilities {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .import-selection-utilities button {
+    flex: 1;
+  }
+
+  .import-entry-list,
+  .import-progress-list {
+    max-height: 300px;
+  }
+
+  .import-dialog .import-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .import-selected-count {
+    width: 100%;
+    justify-content: center;
+    margin-right: 0;
+  }
 }
 
 .import-selected-count {
@@ -718,6 +966,121 @@
   align-self: center;
   color: #a9bcdf;
   font-size: 14px;
+}
+
+/* System-initiated import dialog */
+.system-import-content {
+  display: grid;
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.system-import-content h3 {
+  margin-bottom: 10px;
+  color: #dcecff;
+  font-size: 15px;
+}
+
+.system-import-file-list,
+.system-import-error ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-import-file-list {
+  max-height: 170px;
+  overflow-y: auto;
+  border: 1px solid rgba(59, 112, 190, .22);
+  border-radius: 12px;
+  background: rgba(5, 20, 49, .48);
+}
+
+.system-import-file-list li,
+.system-import-error li {
+  border-bottom: 1px solid rgba(59, 112, 190, .16);
+}
+
+.system-import-file-list li {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: #dcecff;
+}
+
+.system-import-file-list li:last-child,
+.system-import-error li:last-child {
+  border-bottom: 0;
+}
+
+.system-import-file-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.system-import-error {
+  padding: 12px 14px;
+  border: 1px solid rgba(208, 87, 106, .48);
+  border-radius: 12px;
+  background: rgba(140, 38, 59, .18);
+  color: #ffb8bf;
+}
+
+.system-import-error p,
+.system-import-error li {
+  margin: 0;
+}
+
+.system-import-error ul {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.system-import-folder-group {
+  margin: 0;
+  padding: 8px;
+  border: 1px solid rgba(59, 112, 190, .22);
+  border-radius: 12px;
+  background: rgba(5, 20, 49, .48);
+}
+
+.system-import-folder-group legend {
+  padding: 0 6px;
+  color: #b8cdf1;
+  font-size: 13px;
+}
+
+.system-import-folder-group label {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: #dcecff;
+  cursor: pointer;
+}
+
+.system-import-folder-group label:hover,
+.system-import-folder-group label:focus-within {
+  background: rgba(28, 89, 171, .16);
+}
+
+.system-import-folder-group input {
+  margin: 0;
+  accent-color: #35b0ff;
+}
+
+.system-import-folder-group span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dialog-danger {
