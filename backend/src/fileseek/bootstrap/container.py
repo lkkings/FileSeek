@@ -10,15 +10,13 @@
 
 后台任务：
 
-    TaskScheduler
-        ↓
-    TaskProcessor
-        ↓
-    FileHandlerRegistry
-        ↓
-    DocumentHandler / ImageHandler / VideoHandler
-        ↓
-    各基础设施服务
+    TaskScheduler ──TaskSpec/TaskResult──> 导入模型子进程
+        ↓                                   FileHandlerRegistry
+    TaskProcessor（写向量库）                 DocumentHandler / ImageHandler / VideoHandler
+                                            embedding / OCR / classifier
+
+服务进程这一侧不构建任何模型：handler 及其依赖由子进程自己组装（见
+`features/tasks/infrastructure/worker.py`）。
 
 请求作用域的依赖由各 Feature 的
 `interfaces/http/dependencies.py` 通过 FastAPI Depends 自行解析。
@@ -39,37 +37,25 @@ from fileseek.features.library.infrastructure.repositories import (
 from fileseek.features.tasks.application.cancellation import (
     get_task_cancellation_registry,
 )
-from fileseek.features.tasks.application.handlers import (
-    DocumentHandler,
-    FileHandlerRegistry,
-    ImageHandler,
-    VideoHandler,
-)
 from fileseek.features.tasks.application.processor import (
     TaskProcessor,
 )
 from fileseek.features.tasks.application.scheduler import (
     TaskScheduler,
 )
-from fileseek.features.tasks.infrastructure.file_processor import (
-    DocumentParser,
-    VideoSampler,
-)
 from fileseek.features.tasks.infrastructure.repositories import (
     TaskRepositoryImpl,
 )
-from fileseek.infrastructure.classifier import (
-    SnapshotClassifierProvider,
-)
-from fileseek.infrastructure.embedding import (
-    get_embedding_service,
-)
-from fileseek.infrastructure.ocr import (
-    get_ocr_service,
+from fileseek.features.tasks.infrastructure.worker import (
+    TASK_WORKER_NAME,
+    TaskWorkerClient,
+    build_task_worker_config,
+    run_task_worker,
 )
 from fileseek.infrastructure.vector_store import (
     get_vector_store,
 )
+from fileseek.shared.infrastructure.worker import WorkerHandle
 from fileseek.shared.utils.cache import (
     get_cache_service,
 )
@@ -82,110 +68,29 @@ def build_task_scheduler(
 ) -> TaskScheduler:
     """组装后台任务调度器。
 
-    这里创建后台任务所需的完整依赖图。
-
-    Handler 负责具体文件类型的处理逻辑，
-    TaskProcessor 只负责调度 Handler，
+    计算交给导入模型子进程（按需启动、空闲退出、崩溃后重启），
+    TaskProcessor 只负责把结果写进向量库，
     TaskScheduler 只负责任务调度。
     """
-
-    # ==================================================
-    # 基础设施
-    # ==================================================
-
-    embedding_service = get_embedding_service()
     vector_index = get_vector_store()
-    classifier_provider = SnapshotClassifierProvider()
-    ocr_service = get_ocr_service()
     cache = get_cache_service()
     cancellation_registry = get_task_cancellation_registry()
 
-    # ==================================================
-    # 文件处理基础服务
-    # ==================================================
-
-    document_parser = DocumentParser(
-        chunk_size=settings.document_chunk_size,
-        overlap=settings.document_overlap,
+    compute = TaskWorkerClient(
+        WorkerHandle(
+            TASK_WORKER_NAME,
+            run_task_worker,
+            build_task_worker_config(settings),
+        )
     )
-
-    video_sampler = VideoSampler(
-        sample_every_n_frames=(
-            settings.video_sample_every_n_frames
-        ),
-        hash_threshold=(
-            settings.video_perceptual_hash_threshold
-        ),
-    )
-
-    # ==================================================
-    # File Handlers
-    # ==================================================
-
-    document_handler = DocumentHandler(
-        document_parser=document_parser,
-        embedding_service=embedding_service,
-        vector_index=vector_index,
-        classifier=classifier_provider,
-        batch_size=settings.task_document_batch_size,
-    )
-
-    image_handler = ImageHandler(
-        ocr_service=ocr_service,
-        embedding_service=embedding_service,
-        vector_index=vector_index,
-        classifier=classifier_provider,
-    )
-
-    video_handler = VideoHandler(
-        video_sampler=video_sampler,
-        embedding_service=embedding_service,
-        vector_index=vector_index,
-        classifier=classifier_provider,
-        batch_size=settings.task_video_batch_size,
-    )
-
-    # ==================================================
-    # Handler Registry
-    # ==================================================
-
-    handler_registry = FileHandlerRegistry(
-        handlers=[
-            document_handler,
-            image_handler,
-            video_handler,
-        ]
-    )
-
-    # ==================================================
-    # Task Processor
-    # ==================================================
-
-    processor = TaskProcessor(
-        handler_registry=handler_registry,
-        vector_index=vector_index,
-        cancellation_registry=cancellation_registry,
-    )
-
-    # ==================================================
-    # Repository
-    # ==================================================
-
-    file_repo = FileRepositoryImpl()
-    file_chunk_repo = FileChunkRepositoryImpl()
-    task_repo = TaskRepositoryImpl()
-
-    # ==================================================
-    # Task Scheduler
-    # ==================================================
 
     return TaskScheduler(
-        task_repo=task_repo,
-        file_repo=file_repo,
-        file_chunk_repo=file_chunk_repo,
-        processor=processor,
+        task_repo=TaskRepositoryImpl(),
+        file_repo=FileRepositoryImpl(),
+        file_chunk_repo=FileChunkRepositoryImpl(),
+        processor=TaskProcessor(vector_index=vector_index),
+        compute=compute,
         poll_interval=settings.task_poll_interval,
-        max_workers=settings.task_max_workers,
         cache=cache,
         cancellation_registry=cancellation_registry,
     )

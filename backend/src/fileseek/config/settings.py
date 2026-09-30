@@ -46,6 +46,8 @@ class Settings(BaseSettings):
 
     # 任务队列配置
     task_poll_interval: float = 2.0  # 秒
+    # 已不再生效：导入计算固定在一个模型子进程里串行执行（每多一个进程就多一份模型）。
+    # 保留字段是为了不让旧 .env 里的这一项报错。
     task_max_workers: int = 1
     task_max_retries: int = 3
     task_document_batch_size: int = Field(default=32, ge=1)
@@ -53,6 +55,11 @@ class Settings(BaseSettings):
 
     # 关闭时等待在飞任务落地的时限（秒），超时仍在跑的任务放回 queued。
     task_drain_timeout: float = 10.0
+
+    # 模型子进程空闲多少秒后自行退出，把模型内存完整还给系统；0 表示常驻不退出。
+    # 进程内卸载模型只能收回约一半内存，且反复卸载会越积越多，所以只能靠进程退出。
+    task_worker_idle_timeout: float = Field(default=300.0, ge=0)
+    query_worker_idle_timeout: float = Field(default=900.0, ge=0)
 
     # 向量模型配置 (jina-clip-v2 via ONNX Runtime)
     embedding_provider: Literal["jina-clip-v2"] = "jina-clip-v2"

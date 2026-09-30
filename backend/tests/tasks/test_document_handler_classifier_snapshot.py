@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fileseek.features.library.domain.entities import File
 from fileseek.features.tasks.application.handlers.document import DocumentHandler
+from fileseek.features.tasks.application.processor import TaskProcessor
 from fileseek.features.tasks.application.handlers.video import VideoHandler
 from fileseek.features.tasks.domain.entities import Task, TaskStage
 from fileseek.features.tasks.domain.ports import (
@@ -153,12 +154,12 @@ def test_document_handler_uses_task_label_snapshot(tmp_path: Path) -> None:
     handler = DocumentHandler(
         document_parser=FakeParser(),
         embedding_service=FakeEmbedding(),
-        vector_index=FakeVectorIndex(),
         classifier=provider,
         batch_size=4,
     )
 
-    handler.process(task, FakeProgress())
+    result = handler.compute(TaskProcessor.build_spec(task), FakeProgress())
+    TaskProcessor(vector_index=FakeVectorIndex()).persist(task, result, FakeProgress())
 
     assert file.tags == ["旧标签"]
     assert provider.snapshots == [snapshot]
@@ -196,12 +197,14 @@ def test_document_handler_batches_processing_and_reports_progress(
     handler = DocumentHandler(
         document_parser=FakeParser(chunk_count=9),
         embedding_service=embedding,
-        vector_index=vector_index,
         classifier=FakeClassifierProvider(),
         batch_size=4,
     )
 
-    handler.process(task, progress)
+    result = handler.compute(TaskProcessor.build_spec(task), progress)
+    # compute 阶段不碰向量库
+    assert vector_index.batch_sizes == []
+    TaskProcessor(vector_index=vector_index).persist(task, result, progress)
 
     assert embedding.batch_sizes == [4, 4, 1]
     assert vector_index.batch_sizes == [4, 4, 1]
@@ -255,12 +258,14 @@ def test_video_handler_batches_processing_and_reports_progress(
     handler = VideoHandler(
         video_sampler=FakeVideoSampler(keyframe_count=9),
         embedding_service=embedding,
-        vector_index=vector_index,
         batch_size=4,
         classifier=FakeVideoClassifierProvider(),
     )
 
-    handler.process(task, progress)
+    result = handler.compute(TaskProcessor.build_spec(task), progress)
+    # compute 阶段不碰向量库
+    assert vector_index.batch_sizes == []
+    TaskProcessor(vector_index=vector_index).persist(task, result, progress)
 
     assert embedding.batch_sizes == [4, 4, 1]
     assert vector_index.batch_sizes == [4, 4, 1]

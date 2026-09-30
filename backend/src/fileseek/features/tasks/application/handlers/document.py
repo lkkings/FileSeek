@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
-from fileseek.features.library.domain.entities import FileChunk
+from fileseek.features.tasks.application.compute import (
+    ChunkPayload,
+    TaskResult,
+    TaskSpec,
+    as_vector_array,
+)
 from fileseek.features.tasks.application.handlers.base import FileHandler
-from fileseek.features.tasks.domain.entities import Task, TaskStage
+from fileseek.features.tasks.domain.entities import TaskStage
 from fileseek.features.tasks.domain.ports import (
     ClassifierLabelSnapshot,
     DocumentParserPort,
@@ -13,9 +17,6 @@ from fileseek.features.tasks.domain.ports import (
 )
 from fileseek.infrastructure.classifier import ClassifierProvider
 from fileseek.infrastructure.embedding import EmbeddingPort
-from fileseek.infrastructure.vector_store import (
-    VectorIndexPort,
-)
 from fileseek.shared.domain.file_types import FileType
 
 logger = logging.getLogger(__name__)
@@ -27,13 +28,11 @@ class DocumentHandler(FileHandler):
         self,
         document_parser: DocumentParserPort,
         embedding_service: EmbeddingPort,
-        vector_index: VectorIndexPort,
         classifier: ClassifierProvider,
         batch_size: int,
     ) -> None:
         self._document_parser = document_parser
         self._embedding_service = embedding_service
-        self._vector_index = vector_index
         self._classifier = classifier
         self._batch_size = batch_size
 
@@ -41,19 +40,13 @@ class DocumentHandler(FileHandler):
         """判断是否支持当前文件类型。"""
         return file_type.is_document and file_type.is_support
 
-    def process(
+    def compute(
         self,
-        task: Task,
+        spec: TaskSpec,
         progress: ProgressReporter,
-    ) -> None:
-        """处理文档并返回分类标签。"""
-        metadata = task.metadata
-        if metadata is None:
-            raise ValueError("任务缺少元数据")
-        temp_path = metadata.get("temp_path")
-        if not isinstance(temp_path, str):
-            raise TypeError("任务临时文件路径必须是字符串")
-        path = Path(temp_path)
+    ) -> TaskResult:
+        """解析文档、向量化并分类。"""
+        path = self.temp_path(spec)
         # ==================================================
         # 1. 提取文档内容
         # ==================================================
@@ -75,9 +68,9 @@ class DocumentHandler(FileHandler):
         if not content.chunks:
             logger.info(
                 "文档没有可索引内容: path=%s",
-                task.file.path,
+                spec.file_path,
             )
-            return
+            return TaskResult.empty()
         progress.report(
             TaskStage.ENCODED,
             completed_count=0,
@@ -110,61 +103,30 @@ class DocumentHandler(FileHandler):
             total_count=1,
         )
         classifier = self._classifier.get_classifier(
-            ClassifierLabelSnapshot.from_metadata(task.metadata)
+            ClassifierLabelSnapshot.from_metadata(spec.metadata)
         )
-        tags = [
+        tags = tuple(
             score.label
             for score in classifier.classify_document(embeddings)
-        ]
-        task.add_file_tags(tags)
+        )
         progress.report(
             TaskStage.CLASSIFY,
             completed_count=1,
             total_count=1,
         )
-        # ==================================================
-        # 4. 建立索引
-        # ==================================================
-        progress.report(
-            TaskStage.INDEXED,
-            completed_count=0,
-            total_count=total,
+        return TaskResult(
+            chunks=tuple(
+                ChunkPayload(
+                    metadata={
+                        "text": chunk.text,
+                        "page_number": chunk.page_number,
+                        "line_number": chunk.line_number,
+                        "chunk_index": chunk.chunk_index,
+                    }
+                )
+                for chunk in content.chunks
+            ),
+            vectors=as_vector_array(embeddings),
+            tags=tags,
+            index_batch_size=self._batch_size,
         )
-        total = len(embeddings)
-        for start in range(0, total, self._batch_size):
-            vectors = embeddings[start : start + self._batch_size]
-            ids = [
-                f"{task.file.id}_{start + offset}"
-                for offset in range(len(vectors))
-            ]
-            self._vector_index.add_batch(ids, vectors)
-            task.add_file_chunks(
-                [
-                    FileChunk(
-                        id=id,
-                        file_id=task.file.id,
-                        metadata={
-                            "text": chunk.text,
-                            "page_number": chunk.page_number,
-                            "line_number": chunk.line_number,
-                            "chunk_index": chunk.chunk_index,
-                        }
-                    )
-                    for id, chunk in zip(
-                        ids,
-                        content.chunks[start : start + self._batch_size],
-                        strict=True,
-                    )
-                ]
-            )
-            progress.report(
-                TaskStage.INDEXED,
-                completed_count=start + len(vectors),
-                total_count=total,
-            )
-        progress.report(
-            TaskStage.INDEXED,
-            completed_count=total,
-            total_count=total,
-        )
-        return

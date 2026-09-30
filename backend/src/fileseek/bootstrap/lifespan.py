@@ -5,8 +5,12 @@
 连接文件放在最后，因为它就是"就绪"信号：桌面端一读到它就开始打接口。提前发布
 会让第一批请求打在还没建表的库上。
 
-关闭顺序是反的，而且同样不能调换：先停止领新任务，等在飞的任务落地，再撤掉连接
-文件、关库。反过来做会在任务还在写库的时候把连接抽走。
+关闭顺序是反的，而且同样不能调换：先停止领新任务，等在飞的任务落地（调度器关闭时
+顺带结束导入模型进程），再结束查询模型进程、撤掉连接文件、关库。反过来做会在任务还在
+写库的时候把连接抽走。
+
+两个模型子进程都是 daemon，服务进程退出时它们也会被带走；这里显式关闭是为了让它们
+收尾退干净，不在 uvicorn 退出后还占着几个 GB 内存多活一会儿。
 
 关闭路径上的每一步都要能在协作者已经不在了的时候不炸——关闭本身失败没有第二次
 机会，而且会盖掉真正的退出原因。
@@ -81,6 +85,13 @@ async def _shutdown(app: FastAPI, container: Container, app_paths: AppPaths) -> 
             logger.exception("任务调度器关闭失败")
         finally:
             container.scheduler = None
+
+    query_client = getattr(app.state, "dependencies", {}).get("query_embedding_client")
+    if query_client is not None:
+        try:
+            query_client.shutdown()
+        except Exception:
+            logger.exception("查询模型进程关闭失败")
 
     if getattr(app.state, "publish_connection", False):
         try:

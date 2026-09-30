@@ -12,14 +12,22 @@ import sys
 from pathlib import Path
 
 _FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+# 模型子进程和服务进程写同一个日志文件，行首带上进程名才分得清是谁打的。
+_WORKER_FORMAT = "%(asctime)s %(levelname)-8s [%(processName)s] %(name)s: %(message)s"
 
 
-def configure_logging(level: str = "INFO", log_file: Path | None = None) -> None:
+def configure_logging(
+    level: str = "INFO",
+    log_file: Path | None = None,
+    *,
+    worker: bool = False,
+) -> None:
     """配置根 logger。
 
     Args:
         level: 日志级别名（INFO / DEBUG / ...）
         log_file: 日志文件路径，None 表示只写 stderr
+        worker: 是否为模型子进程，是则在每行带上进程名
     """
     root = logging.getLogger()
     root.setLevel(level.upper())
@@ -28,7 +36,7 @@ def configure_logging(level: str = "INFO", log_file: Path | None = None) -> None
     for handler in list(root.handlers):
         root.removeHandler(handler)
 
-    formatter = logging.Formatter(_FORMAT)
+    formatter = logging.Formatter(_WORKER_FORMAT if worker else _FORMAT)
 
     stream_handler = logging.StreamHandler(sys.stderr)
     stream_handler.setFormatter(formatter)

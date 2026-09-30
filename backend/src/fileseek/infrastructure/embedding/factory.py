@@ -47,6 +47,7 @@ class EmbeddingFactory:
         cache_dir: Path | None = None,
         intra_op_num_threads: int | None = None,
         inter_op_num_threads: int | None = None,
+        text_only: bool = False,
     ) -> EmbeddingPort:
         """创建 Embedding 实现。
 
@@ -66,6 +67,9 @@ class EmbeddingFactory:
             inter_op_num_threads:
                 ONNX Runtime 算子之间线程数。
 
+            text_only:
+                只做文本向量化（查询进程），优先加载文本塔子图。
+
         Returns:
             EmbeddingPort 实例。
 
@@ -76,16 +80,13 @@ class EmbeddingFactory:
         normalized_provider = provider.strip().lower()
 
         if normalized_provider == "jina-clip-v2":
-            kwargs: dict[str, object] = {
-                "cache_dir": cache_dir,
-                "intra_op_num_threads": intra_op_num_threads,
-                "inter_op_num_threads": inter_op_num_threads,
-            }
-
-            if model_name is not None:
-                kwargs["model_name"] = model_name
-
-            return JinaClipV2Embedding(**kwargs)
+            return JinaClipV2Embedding(
+                model_name=model_name or JinaClipV2Embedding.DEFAULT_MODEL_NAME,
+                cache_dir=cache_dir,
+                intra_op_num_threads=intra_op_num_threads,
+                inter_op_num_threads=inter_op_num_threads,
+                text_only=text_only,
+            )
 
         raise ValueError(
             f"不支持的 Embedding provider: {provider}"

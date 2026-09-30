@@ -17,12 +17,13 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
+from fileseek.features.library.domain.exceptions import SourceUnavailableError
 from fileseek.shared.domain.exceptions import (
     ApplicationError,
+    InferenceError,
     NotFoundError,
     ValidationError,
 )
-from fileseek.features.library.domain.exceptions import SourceUnavailableError
 from fileseek.shared.envelope import error_response
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,17 @@ async def handle_http_exception(_request: Request, exc: Exception) -> JSONRespon
     )
 
 
+async def handle_inference_error(_request: Request, exc: Exception) -> JSONResponse:
+    """模型推理不可用 → 503。
+
+    查询模型进程崩溃、超时或处于崩溃冷却期时走这里。单独给 503 而不是落进兜底的 500：
+    这是暂时性故障，下一次请求会自动重启进程，前端可以据此提示"稍后重试"。
+    不降级成空结果——那会让用户以为"没有搜到"。报文不含路径等细节，原样透传。
+    """
+    logger.warning("模型推理不可用: %s", exc)
+    return JSONResponse(error_response(f"搜索服务暂时不可用，请稍后重试（{exc}）"), status_code=503)
+
+
 async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
     """兜底 → 500。原因只进日志，不进响应。"""
     logger.exception(
@@ -109,6 +121,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(SourceUnavailableError, handle_source_unavailable)
     app.add_exception_handler(ValidationError, handle_validation)
     app.add_exception_handler(ApplicationError, handle_application_error)
+    app.add_exception_handler(InferenceError, handle_inference_error)
     app.add_exception_handler(RequestValidationError, handle_request_validation)
     app.add_exception_handler(StarletteHTTPException, handle_http_exception)
     app.add_exception_handler(Exception, handle_unexpected)

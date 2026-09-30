@@ -4,6 +4,7 @@ import { ApiClient, type RawResponse } from "./client";
 import { addFilesToRecycle, deleteRecycleBatch, listRecycle } from "./recycle";
 import { moveFilesToFolder } from "./library";
 import { addRecent, deleteRecentRecord, listRecent } from "./recent";
+import { warmupSearch } from "./search";
 import { deleteTask, listTasks, retryTask } from "./tasks";
 
 function createClient() {
@@ -83,5 +84,15 @@ describe("Tasks API services", () => {
     expect(transport).toHaveBeenNthCalledWith(1, "GET", "/api/v1/tasks?page=2&page_size=25&status=processing", undefined);
     expect(transport).toHaveBeenNthCalledWith(2, "POST", "/api/v1/tasks/task%2F1/retry", undefined);
     expect(transport).toHaveBeenNthCalledWith(3, "DELETE", "/api/v1/tasks/task%2F1", undefined);
+  });
+});
+
+describe("Search API services", () => {
+  it("posts to the warmup route without a body", async () => {
+    const { client, transport } = createClient();
+
+    await warmupSearch(client);
+
+    expect(transport).toHaveBeenCalledWith("POST", "/api/v1/search/warmup", undefined);
   });
 });

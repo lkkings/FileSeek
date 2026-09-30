@@ -61,3 +61,44 @@ def ensure_model_cached(model_name: str, cache_dir: Path) -> tuple[Path, Path]:
         target.write_bytes(Path(downloaded).read_bytes())
 
     return onnx_path, tokenizer_dir
+
+
+# 文本塔子图的输入和输出。官方只发布了文本、图片两座塔打包在一张图里的联合模型；
+# 查询只用得到文本塔，把它单独抽出来能少加载一半权重（实测 874MB -> 537MB），
+# 而两座塔在图内互不依赖，抽出来的子图输出与联合模型逐位一致。
+_TEXT_GRAPH_INPUTS = ["input_ids"]
+_TEXT_GRAPH_OUTPUTS = ["l2norm_text_embeddings"]
+
+
+def text_model_path(onnx_path: Path) -> Path:
+    """文本塔子图的位置：和联合模型放在一起。
+
+    `model_quantized.onnx` -> `model_quantized.text.onnx`。
+    """
+    return onnx_path.with_suffix(".text.onnx")
+
+
+def ensure_text_model(onnx_path: Path) -> Path | None:
+    """确保文本塔子图已生成，返回其路径；生成失败返回 None，调用方回退到联合模型。
+
+    首次调用时从联合模型抽取，约 1~2 秒。先写临时文件再 rename：抽取途中进程被杀掉，
+    也不会留下一个半截的子图让下次加载失败。
+    """
+    target = text_model_path(onnx_path)
+    if target.exists():
+        return target
+    tmp = target.with_suffix(".onnx.tmp")
+    try:
+        import onnx
+        from onnx.utils import Extractor
+
+        model = onnx.load(str(onnx_path))
+        sub = Extractor(model).extract_model(_TEXT_GRAPH_INPUTS, _TEXT_GRAPH_OUTPUTS)
+        onnx.save(sub, str(tmp))
+        tmp.replace(target)
+    except Exception:
+        logger.warning("文本塔子图生成失败，将使用联合模型: %s", onnx_path, exc_info=True)
+        tmp.unlink(missing_ok=True)
+        return None
+    logger.info("已生成文本塔子图: %s", target)
+    return target

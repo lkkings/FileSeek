@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from fileseek.features.library.domain.entities import FileChunk
-from fileseek.features.tasks.domain.entities import Task,TaskStage
+from fileseek.features.tasks.application.compute import (
+    ChunkPayload,
+    TaskResult,
+    TaskSpec,
+    as_vector_array,
+)
 from fileseek.features.tasks.application.handlers.base import FileHandler
+from fileseek.features.tasks.domain.entities import TaskStage
 from fileseek.features.tasks.domain.ports import (
+    ClassifierLabelSnapshot,
     ProgressReporter,
 )
 from fileseek.infrastructure.classifier import ClassifierProvider
-from fileseek.features.tasks.domain.ports import ClassifierLabelSnapshot
 from fileseek.infrastructure.embedding import EmbeddingPort
-from fileseek.infrastructure.ocr import (
-    ImageContent,
-    OCRPort
-)
-from fileseek.infrastructure.vector_store import (
-    VectorIndexPort,
-)
+from fileseek.infrastructure.ocr import ImageContent, OCRPort
 from fileseek.shared.domain.file_types import FileType
 
 
@@ -28,12 +25,10 @@ class ImageHandler(FileHandler):
         self,
         ocr_service: OCRPort,
         embedding_service: EmbeddingPort,
-        vector_index: VectorIndexPort,
         classifier: ClassifierProvider,
     ) -> None:
         self._ocr_service = ocr_service
         self._embedding_service = embedding_service
-        self._vector_index = vector_index
         self._classifier = classifier
 
     def supports(
@@ -42,11 +37,11 @@ class ImageHandler(FileHandler):
     ) -> bool:
         return file_type.is_image and file_type.is_support
 
-    def process(
+    def compute(
         self,
-        task: Task,
+        spec: TaskSpec,
         progress: ProgressReporter,
-    ) -> None:
+    ) -> TaskResult:
         """处理图片。
 
         流程：
@@ -57,11 +52,9 @@ class ImageHandler(FileHandler):
              ↓
             OCR 文本 Embedding
              ↓
-            写入向量索引
-             ↓
             图片分类
         """
-        path = Path(task.metadata["temp_path"])
+        path = self.temp_path(spec)
         # --------------------------------------------------
         # 1. OCR
         # --------------------------------------------------
@@ -132,57 +125,30 @@ class ImageHandler(FileHandler):
         # --------------------------------------------------
         # 4. 图片分类
         # --------------------------------------------------
-        if not embeddings:
-            return []
         progress.report(
             stage=TaskStage.CLASSIFY,
             completed_count=0,
             total_count=1,
         )
         classifier = self._classifier.get_classifier(
-            ClassifierLabelSnapshot.from_metadata(task.metadata)
+            ClassifierLabelSnapshot.from_metadata(spec.metadata)
         )
         scores = classifier.classify_image(
             embeddings[0]
         )
-        tags = [
+        tags = tuple(
             score.label
             for score in scores
-        ]
-        task.add_file_tags(tags)
+        )
         progress.report(
             stage=TaskStage.CLASSIFY,
             completed_count=1,
             total_count=1,
         )
-        # ==================================================
-        # 5. 建立索引
-        # ==================================================
-        progress.report(
-            TaskStage.INDEXED,
-            completed_count=0,
-            total_count=len(embeddings),
+        # 图片和 OCR 文本一次写入：原实现就是单批 add_batch。
+        return TaskResult(
+            chunks=tuple(ChunkPayload(metadata=feature) for feature in features),
+            vectors=as_vector_array(embeddings),
+            tags=tags,
+            index_batch_size=len(embeddings),
         )
-        ids = [f"{task.file.id}_{i}" for i in range(len(embeddings))]
-        self._vector_index.add_batch(ids,vectors=embeddings)
-        progress.report(
-            TaskStage.INDEXED,
-            completed_count=len(embeddings),
-            total_count=len(embeddings),
-        )
-        # ==================================================
-        # 6. 更新文件块状态
-        # ==================================================
-        file_chunks = [
-            FileChunk(
-                id=id,
-                file_id=task.file.id,
-                metadata=feature
-            )
-            for id, feature in zip(
-                ids,
-                features,
-                strict=True,
-            )
-        ]
-        task.add_file_chunks(file_chunks)

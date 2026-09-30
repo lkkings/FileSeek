@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import logging
-import queue
+from collections.abc import Callable
 
-from fileseek.features.tasks.application.cancellation import (
-    TaskCancellationRegistry,
-)
 from fileseek.features.tasks.domain.entities import (
     TaskProgress,
     TaskStage,
 )
-from fileseek.features.tasks.domain.exceptions import TaskCancelledError
 from fileseek.features.tasks.domain.ports import (
     ProgressReporter,
 )
@@ -18,22 +14,20 @@ from fileseek.features.tasks.domain.ports import (
 logger = logging.getLogger(__name__)
 
 
-class QueueProgressReporter(ProgressReporter):
-    """基于 Queue 的进度上报器。
+class CallbackProgressReporter(ProgressReporter):
+    """把进度交给一个回调的上报器。
 
-    进度属于派生信息。
-    上报失败不能影响核心任务处理。
+    子进程里回调是"经 Pipe 发回服务进程"，服务进程里（`persist` 阶段）是"推进任务并记下来"。
+
+    进度属于派生信息，投递失败不能影响核心任务处理；但计数不合法是调用方的 bug，
+    照常抛出。
+
+    终止任务不再靠这里检查：子进程拿不到服务进程的取消登记，终止由调度器直接结束
+    子进程完成，即使计算正卡在一次长推理里也能立刻生效。
     """
 
-    def __init__(
-        self,
-        progress_queue: queue.Queue[TaskProgress],
-        cancellation_registry: TaskCancellationRegistry | None = None,
-        task_id: str | None = None,
-    ) -> None:
-        self._queue = progress_queue
-        self._cancellation_registry = cancellation_registry
-        self._task_id = task_id
+    def __init__(self, sink: Callable[[TaskProgress], None]) -> None:
+        self._sink = sink
 
     def report(
         self,
@@ -41,20 +35,13 @@ class QueueProgressReporter(ProgressReporter):
         completed_count: int,
         total_count: int,
     ) -> None:
-        if (
-            self._cancellation_registry is not None
-            and self._task_id is not None
-            and self._cancellation_registry.is_cancelled(self._task_id)
-        ):
-            raise TaskCancelledError(f"任务 {self._task_id} 已终止")
-
         task_progress = TaskProgress(
             stage=stage,
             completed_count=completed_count,
             total_count=total_count,
         )
         try:
-            self._queue.put(task_progress)
+            self._sink(task_progress)
         except Exception:
             logger.exception(
                 "任务进度上报失败: stage=%s",

@@ -55,3 +55,15 @@ export interface SearchResponseData {
 export function searchFiles(request: SearchRequest, client: ApiClient = defaultClient): Promise<ApiResponse<SearchResponseData>> {
   return client.post<SearchResponseData>("/search", request);
 }
+
+export interface WarmupResponseData {
+  started: boolean;
+}
+
+/**
+ * 预热查询模型：查询模型进程空闲退出后，第一次搜索要等几秒冷启动。
+ * 搜索框获得焦点时调用它，后端在后台把模型加载起来，用户提交搜索时多半已经就绪。
+ */
+export function warmupSearch(client: ApiClient = defaultClient): Promise<ApiResponse<WarmupResponseData>> {
+  return client.post<WarmupResponseData>("/search/warmup");
+}

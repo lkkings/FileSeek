@@ -3,28 +3,33 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from fileseek.features.library.domain.entities import File
+from fileseek.features.tasks.application.compute import TaskResult, TaskSpec
 from fileseek.features.tasks.application.handlers import FileHandlerRegistry
 from fileseek.features.tasks.application.processor import TaskProcessor
 from fileseek.features.tasks.domain.entities import Task
 from fileseek.features.tasks.domain.ports import ProgressReporter
+from fileseek.features.tasks.infrastructure.worker import make_task_request_handler
 from fileseek.shared.domain.file_types import FileCategory, FileType
 
 
 class FakeHandler:
+    def __init__(self, fail: bool = False) -> None:
+        self.fail = fail
+
     def supports(self, file_type: FileType) -> bool:
         return file_type is FileType.TXT
 
-    def process(self, task: Task, progress: ProgressReporter) -> None:
-        _ = task, progress
+    def compute(self, spec: TaskSpec, progress: ProgressReporter) -> TaskResult:
+        _ = spec, progress
+        if self.fail:
+            raise ValueError("parse failed")
+        return TaskResult.empty()
 
 
-class FakeVectorIndex:
-    def update_file_tags(self, file_id: str, tags: list[str]) -> None:
-        _ = file_id, tags
-
-
-def test_task_processor_cleans_temp_cache_and_keeps_source(tmp_path: Path) -> None:
+def _spec(tmp_path: Path) -> tuple[TaskSpec, Path, Path]:
     source = tmp_path / "source.txt"
     cache = tmp_path / "cache.txt"
     source.write_text("source", encoding="utf-8")
@@ -39,17 +44,26 @@ def test_task_processor_cleans_temp_cache_and_keeps_source(tmp_path: Path) -> No
         path=str(source),
         storage_id="local",
     )
-    task = Task(
-        id="task-1",
-        file=file,
-        metadata={"temp_path": str(cache)},
-    )
-    processor = TaskProcessor(
-        handler_registry=FileHandlerRegistry(handlers=[FakeHandler()]),
-        vector_index=FakeVectorIndex(),
-    )
+    task = Task(id="task-1", file=file, metadata={"temp_path": str(cache)})
+    return TaskProcessor.build_spec(task), source, cache
 
-    processor.process(task, FakeHandler())
+
+def test_worker_cleans_temp_cache_and_keeps_source(tmp_path: Path) -> None:
+    spec, source, cache = _spec(tmp_path)
+    handle = make_task_request_handler(FileHandlerRegistry(handlers=[FakeHandler()]))
+
+    handle(spec, lambda progress: None)
+
+    assert source.exists()
+    assert not cache.exists()
+
+
+def test_worker_cleans_temp_cache_when_compute_fails(tmp_path: Path) -> None:
+    spec, source, cache = _spec(tmp_path)
+    handle = make_task_request_handler(FileHandlerRegistry(handlers=[FakeHandler(fail=True)]))
+
+    with pytest.raises(ValueError, match="parse failed"):
+        handle(spec, lambda progress: None)
 
     assert source.exists()
     assert not cache.exists()

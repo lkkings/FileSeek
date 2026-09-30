@@ -74,6 +74,8 @@ temp/
 *.bak
 test.mp4
 desktop/src-tauri/PlugIns/
+desktop/src-tauri/binaries/
+desktop/target/
 
 # =========================
 # OS

@@ -15,6 +15,7 @@ from fileseek.shared.domain.exceptions import (
 )
 from fileseek.shared.utils.model_cache import (
     ensure_model_cached,
+    ensure_text_model,
 )
 
 if TYPE_CHECKING:
@@ -99,6 +100,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         *,
         intra_op_num_threads: int | None = None,
         inter_op_num_threads: int | None = None,
+        text_only: bool = False,
     ) -> None:
         """初始化 Jina CLIP V2 embedding adapter。
 
@@ -116,12 +118,17 @@ class JinaClipV2Embedding(EmbeddingPort):
             inter_op_num_threads:
                 ONNX Runtime 算子之间使用的线程数。
                 None 表示使用 ONNX Runtime 默认值。
+
+            text_only:
+                只做文本向量化（查询进程用）。优先加载只含文本塔的子图，少加载视觉塔
+                那一半权重；子图不可用时回退到联合模型。此模式下 `embed_image` 不可用。
         """
         self._model_name = model_name
         self._cache_dir = cache_dir or self.DEFAULT_CACHE_DIR
 
         self._intra_op_num_threads = intra_op_num_threads
         self._inter_op_num_threads = inter_op_num_threads
+        self._text_only = text_only
 
         self._session: ort.InferenceSession | None = None
         self._tokenizer: PreTrainedTokenizerBase | None = None
@@ -277,10 +284,14 @@ class JinaClipV2Embedding(EmbeddingPort):
         Returns:
             与 images 一一对应的 1024 维向量。
         """
+        if self._text_only:
+            raise InferenceError("text_only 模式不支持图片向量化")
         images = [images] if isinstance(images,bytes) else images
         self._validate_images(images)
 
         session, _, image_processor = self._ensure_loaded()
+        if image_processor is None:
+            raise InferenceError("图片处理器未加载")
 
         try:
             pil_images = [
@@ -324,13 +335,16 @@ class JinaClipV2Embedding(EmbeddingPort):
     ) -> tuple[
         ort.InferenceSession,
         PreTrainedTokenizerBase,
-        AutoImageProcessor,
+        AutoImageProcessor | None,
     ]:
         """确保模型资源已经加载。
 
         使用 double-check locking：
         正常情况下无需获取锁；
         首次加载时保证只有一个线程执行模型初始化。
+
+        "已加载"只看 session 和 tokenizer：text_only 模式下图片处理器始终是 None，
+        拿它参与判断会让每次调用都重新加载一遍模型。
         """
         session = self._session
         tokenizer = self._tokenizer
@@ -339,7 +353,6 @@ class JinaClipV2Embedding(EmbeddingPort):
         if (
             session is not None
             and tokenizer is not None
-            and image_processor is not None
         ):
             return session, tokenizer, image_processor
 
@@ -351,7 +364,6 @@ class JinaClipV2Embedding(EmbeddingPort):
             if (
                 session is not None
                 and tokenizer is not None
-                and image_processor is not None
             ):
                 return session, tokenizer, image_processor
 
@@ -385,7 +397,7 @@ class JinaClipV2Embedding(EmbeddingPort):
     ) -> tuple[
         ort.InferenceSession,
         PreTrainedTokenizerBase,
-        AutoImageProcessor,
+        AutoImageProcessor | None,
     ]:
         """加载 ONNX Session、Tokenizer 和 ImageProcessor。
 
@@ -407,29 +419,59 @@ class JinaClipV2Embedding(EmbeddingPort):
 
         session_options = self._build_session_options()
 
-        session = ort.InferenceSession(
-            str(onnx_path),
-            sess_options=session_options,
-            providers=["CPUExecutionProvider"],
-        )
+        session = None
+        if self._text_only:
+            session = self._load_text_session(onnx_path, session_options)
+        if session is None:
+            session = ort.InferenceSession(
+                str(onnx_path),
+                sess_options=session_options,
+                providers=["CPUExecutionProvider"],
+            )
 
         tokenizer = AutoTokenizer.from_pretrained(
             str(tokenizer_dir),
             trust_remote_code=True,
         )
 
-        image_processor = AutoImageProcessor.from_pretrained(
-            str(tokenizer_dir),
-            trust_remote_code=True,
-        )
+        # 查询进程用不到图片处理器；它的远程代码会连带 import torchvision，能省则省。
+        image_processor = None
+        if not self._text_only:
+            image_processor = AutoImageProcessor.from_pretrained(
+                str(tokenizer_dir),
+                trust_remote_code=True,
+            )
 
-        self._validate_model_outputs(session)
+        self._validate_model_outputs(session, text_only=self._text_only)
 
         return (
             session,
             tokenizer,
             image_processor,
         )
+
+    @staticmethod
+    def _load_text_session(
+        onnx_path: Path,
+        session_options: ort.SessionOptions,
+    ) -> ort.InferenceSession | None:
+        """加载文本塔子图；生成或加载失败返回 None，由调用方回退到联合模型。"""
+        import onnxruntime as ort
+
+        text_path = ensure_text_model(onnx_path)
+        if text_path is None:
+            return None
+        try:
+            session = ort.InferenceSession(
+                str(text_path),
+                sess_options=session_options,
+                providers=["CPUExecutionProvider"],
+            )
+        except Exception:
+            logger.warning("文本塔子图加载失败，回退到联合模型: %s", text_path, exc_info=True)
+            return None
+        logger.info("已加载文本塔子图: %s", text_path)
+        return session
 
     def _build_session_options(self) -> ort.SessionOptions:
         """创建 ONNX Runtime SessionOptions。"""
@@ -822,8 +864,13 @@ class JinaClipV2Embedding(EmbeddingPort):
     @staticmethod
     def _validate_model_outputs(
         session: ort.InferenceSession,
+        *,
+        text_only: bool = False,
     ) -> None:
-        """校验 ONNX 模型是否符合当前 Adapter 预期。"""
+        """校验 ONNX 模型是否符合当前 Adapter 预期。
+
+        text_only 模式可能加载的是文本塔子图：只有 input_ids 输入、只有文本 embedding 输出。
+        """
         input_names = {
             item.name
             for item in session.get_inputs()
@@ -833,6 +880,12 @@ class JinaClipV2Embedding(EmbeddingPort):
             raise ModelLoadError(
                 "Jina CLIP ONNX 模型缺少 input_ids 输入"
             )
+
+        if text_only:
+            output_names = {item.name for item in session.get_outputs()}
+            if not output_names & {"l2norm_text_embeddings", "text_embeddings"}:
+                raise ModelLoadError("Jina CLIP ONNX 模型缺少文本 embedding 输出")
+            return
 
         if "pixel_values" not in input_names:
             raise ModelLoadError(

@@ -10,8 +10,13 @@ from __future__ import annotations
 from fastapi import Request
 
 from fileseek.features.search.application.use_cases import SearchFilesUseCase
+from fileseek.features.search.infrastructure.query_worker import QueryEmbeddingClient
 from fileseek.shared.application.dependencies import resolve_dependency
 
 
 def get_search_files_use_case(request: Request)-> SearchFilesUseCase:
     return resolve_dependency(request, "search_files_use_case")
+
+
+def get_query_embedding_client(request: Request) -> QueryEmbeddingClient:
+    return resolve_dependency(request, "query_embedding_client")

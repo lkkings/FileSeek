@@ -43,6 +43,7 @@ dependencies = [
     # Tortoise 0.25.1 calls aiosqlite.Connection.start(), removed in 0.22.
     "aiosqlite==0.21.0",
     "defusedxml==0.7.1",
+    "onnx==1.23.1",
 ]
 
 [project.optional-dependencies]
@@ -136,10 +137,12 @@ asyncio_mode = "strict"
 [tool.coverage.run]
 source = ["fileseek"]
 branch = true
-# concurrency/parallel/sigterm 曾经是为一个 spawn 出来的模型 worker 子进程设的。
-# 那个 worker 在重构中已经没了（src/ 下不再有 multiprocessing），而留着这几项会让
-# 主进程的测量数据落到分片文件里不合并——结果是覆盖率被显著低报（auth.py 明明被
-# 10 个用例覆盖却报 34%）。恢复前请确认真的又有子进程要测。
+# 导入、查询两个模型子进程用 spawn 启动，测试里真的会起它们（tests/tasks/test_task_worker_process.py
+# 等）。子进程的测量数据落到分片文件里，必须用 `coverage combine` 合并后再出报告，否则
+# 主进程的数字会被显著低报（之前 auth.py 被 10 个用例覆盖却报 34% 就是这个原因）。
+concurrency = ["multiprocessing", "thread"]
+parallel = true
+sigterm = true
 
 [tool.coverage.report]
 fail_under = 80

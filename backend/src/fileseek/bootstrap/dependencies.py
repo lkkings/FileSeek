@@ -68,12 +68,18 @@ from fileseek.features.tasks.application.use_cases import (
     RetryTaskUseCase,
 )
 from fileseek.features.tasks.infrastructure.repositories import TaskRepositoryImpl
-from fileseek.infrastructure.embedding import get_embedding_service
+from fileseek.features.search.infrastructure.query_worker import (
+    QUERY_WORKER_NAME,
+    QueryEmbeddingClient,
+    build_query_worker_config,
+    run_query_worker,
+)
 from fileseek.infrastructure.thumbnail_cache import ThumbnailCache
 from fileseek.infrastructure.thumbnails import ThumbnailGenerator
 from fileseek.infrastructure.vector_store import (
     get_vector_store,
 )
+from fileseek.shared.infrastructure.worker import WorkerHandle
 from fileseek.shared.utils.cache import get_cache_service
 
 
@@ -86,7 +92,15 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
     # 与检索、调度器共用同一个 Chroma 客户端（get_vector_store 带 lru_cache）：
     # 同一个目录开两个客户端会互相打架。
     vector_store = get_vector_store()
-    embedder = get_embedding_service()
+    # 查询向量化在独立的查询模型子进程里做（和导入进程互不影响、空闲自动退出），
+    # 服务进程本身不加载模型。子进程按需启动：这里只是建句柄，不会立刻拉起。
+    query_embedder = QueryEmbeddingClient(
+        WorkerHandle(
+            QUERY_WORKER_NAME,
+            run_query_worker,
+            build_query_worker_config(settings),
+        )
+    )
     cache = get_cache_service()
 
     task_manager = DefaultTaskManager(
@@ -169,8 +183,9 @@ def build_http_dependencies(settings: Settings) -> dict[str, Any]:
 
         # 文件搜索：元信息随向量落盘，检索不回库表，所以这里不再注入 file_repo。
         "search_files_use_case": SearchFilesUseCase(
-            embedder, vector_store, file_repo, cache
+            query_embedder, vector_store, file_repo, cache
         ),
+        "query_embedding_client": query_embedder,
 
         # 系统设置
         "get_classifier_labels_use_case": GetClassifierLabelsUseCase(

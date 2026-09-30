@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import queue
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import cast
@@ -17,8 +16,9 @@ from fileseek.features.tasks.application.cancellation import (
 )
 from fileseek.features.tasks.application.manager import DefaultTaskManager
 from fileseek.features.tasks.application.processor import TaskProcessor
+from fileseek.features.tasks.application.compute import TaskSpec
 from fileseek.features.tasks.application.progress_reporter import (
-    QueueProgressReporter,
+    CallbackProgressReporter,
 )
 from fileseek.features.tasks.application.scheduler import TaskScheduler
 from fileseek.features.tasks.domain.entities import (
@@ -29,7 +29,6 @@ from fileseek.features.tasks.domain.entities import (
 )
 from fileseek.features.tasks.domain.exceptions import (
     InvalidTransitionError,
-    TaskCancelledError,
 )
 from fileseek.features.tasks.domain.repositories import TaskRepository
 from fileseek.shared.domain.file_types import FileCategory, FileType
@@ -115,19 +114,6 @@ async def test_cancel_task_rejects_non_processing_task() -> None:
     assert registry.is_cancelled("task-queued") is False
 
 
-def test_progress_reporter_raises_when_task_cancelled() -> None:
-    registry = TaskCancellationRegistry()
-    registry.request("task-1")
-    reporter = QueueProgressReporter(queue.Queue(), registry, "task-1")
-
-    with pytest.raises(TaskCancelledError):
-        reporter.report(
-            TaskStage.EXTRACTED,
-            completed_count=0,
-            total_count=1,
-        )
-
-
 @pytest.mark.parametrize(
     ("completed_count", "total_count"),
     [
@@ -140,7 +126,7 @@ def test_progress_reporter_rejects_invalid_count_pairs(
     completed_count: int,
     total_count: int,
 ) -> None:
-    reporter = QueueProgressReporter(queue.Queue())
+    reporter = CallbackProgressReporter(lambda progress: None)
 
     with pytest.raises(ValueError):
         reporter.report(
@@ -181,43 +167,57 @@ async def test_scheduler_stops_task_and_skips_partial_persistence() -> None:
     class FakeProcessor:
         cleaned_ids: list[str] = []
 
-        def process(
-            self,
-            task: Task,
-            progress_queue: queue.Queue[TaskProgress],
-        ) -> None:
-            registry.request(task.id)
-            reporter = QueueProgressReporter(progress_queue, registry, task.id)
-            reporter.report(
-                TaskStage.EXTRACTED,
-                completed_count=0,
-                total_count=1,
-            )
+        @staticmethod
+        def build_spec(task: Task) -> TaskSpec:
+            return TaskProcessor.build_spec(task)
+
+        def persist(self, task, result, progress) -> None:
+            raise AssertionError("被终止的任务不应写入")
 
         def cleanup(self, task: Task) -> None:
             self.cleaned_ids.extend(chunk.id for chunk in task.file.chunks)
 
+    class FakeCompute:
+        """第一次 poll 时模拟用户点了终止；之后一直没有结果（计算卡在长推理里）。"""
+
+        terminated = False
+
+        def in_cooldown(self) -> bool:
+            return False
+
+        def submit(self, spec: TaskSpec) -> None:
+            _ = spec
+
+        def poll(self) -> object | None:
+            registry.request(task.id)
+            return TaskProgress(TaskStage.EXTRACTED, 0, 1)
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def shutdown(self) -> None:
+            pass
+
     file_repo = FakeFileRepository()
     chunk_repo = FakeFileChunkRepository()
     processor = FakeProcessor()
+    compute = FakeCompute()
     scheduler = TaskScheduler(
         task_repo=cast(TaskRepository, FakeTaskRepository()),
         file_repo=cast(FileRepository, file_repo),
         file_chunk_repo=cast(FileChunkRepository, chunk_repo),
         processor=cast(TaskProcessor, processor),
+        compute=compute,
         poll_interval=0.01,
-        max_workers=1,
         cache=cast(TTLLRUCache[str, object], FakeCache()),
         cancellation_registry=registry,
     )
 
-    try:
-        await scheduler._execute_task(task)
-    finally:
-        scheduler._executor.shutdown(wait=False)
+    await scheduler._execute_task(task)
 
+    assert compute.terminated is True
     assert task.status is TaskStatus.CANCELLED
-    assert saved_tasks == [task]
+    assert saved_tasks[-1] is task
     assert file_repo.saved is False
     assert chunk_repo.saved is False
     assert processor.cleaned_ids == ["task-1_0"]

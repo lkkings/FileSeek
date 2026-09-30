@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from fileseek.features.library.domain.entities import File
 from fileseek.features.tasks.application.handlers.image import ImageHandler
+from fileseek.features.tasks.application.processor import TaskProcessor
 from fileseek.features.tasks.domain.entities import Task, TaskStage
 from fileseek.infrastructure.classifier.base import ClassificationScore
 from fileseek.shared.domain.file_types import FileCategory, FileType
@@ -78,23 +81,21 @@ def test_image_handler_preserves_ocr_feature_indexing(tmp_path) -> None:
     handler = ImageHandler(
         ocr_service=_FakeOCR(),
         embedding_service=_FakeEmbedding(),
-        vector_index=vector_index,
         classifier=_FakeClassifier(),
     )
 
-    handler.process(task, progress)
+    result = handler.compute(TaskProcessor.build_spec(task), progress)
+    assert vector_index.batches == []
+    TaskProcessor(vector_index=vector_index).persist(task, result, progress)
 
     assert [chunk.metadata["feature_type"] for chunk in file.chunks] == [
         "image",
         "ocr",
     ]
     assert file.chunks[1].metadata["text"] == "sunset"
-    assert vector_index.batches == [
-        (
-            ["file-1_0", "file-1_1"],
-            [[0.1], [0.2]],
-        ),
-    ]
+    # 向量以 float32 跨进程传输（Chroma 本身也按 float32 存），所以按近似比较。
+    assert [ids for ids, _ in vector_index.batches] == [["file-1_0", "file-1_1"]]
+    assert vector_index.batches[0][1] == [[pytest.approx(0.1)], [pytest.approx(0.2)]]
     assert progress.reports == [
         (TaskStage.EXTRACTED, 0, 1),
         (TaskStage.EXTRACTED, 1, 1),
@@ -103,5 +104,7 @@ def test_image_handler_preserves_ocr_feature_indexing(tmp_path) -> None:
         (TaskStage.CLASSIFY, 0, 1),
         (TaskStage.CLASSIFY, 1, 1),
         (TaskStage.INDEXED, 0, 2),
+        (TaskStage.INDEXED, 2, 2),
+        # 写入统一由 TaskProcessor.persist 完成，末尾那次收尾上报和文档、视频一致。
         (TaskStage.INDEXED, 2, 2),
     ]
