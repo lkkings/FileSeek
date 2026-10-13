@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const LAUNCH_AGENT_LABEL: &str = "com.fileseek.desktop";
 #[allow(dead_code)]

@@ -90,9 +90,11 @@ pub fn hide_to_tray(app: tauri::AppHandle) {
     }
 }
 
-pub fn set_hidden_activation_policy<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) {
+pub fn set_hidden_activation_policy<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     #[cfg(target_os = "macos")]
     let _ = app.set_activation_policy(tauri_activation_policy(activation_policy(true)));
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
 }
 
 #[cfg(target_os = "macos")]
