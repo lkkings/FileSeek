@@ -1,0 +1,70 @@
+{
+  "python_version": "3.12.15",
+  "pbs_release": "20261001",
+  "pbs_sha256": {
+    "aarch64-apple-darwin": "10cab8f6ed6202fdd81637aa6eda4af8d5b7eaa8fc42f9df3c6bea4923de0d93",
+    "x86_64-apple-darwin": "d101ac54bc34afff54741406261325dc896b7b646a36a58fff4845ef0a00b2ce",
+    "x86_64-pc-windows-msvc": "52124cee54126f3f360eaa378288f6f64c402c983a3c14c95eff67f4af986aaa",
+    "x86_64-unknown-linux-gnu": "7bb1659e3235077b7f63d5b6eb6ce653c6fcd6c5041e9d5f73b42ce10421464d",
+    "aarch64-unknown-linux-gnu": "0b35f4dc08d58534eb82e024989e2db9873885dccd4f2a316ff55c0cec146123"
+  },
+  "mirrors": {
+    "_comment": "Tried in order; every file is checked against the sha256 pinned in the app, so a mirror can only be slow or fail, never serve something else.",
+    "python": [
+      "https://registry.npmmirror.com/-/binary/python-build-standalone/{release}/{file}",
+      "https://github.com/astral-sh/python-build-standalone/releases/download/{release}/{file}"
+    ],
+    "pypi": [
+      "https://mirrors.aliyun.com/pypi/packages/{path}",
+      "https://pypi.tuna.tsinghua.edu.cn/packages/{path}",
+      "https://files.pythonhosted.org/packages/{path}"
+    ],
+    "model": [
+      "https://hf-mirror.com/{repo}/resolve/{revision}/{file}",
+      "https://huggingface.co/{repo}/resolve/{revision}/{file}"
+    ]
+  },
+  "model": {
+    "id": "jina-clip-v2-q",
+    "repo": "jinaai/jina-clip-v2",
+    "revision": "e10d47f5691d0454a0fb5d13f46f2199b74cb436",
+    "files": [
+      {
+        "path": "model_quantized.onnx",
+        "file": "onnx/model_quantized.onnx",
+        "size": 874351078,
+        "sha256": "65c6423fc82eecffb7f7f813730c6a6f0d28e2dc908e414250733b1416ed30bf"
+      },
+      {
+        "path": "tokenizer/tokenizer.json",
+        "file": "tokenizer.json",
+        "size": 17082997,
+        "sha256": "6601c4120779a1a3863897ba332fe3481d548e363bec2c91eba10ef8640a5e93"
+      },
+      {
+        "path": "tokenizer/tokenizer_config.json",
+        "file": "tokenizer_config.json",
+        "size": 1148,
+        "sha256": "e1bc77da5b90ba65b47aa8bd776c6317f47d50dc6717e92b10177686b3b8f161"
+      },
+      {
+        "path": "tokenizer/special_tokens_map.json",
+        "file": "special_tokens_map.json",
+        "size": 964,
+        "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835"
+      },
+      {
+        "path": "tokenizer/preprocessor_config.json",
+        "file": "preprocessor_config.json",
+        "size": 584,
+        "sha256": "920bc482e3dad0de2bffe4e534181a1f61a4a6baefa1aee53b75849557786301"
+      }
+    ]
+  },
+  "pbs_size": {
+    "aarch64-apple-darwin": 25023573,
+    "x86_64-pc-windows-msvc": 22013771,
+    "x86_64-unknown-linux-gnu": 34289539,
+    "aarch64-unknown-linux-gnu": 29212084
+  }
+}

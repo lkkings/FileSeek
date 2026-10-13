@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "0.1.0"
+version = "1.0.2"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -16,6 +16,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# `build.rs` computes the backend runtime id with the same code the crate uses.
+sha2 = "=0.10.9"
+serde_json = "1"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
@@ -24,8 +27,32 @@ tauri-plugin-opener = "2"
 tauri-plugin-mcp-bridge = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-ureq = { version = "2", default-features = false, features = ["json"] }
+# `tls`: the Keygate server and the runtime CDN are https.
+ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 dirs = "6.0"
+sha2 = "=0.10.9"
+# Backend runtime download: python-build-standalone's `.tar.gz` (flate2 is already in the
+# tree) and free-space checks. Every file is checked against a sha256 compiled in.
+base64 = "=0.22.1"
+flate2 = "=1.1.10"
+tar = "=0.4.46"
+fs4 = "=1.1.0"
+# "FileSeek is ready" once a background first-run download finishes.
+tauri-plugin-notification = "=2.5.1"
+# Licensing: verifying Keygate's Ed25519-signed tokens, and a random Idempotency-Key per
+# activation (getrandom is already in the tree).
+ed25519-dalek = "=3.0.0"
+getrandom = "=0.2.17"
+# App updates: Keygate's feed, artifacts signed by Keygate; semver (already in the tree)
+# compares against its minimum supported version.
+tauri-plugin-updater = "=2.13.1"
+semver = "=1.0.28"
+# Racing an update download against its cancel flag; already in the tree via tauri.
+tokio = { version = "=1.53.1", features = ["time", "macros"] }
+chrono = { version = "=0.4.45", default-features = false, features = ["std", "clock", "serde"] }
+
+[dev-dependencies]
+tempfile = "=3.27.0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

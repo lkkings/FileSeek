@@ -1,0 +1,198 @@
+# Builds FileSeek for the four supported platforms and publishes the app update to Keygate.
+#
+#   plan ──> app (per platform) ──> publish
+#
+# Only the app's own code goes to Keygate. The Python runtime, the backend's dependencies
+# and the model are downloaded by the app on first run from their official sources and
+# mirrors, each checked against the sha256 in desktop/src-tauri/runtime-sources/.
+#
+# Push a `v<version>` tag matching `tauri.conf.json`: everything is built and uploaded to
+# Keygate as a draft, to check in the dashboard before publishing it there. Or run it by
+# hand (Actions → Release → Run workflow): build only, upload a draft, or go live. See design.md decision 16 in
+# openspec/changes/commercial-licensing-and-updates for why these four platforms.
+#
+# Repository settings:
+#   secrets.KEYGATE_API_KEY                 releases:write, limited to the fileseek product
+#
+# No code signing certificates yet: macOS builds are ad-hoc signed and Windows builds unsigned.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Upload to Keygate (as a draft unless 'go live' is also set)"
+        type: boolean
+        default: false
+      go_live:
+        description: "Publish the Keygate release immediately"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - id: plan
+        run: |
+          version=$(jq -r .version desktop/src-tauri/tauri.conf.json)
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match tauri.conf.json version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Runtime sources match uv.lock
+        run: uv run --no-project --python "$PYTHON_VERSION" --with packaging release/build_sources.py --check
+
+  app:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            platform: darwin-arm64
+            bundles: app,dmg
+            update: bundle/macos/*.app.tar.gz
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            platform: windows-x64
+            bundles: nsis
+            update: bundle/nsis/*-setup.exe
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64
+            bundles: appimage
+            update: bundle/appimage/*.AppImage
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            platform: linux-arm64
+            bundles: appimage
+            update: bundle/appimage/*.AppImage
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: desktop/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2
+
+      - name: MCP sidecar
+        shell: bash
+        working-directory: services/mcp-service
+        run: |
+          uv run --no-project --python "$PYTHON_VERSION" --with-requirements requirements.txt \
+            --with pyinstaller pyinstaller --noconfirm build.spec
+          ext=""; [[ "$RUNNER_OS" == "Windows" ]] && ext=".exe"
+          mkdir -p ../../desktop/src-tauri/binaries
+          cp "dist/fileseek-mcp-service$ext" \
+            "../../desktop/src-tauri/binaries/fileseek-mcp-service-${{ matrix.target }}$ext"
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+
+      # `createUpdaterArtifacts` needs a key to sign the update bundle with. Keygate signs
+      # every artifact again when it publishes and the feed serves its signature, so this
+      # one is thrown away: a fresh key per run, never stored.
+      - name: Throwaway updater signing key
+        shell: bash
+        working-directory: desktop
+        run: |
+          pnpm tauri signer generate --ci -p "" -w "$RUNNER_TEMP/updater.key" >/dev/null
+          # The CLI checks its signature against plugins.updater.pubkey, which is empty in
+          # tauri.conf.json (the app gets Keygate's key from build.rs): give it this run's.
+          jq -n --arg k "$(cat "$RUNNER_TEMP/updater.key.pub")" '{plugins:{updater:{pubkey:$k}}}' \
+            > "$RUNNER_TEMP/updater.conf.json"
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY=$(cat "$RUNNER_TEMP/updater.key")"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD="
+          } >> "$GITHUB_ENV"
+
+      - name: Build
+        shell: bash
+        working-directory: desktop
+        run: |
+          pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} \
+            --config "$RUNNER_TEMP/updater.conf.json"
+
+      - name: Collect
+        shell: bash
+        run: |
+          out="$RUNNER_TEMP/out/${{ matrix.platform }}"
+          mkdir -p "$out/installer" "$out/update"
+          cd "desktop/src-tauri/target/${{ matrix.target }}/release"
+          shopt -s nullglob
+          update=( ${{ matrix.update }} )
+          [[ ${#update[@]} -eq 1 ]] || { echo "::error::expected one update bundle, found ${update[*]}"; exit 1; }
+          cp "${update[0]}" "$out/update/"
+          for f in bundle/dmg/*.dmg bundle/nsis/*-setup.exe bundle/appimage/*.AppImage; do
+            cp "$f" "$out/installer/"
+          done
+          ls -la "$out"/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.platform }}
+          path: ${{ runner.temp }}/out/${{ matrix.platform }}/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: [plan, app]
+    if: github.ref_type == 'tag' || inputs.publish
+    runs-on: ubuntu-latest
+    environment: keygate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: app-*
+          path: dist
+      - name: Upload to Keygate
+        env:
+          KEYGATE_API_KEY: ${{ secrets.KEYGATE_API_KEY }}
+          GO_LIVE: ${{ inputs.go_live == true }}
+        run: |
+          args=()
+          for platform in darwin-arm64 windows-x64 linux-x64 linux-arm64; do
+            file=$(ls dist/app-$platform/update/*)
+            args+=(--artifact "$platform=$file")
+          done
+          [[ "$GO_LIVE" == "true" ]] && args+=(--publish)
+          uv run --no-project --python "$PYTHON_VERSION" release/publish_keygate.py \
+            --version "${{ needs.plan.outputs.version }}" \
+            --notes "FileSeek ${{ needs.plan.outputs.version }}" "${args[@]}"

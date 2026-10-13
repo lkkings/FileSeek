@@ -1,0 +1,398 @@
+/* MCP 设置 - 遵循项目整体样式 */
+
+.mcp-settings {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+/* 卡片基础样式 */
+.mcp-config-card,
+.mcp-grants-card {
+  min-width: 0;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius);
+  background: var(--settings-surface);
+  box-shadow: 0 18px 38px rgba(3, 16, 44, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 卡片头部 */
+.mcp-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  padding: 22px 24px 18px;
+}
+
+.mcp-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mcp-card-heading > div {
+  min-width: 0;
+}
+
+.mcp-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--settings-surface-raised);
+  color: var(--settings-accent-light);
+  flex-shrink: 0;
+}
+
+.mcp-card-heading h2 {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.3;
+  color: var(--settings-text);
+}
+
+.mcp-card-heading p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--settings-muted);
+}
+
+/* 状态徽章 */
+.mcp-status-badge {
+  flex-shrink: 0;
+}
+
+.mcp-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.mcp-status-ready {
+  background: color-mix(in srgb, var(--settings-success) 12%, transparent);
+  color: var(--settings-success);
+  border: 1px solid color-mix(in srgb, var(--settings-success) 22%, transparent);
+}
+
+.mcp-status-unavailable {
+  background: color-mix(in srgb, var(--settings-danger) 12%, transparent);
+  color: var(--settings-danger);
+  border: 1px solid color-mix(in srgb, var(--settings-danger) 22%, transparent);
+}
+
+.mcp-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* 卡片内容 */
+.mcp-card-content {
+  padding: 0 24px 24px;
+}
+
+/* 配置操作 */
+.mcp-config-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mcp-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 11px 18px;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-control);
+  background: var(--settings-control);
+  color: var(--settings-text);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.mcp-action-button:hover:not(:disabled) {
+  background: var(--settings-control-hover);
+  border-color: var(--settings-border-strong);
+  transform: translateY(-1px);
+}
+
+.mcp-action-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mcp-action-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mcp-button-primary {
+  background: color-mix(in srgb, var(--settings-accent) 18%, var(--settings-control));
+  border-color: var(--settings-accent);
+  color: var(--settings-accent-light);
+}
+
+.mcp-button-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--settings-accent) 28%, var(--settings-control));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--settings-accent) 22%, transparent);
+}
+
+.mcp-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--settings-accent-light);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.mcp-link-button:hover {
+  color: var(--settings-accent);
+}
+
+/* 配置显示 */
+.mcp-config-display {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-inner);
+  background: var(--settings-input-bg);
+  overflow-x: auto;
+}
+
+.mcp-config-display pre {
+  margin: 0;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--settings-accent-light);
+}
+
+/* 头部操作 */
+.mcp-header-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.mcp-text-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--settings-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.mcp-text-button:hover {
+  color: var(--settings-text);
+}
+
+.mcp-text-danger {
+  color: color-mix(in srgb, var(--settings-danger) 80%, var(--settings-text));
+}
+
+.mcp-text-danger:hover {
+  color: var(--settings-danger);
+}
+
+/* 空状态 */
+.mcp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-inner);
+  background: var(--settings-surface-raised);
+}
+
+.mcp-empty-icon {
+  margin-bottom: 16px;
+  opacity: 0.3;
+  color: var(--settings-accent-light);
+}
+
+.mcp-empty-text {
+  max-width: 320px;
+}
+
+.mcp-empty-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--settings-text);
+}
+
+.mcp-empty-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--settings-muted);
+}
+
+/* 授权列表 */
+.mcp-grants-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mcp-grant-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-inner);
+  background: var(--settings-surface-raised);
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.mcp-grant-item:hover {
+  border-color: var(--settings-border-strong);
+  background: color-mix(in srgb, var(--settings-surface-raised) 90%, var(--settings-accent-light));
+  transform: translateY(-1px);
+}
+
+.mcp-grant-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--settings-control);
+  color: var(--settings-accent-light);
+  flex-shrink: 0;
+}
+
+.mcp-grant-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-grant-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--settings-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.mcp-grant-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--settings-muted);
+}
+
+.mcp-grant-meta span + span::before {
+  content: '·';
+  margin-right: 10px;
+  opacity: 0.5;
+}
+
+.mcp-grant-time {
+  color: var(--settings-accent-light);
+}
+
+.mcp-grant-revoke {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  background: var(--settings-control);
+  color: var(--settings-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.mcp-grant-revoke:hover {
+  border-color: var(--settings-danger);
+  background: color-mix(in srgb, var(--settings-danger) 12%, var(--settings-control));
+  color: var(--settings-danger);
+  transform: scale(1.05);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .mcp-card-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .mcp-status-badge {
+    align-self: flex-start;
+  }
+
+  .mcp-config-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .mcp-action-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .mcp-link-button {
+    margin-left: 0;
+  }
+
+  .mcp-header-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .mcp-grant-item {
+    flex-wrap: wrap;
+  }
+
+  .mcp-grant-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .mcp-grant-meta span + span::before {
+    content: none;
+  }
+}

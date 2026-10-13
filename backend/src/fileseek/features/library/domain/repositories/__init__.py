@@ -79,3 +79,22 @@ class FileChunkRepository(Protocol):
         chunks: Sequence[FileChunk],
     ) -> None:
         """批量保存文件分块。"""
+
+    async def get_chunks_by_range(
+        self,
+        file_id: str,
+        page: int | None = None,
+        chunk_start: int | None = None,
+        chunk_end: int | None = None,
+    ) -> list[FileChunk]:
+        """按范围查询文件 chunks。
+
+        Args:
+            file_id: 文件 ID
+            page: 可选，过滤到指定页
+            chunk_start: 可选，基于 line_number（段落编号）的起始
+            chunk_end: 可选，基于 line_number（段落编号）的结束
+
+        Returns:
+            匹配的 chunks 列表
+        """

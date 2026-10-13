@@ -11,9 +11,17 @@ pub struct BackendConnection {
     pub token: String,
 }
 
+/// Where to find the backend's connection file. Read on every request rather than once at
+/// startup: the backend starts after the WebView (and may restart on a new port).
 #[derive(Clone, Default)]
 pub struct PreviewTransportState {
-    pub connection: Option<BackendConnection>,
+    pub connection_file: Option<std::path::PathBuf>,
+}
+
+impl PreviewTransportState {
+    fn connection(&self) -> Option<BackendConnection> {
+        load_connection(self.connection_file.as_deref()?)
+    }
 }
 
 pub fn connection_file_path() -> std::path::PathBuf {
@@ -96,11 +104,11 @@ pub fn handle_preview_request(
         return error_response(403, "Preview path is not allowed");
     }
 
-    let Some(connection) = state.connection.as_ref() else {
+    let Some(connection) = state.connection() else {
         return error_response(503, "Backend connection is unavailable");
     };
 
-    let mut forwarded_request = ureq::get(&backend_url(connection, path_and_query));
+    let mut forwarded_request = ureq::get(&backend_url(&connection, path_and_query));
     forwarded_request = forwarded_request.set(TOKEN_HEADER, connection.token.as_str());
 
     if let Some(range) = request.headers().get("range") {

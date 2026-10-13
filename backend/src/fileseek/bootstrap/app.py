@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from fileseek.bootstrap.auth import HEALTH_PATH, TOKEN_HEADER, TokenAuthMiddleware
+from fileseek.bootstrap.auth import HEALTH_PATH, SHUTDOWN_PATH, TOKEN_HEADER, TokenAuthMiddleware
 from fileseek.bootstrap.connection import generate_token
 from fileseek.bootstrap.container import Container
 from fileseek.bootstrap.dependencies import build_http_dependencies
@@ -37,6 +38,11 @@ logger = logging.getLogger(__name__)
 # uvicorn --factory 模式下告知端口用的环境变量：那种模式下 socket 由 uvicorn 持有，
 # 应用自己不知道最终绑到了哪个端口。
 PORT_ENV_VAR = "FILESEEK_PORT"
+
+
+def _signal_self() -> None:
+    """让 uvicorn 以为收到了 Ctrl+C。Windows 上 SIGINT 同样可用，SIGTERM 不行。"""
+    signal.raise_signal(signal.SIGINT)
 
 
 def create_app(
@@ -72,6 +78,9 @@ def create_app(
     app.state.port = port
     app.state.publish_connection = publish_connection
     app.state.auth_token = token
+    # 默认向自身发 SIGINT，uvicorn 收到后和 SIGTERM 一样走优雅关闭；`main()` 持有
+    # uvicorn.Server 时换成直接置 should_exit，不经过信号。
+    app.state.request_shutdown = _signal_self
 
     register_exception_handlers(app)
 
@@ -121,6 +130,15 @@ def create_app(
                 "active_tasks": scheduler.active_count if scheduler else 0,
             }
         )
+
+    # 不带 api 前缀，要 token：桌面端在 Windows 上靠它优雅停止后端——那里没有 SIGTERM，
+    # 直接结束进程会跳过 lifespan 的收尾，在飞任务停在 processing、连接文件留在原地。
+    # 只置停止标志，真正的收尾和 SIGTERM 一样由 uvicorn 走完 lifespan。
+    @app.post(SHUTDOWN_PATH, tags=["health"])
+    async def shutdown() -> dict[str, object]:
+        """请求服务优雅停止。立即返回，收尾在响应发出后进行。"""
+        app.state.request_shutdown()
+        return success_response({"stopping": True})
 
     prefix = resolved_settings.api_prefix
     for feature_router in (

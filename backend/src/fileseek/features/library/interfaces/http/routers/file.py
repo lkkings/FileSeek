@@ -15,6 +15,10 @@ from fileseek.features.library.application.use_cases import (
     MoveFilesUseCase,
     StartBatchImportUseCase,
 )
+from fileseek.features.library.application.use_cases.get_file_chunks import (
+    GetFileChunksQuery,
+    GetFileChunksUseCase,
+)
 from fileseek.features.library.application.dto import ImportEventDTO
 from fileseek.features.library.application.use_cases.batch_import import (
     BatchImportSessionManager,
@@ -40,6 +44,8 @@ from fileseek.features.library.interfaces.http.responses import stream_file, thu
 from fileseek.features.library.interfaces.http.schemas import (
     BatchImportRequest,
     BatchImportResponse,
+    FileChunkData,
+    FileChunksResponse,
     MoveFilesRequest,
     MoveFilesResponse,
 )
@@ -180,3 +186,53 @@ async def check_file_availability(
 ) -> dict[str, object]:
     result = await use_case.execute(check_file_availability_query(file_id))
     return success_response(file_availability_to_schema(result))
+
+
+@router.get("/{file_id}/chunks")
+async def get_file_chunks(
+    file_id: str,
+    page: int | None = Query(None, description="过滤到指定页"),
+    chunk_start: int | None = Query(None, description="起始 chunk（基于 line_number）", alias="chunk_start"),
+    chunk_end: int | None = Query(None, description="结束 chunk（基于 line_number）", alias="chunk_end"),
+    chunk_repo=Depends(lambda: None),  # 临时占位符，需要实现依赖注入
+    file_repo=Depends(lambda: None),   # 临时占位符，需要实现依赖注入
+) -> dict[str, object]:
+    """获取文件的 chunks。
+
+    支持按页、chunk 范围查询。不指定参数时返回全部 chunks。
+    """
+    # TODO: 实现依赖注入
+    from fileseek.features.library.infrastructure.repositories.chunk import FileChunkRepositoryImpl
+    from fileseek.features.library.infrastructure.repositories.file import FileRepositoryImpl
+
+    chunk_repo = FileChunkRepositoryImpl()
+    file_repo = FileRepositoryImpl()
+
+    use_case = GetFileChunksUseCase(file_repo=file_repo, chunk_repo=chunk_repo)
+
+    query = GetFileChunksQuery(
+        file_id=file_id,
+        page=page,
+        chunk_start=chunk_start,
+        chunk_end=chunk_end,
+    )
+
+    result = await use_case.execute(query)
+
+    # 转换为响应 schema
+    response = FileChunksResponse(
+        chunks=[
+            FileChunkData(
+                text=chunk.text,
+                page_number=chunk.page_number,
+                line_number=chunk.line_number,
+                chunk_index=chunk.chunk_index,
+            )
+            for chunk in result.chunks
+        ],
+        total_chunks=result.total_chunks,
+        page_count=result.page_count,
+    )
+
+    return success_response(response.model_dump(by_alias=True))
+

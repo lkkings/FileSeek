@@ -75,6 +75,21 @@ pub fn show_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
+pub fn main_window_visible<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
+    app.get_webview_window(MAIN_WINDOW)
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(false)
+}
+
+/// Sends the main window to the tray, as closing it does; the app keeps working (a
+/// first-run download, say) and the tray brings it back.
+#[tauri::command]
+pub fn hide_to_tray(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+        let _ = window.hide();
+    }
+}
+
 pub fn set_hidden_activation_policy<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     #[cfg(target_os = "macos")]
     let _ = app.set_activation_policy(tauri_activation_policy(activation_policy(true)));

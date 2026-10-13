@@ -48,3 +48,24 @@ class MoveFilesResponse(BaseModel):
     """批量移动文件响应。"""
 
     moved_count: int = Field(alias="moved_count")
+
+
+class FileChunkData(BaseModel):
+    """单个 chunk 数据。"""
+
+    text: str
+    page_number: int | None = Field(default=None, alias="page_number")
+    line_number: int | None = Field(default=None, alias="line_number")
+    chunk_index: int = Field(alias="chunk_index")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class FileChunksResponse(BaseModel):
+    """文件 chunks 响应。"""
+
+    chunks: list[FileChunkData]
+    total_chunks: int = Field(alias="total_chunks")
+    page_count: int | None = Field(default=None, alias="page_count")
+
+    model_config = ConfigDict(populate_by_name=True)

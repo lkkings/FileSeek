@@ -1,4 +1,4 @@
-import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 
 import { isTauriRuntime } from "./api";
 
@@ -10,6 +10,17 @@ function normalizePath(path: string) {
 export async function openPathInSystem(path: string) {
   if (!isTauriRuntime()) return false;
   await openPath(normalizePath(path));
+  return true;
+}
+
+/** An https link in the user's browser (store, renewal). Anything else is refused. */
+export async function openExternalUrl(url: string) {
+  if (!/^https?:\/\//i.test(url)) return false;
+  if (!isTauriRuntime()) {
+    window.open(url, "_blank", "noopener");
+    return true;
+  }
+  await openUrl(url);
   return true;
 }
 

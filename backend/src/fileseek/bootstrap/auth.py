@@ -35,6 +35,9 @@ TOKEN_HEADER = "X-FileSeek-Token"  # noqa: S105 - 头名字，不是密码
 # 不鉴权：它只说明服务在不在，桌面端就是靠它判断后端起来了。
 HEALTH_PATH = "/health"
 
+# 要鉴权：桌面端请求后端优雅停止（Windows 没有 SIGTERM）。
+SHUTDOWN_PATH = "/shutdown"
+
 # 文档页面需要继续请求 /openapi.json 才能渲染；这些页面只提供接口说明，不执行
 # 业务操作。服务仅监听本机地址，因此允许直接在本机浏览器打开。
 PUBLIC_PATHS = frozenset({HEALTH_PATH, "/docs", "/redoc", "/openapi.json"})

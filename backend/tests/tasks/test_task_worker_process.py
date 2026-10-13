@@ -166,6 +166,43 @@ async def test_crash_fails_task_and_next_task_succeeds(harness, tmp_path: Path) 
 
 
 @pytest.mark.asyncio
+async def test_shutdown_puts_a_task_still_computing_back_in_the_queue(
+    harness, tmp_path: Path
+) -> None:
+    """drain 超时仍在算的任务放回 queued，而不是停在 processing 等人推进。"""
+    import asyncio
+
+    scheduler, compute, *_ = harness
+    stuck = _task(tmp_path, "stuck", "sleep")
+    stuck.status = TaskStatus.QUEUED
+
+    class _QueueRepo(_TaskRepo):
+        async def claim_next_queued(self) -> Task | None:
+            if stuck.status is not TaskStatus.QUEUED:
+                return None
+            stuck.status = TaskStatus.PROCESSING
+            return stuck
+
+        async def list_all(self, status, page, page_size):
+            _ = page, page_size
+            matching = [stuck] if stuck.status is status else []
+            return matching, len(matching)
+
+    scheduler.task_repo = cast(TaskRepository, _QueueRepo())
+    scheduler.start()
+    deadline = time.monotonic() + 10
+    while not (scheduler.active_count and compute.handle.is_alive()):
+        assert time.monotonic() < deadline, "任务没有开始计算"
+        await asyncio.sleep(0.05)
+
+    released = await scheduler.shutdown(timeout=0.5)
+
+    assert released == ("stuck",)
+    assert stuck.status is TaskStatus.QUEUED
+    assert not compute.handle.is_alive()
+
+
+@pytest.mark.asyncio
 async def test_cancel_terminates_long_running_compute(harness, tmp_path: Path) -> None:
     scheduler, compute, registry, _, file_repo, _, index = harness
     stuck = _task(tmp_path, "stuck", "sleep")

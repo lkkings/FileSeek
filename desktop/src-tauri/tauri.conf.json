@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "desktop",
-  "version": "0.1.0",
+  "productName": "FileSeek",
+  "version": "1.0.2",
   "identifier": "com.fileseek.desktop",
   "build": {
     "beforeDevCommand": "pnpm run dev",
@@ -23,9 +23,22 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
+    "externalBin": [
+      "binaries/fileseek-mcp-service"
+    ],
+    "resources": {
+      "resources/backend/": "backend/"
+    },
     "macOS": {
       "signingIdentity": "-",
       "files": {

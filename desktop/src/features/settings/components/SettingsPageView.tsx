@@ -6,6 +6,9 @@ import { useSettingsPreferences } from "../hooks/useSettingsPreferences";
 import { StorageDriveManager } from "./StorageDriveManager";
 import { TagManager } from "./TagManager";
 import { SystemIntegrationCard } from "./SystemIntegrationCard";
+import MCPSettings from "../../../pages/settings/MCPSettings";
+import { LicenseCard } from "../../license";
+import { UpdateCard } from "../../update";
 import "./settings.css";
 
 export function SettingsPageView() {
@@ -77,7 +80,15 @@ export function SettingsPageView() {
         </section>
       </div>
 
+      <LicenseCard />
+
+      <UpdateCard />
+
       <SystemIntegrationCard />
+
+      <section className="settings-card">
+        <MCPSettings />
+      </section>
 
       <section className="settings-card settings-storage-card">
         <div className="settings-card-header">

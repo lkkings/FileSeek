@@ -1,0 +1,11 @@
+extend = "../backend/pyproject.toml"
+
+[lint]
+# Build tooling: it runs uv, tauri and the freshly built interpreter by design.
+extend-ignore = ["S603", "S607"]
+
+[lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[lint.isort]
+known-first-party = ["runtime_id"]

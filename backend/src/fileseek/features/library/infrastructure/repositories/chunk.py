@@ -42,3 +42,35 @@ class FileChunkRepositoryImpl(FileChunkRepository):
         await FileChunkModel.bulk_create(
             models
         )
+
+    async def get_chunks_by_range(
+        self,
+        file_id: str,
+        page: int | None = None,
+        chunk_start: int | None = None,
+        chunk_end: int | None = None,
+    ) -> list[FileChunk]:
+        """按范围查询文件 chunks。"""
+        query = FileChunkModel.filter(file_id=file_id)
+
+        # 按 page_number 过滤
+        if page is not None:
+            query = query.filter(metadata__page_number=page)
+
+        # 按 line_number (段落编号) 范围过滤
+        if chunk_start is not None:
+            query = query.filter(metadata__line_number__gte=chunk_start)
+        if chunk_end is not None:
+            query = query.filter(metadata__line_number__lte=chunk_end)
+
+        # 按 chunk_index 排序
+        models = await query.order_by("metadata__chunk_index").all()
+
+        return [
+            FileChunk(
+                id=model.id,
+                file_id=model.file_id,
+                metadata=model.metadata,
+            )
+            for model in models
+        ]

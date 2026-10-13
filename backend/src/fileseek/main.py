@@ -89,15 +89,20 @@ def main(
 
     logger.info("FileSeek 服务启动于 http://%s:%d", resolved_host, resolved_port)
 
-    uvicorn.run(
-        app,
-        host=resolved_host,
-        port=resolved_port,
-        log_level=log_level.lower(),
-        # 日志已由 configure_logging 配好（同时进 stderr 和文件），交给 uvicorn
-        # 重配会把文件那一路顶掉。
-        log_config=None,
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host=resolved_host,
+            port=resolved_port,
+            log_level=log_level.lower(),
+            # 日志已由 configure_logging 配好（同时进 stderr 和文件），交给 uvicorn
+            # 重配会把文件那一路顶掉。
+            log_config=None,
+        )
     )
+    # `POST /shutdown` 直接置停止标志，和收到 SIGTERM 走同一条收尾路径。
+    app.state.request_shutdown = lambda: setattr(server, "should_exit", True)
+    server.run()
 
     return 0
 
