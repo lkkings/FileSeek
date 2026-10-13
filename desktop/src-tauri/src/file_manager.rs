@@ -172,7 +172,7 @@ fn disable() -> Result<(), String> {
 
         let root = RegKey::predef(HKEY_CURRENT_USER);
         root.open_subkey_with_flags(r"Software\Classes\*\shell", KEY_WRITE)
-            .and_then(|shell| shell.delete_subkey_tree(WINDOWS_SHELL_VERB_ID))
+            .and_then(|shell| shell.delete_subkey_all(WINDOWS_SHELL_VERB_ID))
             .or_else(|error| {
                 if error.kind() == std::io::ErrorKind::NotFound {
                     Ok(())
