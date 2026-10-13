@@ -171,16 +171,30 @@ fn disable() -> Result<(), String> {
         use winreg::RegKey;
 
         let root = RegKey::predef(HKEY_CURRENT_USER);
-        root.open_subkey_with_flags(r"Software\Classes\*\shell", KEY_WRITE)
-            .and_then(|shell| shell.delete_subkey_all(WINDOWS_SHELL_VERB_ID))
+
+        // Try to open and delete the subkey recursively
+        let result = root
+            .open_subkey_with_flags(r"Software\Classes\*\shell", KEY_WRITE)
+            .and_then(|shell| {
+                // First try to open the verb key to delete its children
+                if let Ok(verb_key) = shell.open_subkey_with_flags(WINDOWS_SHELL_VERB_ID, KEY_WRITE) {
+                    // Delete all subkeys first
+                    for subkey_name in verb_key.enum_keys().filter_map(|k| k.ok()) {
+                        let _ = verb_key.delete_subkey(&subkey_name);
+                    }
+                }
+                // Then delete the verb key itself
+                shell.delete_subkey(WINDOWS_SHELL_VERB_ID)
+            })
             .or_else(|error| {
                 if error.kind() == std::io::ErrorKind::NotFound {
                     Ok(())
                 } else {
                     Err(error)
                 }
-            })
-            .map_err(|error| format!("could not remove the FileSeek shell verb: {error}"))
+            });
+
+        result.map_err(|error| format!("could not remove the FileSeek shell verb: {error}"))
     }
 
     #[cfg(target_os = "linux")]
