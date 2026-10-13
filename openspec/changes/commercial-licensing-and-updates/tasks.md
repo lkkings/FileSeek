@@ -24,7 +24,7 @@
 - [x] 3.4 恢复 `api_request` 命令和按请求读取连接文件（预览协议同样改为每次读取），让打包后的界面能连上后端
 - [x] 3.5 debug 构建也由 Rust 启动后端（`uv run`）；删除 vite.config.ts 中的 detached 启动，开发代理改为每个请求读取连接文件；用 pidfile + 进程组在下次启动时清掉 `tauri dev` 重建遗留的后端
 - [x] 3.6 `STOP_GRACE_PERIOD` 从 5 秒改为 15 秒，确保大于后端 `task_drain_timeout`（10 秒）；验证 drain 中的任务在退出时放回 `queued`，而不是被强杀后停在 `processing`（应用退出等待 readiness 线程的时限同步改为 grace + 3 秒；`stop_waits_for_a_backend_still_draining_its_queue` 在 5 秒下失败、15 秒下通过；后端 `test_shutdown_puts_a_task_still_computing_back_in_the_queue`）
-- [ ] 3.7 Windows 优雅停止：后端新增 `POST /shutdown`（token 鉴权、仅回环），触发与 SIGTERM 相同的关闭流程；Rust 在 Windows 上先调用它，超时后再强杀；验证 Windows 退出时任务正常放回队列（已实现：后端端点 + 单测、真实 `python -m fileseek` 上 `/shutdown` 1 秒内走完 lifespan 并删掉连接文件；Rust `request_shutdown` 在 macOS 上对假后端测试通过。未验证：Windows 分支未在 Windows 上编译和运行——本机交叉 `cargo check` 卡在 ring 缺 Windows SDK 头文件）
+- [ ] 3.7 Windows 优雅停止：后端新增 `POST /shutdown`（token 鉴权、仅回环），触发与 SIGTERM 相同的关闭流程；Rust 在 Windows 上先调用它，超时后再强杀；验证 Windows 退出时任务正常放回队列（已实现：后端端点 + 单测、真实 `python -m fileseek` 上 `/shutdown` 1 秒内走完 lifespan 并删掉连接文件；Rust `request_shutdown` 在 macOS 上对假后端测试通过。未验证：Windows 分支未在 Windows 上编译和运行——本机交叉 `cargo check` 卡在 ring 缺 Windows SDK 头文件）；Windows 已在 CI 编译通过，运行时行为仍未在 Windows 上实测
 
 ## 4. 就绪状态机与初始化界面
 
@@ -72,10 +72,10 @@
 - [ ] 8.1 在 Keygate 后台：创建 `fileseek` 产品与套餐，生成 Signing 密钥，记录许可公钥和 Tauri 公钥写入构建配置
 - [ ] 8.3 macOS：Developer ID 签名 + 公证，替换当前的 ad-hoc 签名
 - [ ] 8.4 Windows：代码签名（NSIS，选定后不再更换）
-- [ ] 8.5 CI：`.github/workflows/release.yml`（plan / runtime / app / manifest / publish，4 个平台：darwin-arm64、windows-x64、linux-x64、linux-arm64）（工作流已写好，actionlint 通过；没有在 GitHub 上实际运行过。`tsc` 的现有错误会让 app 任务失败，见下方说明。推 tag 只上传为 Keygate 草稿，手动运行并勾选 go live 才会发布）
+- [x] 8.5 CI：`.github/workflows/release.yml`（plan / app / publish，darwin-arm64 + windows-x64；run 38394540618 两个平台构建成功，均已上传到 Keygate 1.0.2 草稿）
 - [x] 8.6 `release/publish_keygate.py`：创建或复用草稿 release、按平台上传更新包、finalize、发布；支持 `--dry-run`；对本地假服务器测试（假服务器 7 个测试；对真实 Keygate 的 `--dry-run` 能正确读到 1.0.1 草稿、1.0.0 已撤回）
 - [x] 8.8 `tauri.conf.json` 设 `productName: FileSeek`
-- [ ] 8.10 Linux 改用 CPU 版 torch（当前 Linux 首次下载约 3.4 GB 依赖，其中 2.45 GB 是 CUDA）
+- [ ] 8.10 （暂不需要：不发布 Linux）Linux 改用 CPU 版 torch
 
 ## 9. 端到端测试（对接真实或本地 docker 的 Keygate）
 
@@ -85,4 +85,4 @@
 - [ ] 9.4 运行中吊销许可：导入中途被拦截，重新激活后任务继续
 - [ ] 9.5 解绑本机后设备数减一
 - [ ] 9.6 只改后端代码的更新；`runtime_id` 变化的更新；设置最低版本后出现强制更新横幅
-- [ ] 9.7 三个平台各跑一遍 9.1–9.6
+- [ ] 9.7 macOS 和 Windows 各跑一遍 9.1–9.6

@@ -223,7 +223,7 @@ now >= exp -> verify:
 
 ### 16. 支持的平台与发布流水线
 
-**决策：** 支持 4 个平台：`darwin-arm64`、`windows-x64`、`linux-x64`、`linux-arm64`。Keygate 的另外 3 个平台不发布。
+**决策：** 发布 2 个平台：`darwin-arm64`、`windows-x64`。Linux 不发布（产品决定；`runtime-sources/` 里仍保留 Linux 清单，以后要发只需在工作流里加回矩阵项）。下面 3 个平台因依赖缺失无法支持：
 
 | 平台 | 缺的依赖（Python 3.12，按 `uv.lock`） |
 |------|------|
@@ -236,11 +236,11 @@ now >= exp -> verify:
 **流水线：** GitHub Actions `.github/workflows/release.yml`（保留在仓库中备用），推 `v<版本>` tag 或手动触发。也可以在各平台本机构建后用 `release/publish_keygate.py` 上传。
 
 ```
-plan ──> app (4 平台各自原生 runner) ──> publish (Keygate)
+plan ──> app (macos-14 / windows-2022 原生 runner) ──> publish (Keygate)
 ```
 
 - **plan**：校验 tag 与 `tauri.conf.json` 版本一致，`build_sources.py --check` 校验下载清单是最新的。
-- **app**：PyInstaller 打 MCP sidecar，`tauri build` 产出安装包和更新包。安装包类型固定：macOS `.dmg` + 更新包 `.app.tar.gz`；Windows NSIS；Linux AppImage。`tauri build` 要求的更新签名私钥用每次运行临时生成的一把，因为 Keygate 发布时会重新签名，这份 `.sig` 不使用。
+- **app**：PyInstaller 打 MCP sidecar，`tauri build` 产出安装包和更新包。安装包类型固定：macOS `.dmg` + 更新包 `.app.tar.gz`；Windows NSIS。`tauri build` 要求的更新签名私钥用每次运行临时生成的一把，因为 Keygate 发布时会重新签名，这份 `.sig` 不使用。
 - **publish**：`release/publish_keygate.py` 调用 Keygate admin API：`POST /admin/releases` → 每个平台 `POST /admin/releases/:id/artifacts` 拿预签名地址 → `PUT` 上传 → `POST .../finalize`（带本地 sha256，由 Keygate 复核）→ `POST /admin/releases/:id/actions/publish`。同一版本已有草稿时复用它，重复运行不会建出多个版本。
 - **没有签名证书时**：macOS 用 ad-hoc 签名（首次打开需要右键"打开"），Windows 不签名（SmartScreen 警告）。证书到位后只需加 Secrets。
 
