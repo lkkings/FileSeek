@@ -116,7 +116,7 @@ describe("ReadinessGate", () => {
     expect(screen.getByText("正在准备 FileSeek")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "10");
     expect(screen.getByText(/256 MB \/ 2.4 GB · 2.5 MB\/s · 约 15 分钟/)).toBeInTheDocument();
-    const current = screen.getByText("下载模型").closest("li");
+    const current = screen.getByText("下载运行时和模型").closest("li");
     expect(current).toHaveAttribute("aria-current", "step");
     expect(screen.getByText("检查磁盘空间").closest("li")).toHaveClass("is-done");
 
@@ -142,7 +142,7 @@ describe("ReadinessGate", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("网络连接失败");
     expect(screen.getByText("/logs/backend.log")).toBeInTheDocument();
-    expect(screen.getByText("下载模型").closest("li")).toHaveClass("is-failed");
+    expect(screen.getByText("下载运行时和模型").closest("li")).toHaveClass("is-failed");
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(service.retryReadiness).toHaveBeenCalled();
   });
@@ -170,7 +170,7 @@ describe("ReadinessGate", () => {
     await waitFor(() => expect(service.onReadinessChange).toHaveBeenCalled());
     act(() => service.emit(snapshot({ state: "repair_needed", errorKind: "backend", error: "Segmentation fault" })));
 
-    fireEvent.click(screen.getByRole("button", { name: "修复模型" }));
+    fireEvent.click(screen.getByRole("button", { name: "修复运行时" }));
     expect(service.repairRuntime).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "确定修复" }));
 

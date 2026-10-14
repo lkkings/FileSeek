@@ -31,9 +31,9 @@ export function SetupScreen({ readiness, installing }: { readiness: Readiness | 
   const t = useTranslate();
   const labels: Record<string, string> = {
     space_check: t("readiness.stepSpaceCheck", "检查磁盘空间"),
-    downloading: t("readiness.stepDownloading", "下载模型"),
+    downloading: t("readiness.stepDownloading", "下载运行时和模型"),
     verifying: t("readiness.stepVerifying", "校验文件"),
-    installing: t("readiness.stepInstalling", "安装模型"),
+    installing: t("readiness.stepInstalling", "安装依赖"),
     starting: t("readiness.stepStarting", "启动服务"),
   };
   const statusText: Record<StepStatus, string> = {
@@ -54,7 +54,7 @@ export function SetupScreen({ readiness, installing }: { readiness: Readiness | 
         </h1>
         {installing && (
           <p className="readiness-setup-lead">
-            {t("readiness.lead", "首次使用需要下载搜索所需的模型（约 890 MB），完成后不再需要。")}
+            {t("readiness.lead", "首次使用需要下载 Python 运行时、依赖和模型（约 1.1 GB），完成后不再需要。")}
           </p>
         )}
 
