@@ -9,7 +9,7 @@
     "aarch64-unknown-linux-gnu": "0b35f4dc08d58534eb82e024989e2db9873885dccd4f2a316ff55c0cec146123"
   },
   "mirrors": {
-    "_comment": "Tried in order; every file is checked against the sha256 pinned in the app, so a mirror can only be slow or fail, never serve something else.",
+    "_comment": "Download candidates; the app measures source speed and tries the fastest first. Every file is checked against the pinned sha256, so a mirror can only be slow or fail, never serve something else.",
     "python": [
       "https://registry.npmmirror.com/-/binary/python-build-standalone/{release}/{file}",
       "https://github.com/astral-sh/python-build-standalone/releases/download/{release}/{file}"

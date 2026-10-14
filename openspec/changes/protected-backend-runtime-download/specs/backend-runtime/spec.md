@@ -16,11 +16,15 @@ The system SHALL generate a per-platform runtime source list containing the exac
 - **THEN** initialization reports that the platform is unsupported and does not attempt runtime installation
 
 ### Requirement: Verified runtime download
-The system SHALL download the interpreter and wheel files only from their listed official source or mirrors. Each file SHALL be checked against its pinned size and SHA-256 digest before it is used. A mirror that supplies a different file SHALL be treated as a failed source, not as an installation candidate.
+The system SHALL download the interpreter and wheel files only from their listed official source or mirrors. Before the first runtime transfer, the system SHALL measure the listed sources with a small range request and try the fastest responsive source first. Each file SHALL be checked against its pinned size and SHA-256 digest before it is used. A mirror that supplies a different file SHALL be treated as a failed source, not as an installation candidate.
 
 #### Scenario: Mirror returns a wrong file
 - **WHEN** a mirror responds successfully with bytes whose digest differs from the pinned digest
 - **THEN** the system rejects that response and tries the next source or retry policy
+
+#### Scenario: A mirror is faster
+- **WHEN** one listed mirror has higher measured throughput than the others
+- **THEN** the runtime downloads try that mirror first, while retaining the official source as a fallback
 
 #### Scenario: Interrupted download
 - **WHEN** a runtime download is interrupted and the user retries

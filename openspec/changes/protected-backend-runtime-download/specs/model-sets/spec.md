@@ -12,11 +12,15 @@ The system SHALL derive a model set identity from the canonical list of model fi
 - **THEN** the app uses a new model set identity and does not report the existing model set as satisfying the new manifest
 
 ### Requirement: Verified model set installation
-The system SHALL download every file in a model set and verify its size and SHA-256 digest before the set can be selected. Partial downloads SHALL resume safely, and any file that does not match its pinned digest SHALL be replaced from a listed source rather than accepted.
+The system SHALL download every file in a model set and verify its size and SHA-256 digest before the set can be selected. Before the first model transfer, the system SHALL measure the listed model sources with a small range request and try the fastest responsive source first. Partial downloads SHALL resume safely, and any file that does not match its pinned digest SHALL be replaced from a listed source rather than accepted.
 
 #### Scenario: Model file is corrupt
 - **WHEN** a model set file no longer matches its pinned digest and repair is requested
 - **THEN** only files failing verification are downloaded again
+
+#### Scenario: A model mirror is faster
+- **WHEN** a model mirror has higher measured throughput than the official model host
+- **THEN** model files try that mirror first while retaining the official host as a fallback
 
 #### Scenario: Model download is interrupted
 - **WHEN** the model set download is interrupted and retried

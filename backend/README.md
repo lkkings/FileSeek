@@ -310,6 +310,8 @@ pkill -TERM -f "uvicorn fileseek"        # 开发模式（--reload）
 
 release 版桌面端带 PyArmor 混淆后的后端源码，由 `desktop/scripts/stage-backend.mjs` 在 `pnpm build` 时调用；Python 解释器和依赖在应用首次运行时下载并校验。
 
+首次运行不要求系统安装 Python：桌面端自身下载并校验 python-build-standalone 解释器归档，再用这个解释器离线安装清单里的全部 wheel。Python、依赖和模型源都会先做小范围测速，按最快源优先下载；完整文件仍逐一校验 SHA-256，失败时回退到官方源。
+
 ```bash
 uv sync --extra dev                 # 含 pyarmor
 uv run python build_protected.py    # 产物：dist/fileseek-backend-protected/
@@ -332,9 +334,13 @@ uv run python scripts/smoke_protected.py   # 启动产物并检查 /health
 │   ├── image.faiss
 │   ├── video_segment.faiss
 │   └── document_chunk.faiss
-└── models/              # 模型权重缓存
-    ├── chinese-clip-vit-large-patch14/
-    └── multilingual-e5-large/
+├── runtime/             # 下载的 Python 运行时和依赖
+│   ├── rt-77feabc66be55476/
+│   ├── state.json
+│   └── .downloads/
+└── models/              # 按内容标识存放的模型集
+    ├── ms-1371ba8497997514/
+    └── current.json
 
 ~/Library/Caches/FileSeek/
 └── thumbnails/          # 视频分段缩略图缓存
@@ -348,6 +354,14 @@ uv run python scripts/smoke_protected.py   # 启动产物并检查 /health
 ```
 
 库内文件保留原文件名；同名不同内容时自动消解冲突，不覆盖已有文件。去重靠 `files.content_hash` 的唯一索引，不靠目录结构。
+
+运行时和模型使用本地数据目录（不是 roaming 配置目录）：
+
+| 平台 | 数据目录 |
+|------|---------|
+| macOS | `~/Library/Application Support/FileSeek/` |
+| Windows | `%LOCALAPPDATA%\FileSeek\` |
+| Linux | `${XDG_DATA_HOME:-~/.local/share}/fileseek/` |
 
 ## 测试
 

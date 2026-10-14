@@ -7,11 +7,12 @@
 //! (`shared/utils/model_cache.py`), so a half-written file under the final name would be
 //! loaded as if it were complete.
 
+use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 
@@ -20,6 +21,9 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 /// timeout: a slow connection may need a long time for the runtime pack.
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
 const CHUNK: usize = 256 * 1024;
+const PROBE_BYTES: u64 = 64 * 1024;
+const PROBE_CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+const PROBE_READ_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// One file to fetch.
 #[derive(Debug, Clone)]
@@ -29,6 +33,82 @@ pub struct FileSpec {
     pub dest: PathBuf,
     pub size: u64,
     pub sha256: String,
+}
+
+/// Orders mirror URLs by measured first-64KiB throughput, caching the result by origin.
+///
+/// Every full transfer is still digest-verified. A probe only chooses where to try first;
+/// an unavailable or corrupt mirror is never accepted because it responded quickly.
+#[derive(Debug, Default)]
+pub struct MirrorRanker {
+    speeds: HashMap<String, f64>,
+}
+
+impl MirrorRanker {
+    pub fn ranked(&mut self, urls: &[String], cancel: &AtomicBool) -> Vec<String> {
+        let mut ranked: Vec<(usize, f64, String)> = Vec::with_capacity(urls.len());
+        for (index, url) in urls.iter().enumerate() {
+            let origin = source_origin(url).unwrap_or_else(|| url.clone());
+            let speed = *self
+                .speeds
+                .entry(origin)
+                .or_insert_with(|| probe_speed(url, cancel).unwrap_or(0.0));
+            ranked.push((index, speed, url.clone()));
+        }
+        ranked.sort_by(|left, right| {
+            right
+                .1
+                .partial_cmp(&left.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(left.0.cmp(&right.0))
+        });
+        ranked.into_iter().map(|(_, _, url)| url).collect()
+    }
+}
+
+fn source_origin(url: &str) -> Option<String> {
+    let (scheme, rest) = ["https://", "http://"]
+        .into_iter()
+        .find_map(|scheme| Some((scheme, url.strip_prefix(scheme)?)))?;
+    let authority = rest.split(['/', '?', '#']).next()?;
+    Some(format!("{scheme}{authority}"))
+}
+
+fn probe_speed(url: &str, cancel: &AtomicBool) -> Option<f64> {
+    if cancel.load(Ordering::SeqCst) {
+        return None;
+    }
+    let started = Instant::now();
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(PROBE_CONNECT_TIMEOUT)
+        .timeout_read(PROBE_READ_TIMEOUT)
+        .build();
+    let response = agent
+        .get(url)
+        .set("Range", &format!("bytes=0-{PROBE_BYTES}"))
+        .call()
+        .ok()?;
+    if !(200..300).contains(&response.status()) {
+        return None;
+    }
+
+    let mut body = response.into_reader().take(PROBE_BYTES + 1);
+    let mut buffer = vec![0u8; 16 * 1024];
+    let mut bytes = 0_u64;
+    while bytes < PROBE_BYTES {
+        if cancel.load(Ordering::SeqCst) {
+            return None;
+        }
+        let read = body.read(&mut buffer).ok()?;
+        if read == 0 {
+            break;
+        }
+        bytes += read as u64;
+    }
+    if bytes == 0 {
+        return None;
+    }
+    Some(bytes as f64 / started.elapsed().as_secs_f64().max(0.001))
 }
 
 /// How many rounds to try, and how long to wait before each new round.
@@ -448,6 +528,18 @@ mod tests {
             2,
             "the mirror once, then the official source"
         );
+    }
+
+    #[test]
+    fn mirror_ranking_prefers_an_available_fast_source_over_an_unavailable_one() {
+        let unavailable = TestServer::start();
+        let available = TestServer::start();
+        available.put("a.bin", body(128 * 1024));
+        let urls = vec![unavailable.url("missing.bin"), available.url("a.bin")];
+
+        let ranked = MirrorRanker::default().ranked(&urls, &AtomicBool::new(false));
+
+        assert_eq!(ranked, urls.into_iter().rev().collect::<Vec<_>>());
     }
 
     #[test]

@@ -18,6 +18,7 @@
 - [x] 3.2 Implement runtime readiness, resumable downloads, checksum verification, space checking, staging extraction, offline pip installation, `.complete`, and atomic rename. Verify tests cover mirror checksum mismatch, interrupted transfer, failed install, and successful atomic install.
 - [x] 3.3 Implement runtime reuse, new-runtime installation, previous-runtime retention, stale-runtime cleanup, and runtime repair. Verify tests show a code-only update makes no network requests and a dependency update retains one rollback runtime.
 - [x] 3.4 Restore the production sidecar command to launch the downloaded interpreter against the protected backend resource with an isolated environment. Verify sidecar tests cover conflicting Python variables and the model cache environment variable.
+- [x] 3.5 Measure mirror throughput and try runtime, dependency, and model sources fastest-first while retaining hash verification and official-source fallback. Verify mirror ranking prefers a responsive source over an unavailable one.
 
 ## 4. Model set management
 

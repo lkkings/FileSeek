@@ -43,7 +43,7 @@ Do not enable anti-debug, expiry, or device-binding features in this change. The
 
 ### 2. Runtime identity and installation
 
-Restore the runtime source-list generator and desktop runtime modules from the downloaded-runtime design. Use manifest version 4 so old app builds cannot misread the new format.
+Restore the runtime source-list generator and desktop runtime modules from the downloaded-runtime design. Use manifest version 4 so old app builds cannot misread the new format. Runtime and model downloads measure each distinct source origin once with a 64 KiB range request, cache the measured speed, and try sources fastest-first; probes never replace the full size and SHA-256 verification.
 
 `runtime_id` SHALL be:
 

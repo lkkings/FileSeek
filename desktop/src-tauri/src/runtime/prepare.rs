@@ -10,7 +10,7 @@ use std::sync::atomic::AtomicBool;
 
 use serde::Serialize;
 
-use super::download::{self, DownloadError, FileSpec, Phase, RetryPolicy};
+use super::download::{self, DownloadError, FileSpec, MirrorRanker, Phase, RetryPolicy};
 use super::install::{self, InstallError, InsufficientSpace, Layout};
 use super::manifest::{Manifest, ManifestError};
 
@@ -109,6 +109,7 @@ pub fn prepare(
 ) -> Result<Ready, PrepareError> {
     let runtime_id = manifest.runtime_id.as_str();
     let need_runtime = layout.installed_runtime(runtime_id).is_none();
+    let mut mirror_ranker = MirrorRanker::default();
 
     let spec = |file: &str, size: u64, sha256: &str, urls: &[String]| FileSpec {
         urls: urls.to_vec(),
@@ -123,10 +124,15 @@ pub fn prepare(
             &python.file,
             python.size,
             &python.sha256,
-            &python.urls,
+            &mirror_ranker.ranked(&python.urls, cancel),
         ));
         for wheel in &manifest.wheels {
-            runtime_specs.push(spec(&wheel.file, wheel.size, &wheel.sha256, &wheel.urls));
+            runtime_specs.push(spec(
+                &wheel.file,
+                wheel.size,
+                &wheel.sha256,
+                &mirror_ranker.ranked(&wheel.urls, cancel),
+            ));
         }
     }
     let model_dir = layout.model_dir(&manifest.model.id);
@@ -138,7 +144,7 @@ pub fn prepare(
             .files
             .iter()
             .map(|file| FileSpec {
-                urls: file.urls.clone(),
+                urls: mirror_ranker.ranked(&file.urls, cancel),
                 dest: model_dir.join(&file.path),
                 size: file.size,
                 sha256: file.sha256.clone(),
