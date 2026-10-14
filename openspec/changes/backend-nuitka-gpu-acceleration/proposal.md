@@ -1,5 +1,7 @@
 ## Why
 
+> **Superseded:** `protected-backend-runtime-download` replaces this Nuitka packaging direction. The app now ships PyArmor-protected source and downloads the pinned interpreter, wheels, and model.
+
 release 版首次启动要先下载 python-build-standalone 解释器和 `uv.lock` 里的全部 wheel，再下载模型；后端以明文 `.py` 随安装包分发。把后端用 Nuitka 编译成可执行文件随安装包发布后，首次启动只需下载模型，不再依赖下载来的 Python 环境，源码也不再以明文出现在安装包里。
 
 推理统一使用 CPU。原提案的 CoreML/CUDA/DirectML 加速已放弃：在 Apple Silicon 上用当前的 INT8 动态量化模型实测（512×512 单图），CPU 1052ms，CoreML 8028ms（加载 27s），CoreML MLProgram 约 45s。模型里的 `MatMulInteger`、`DynamicQuantizeLinear` 和不定长维度 CoreML 不支持，图被切成大量碎片在 CPU 和 CoreML 之间往返。GPU 方案还需要用户自装 CUDA/cuDNN，且 Nuitka 编译后能否用 `sys.path` 替换内置 onnxruntime 未经验证。

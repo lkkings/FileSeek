@@ -27,7 +27,6 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_updater::UpdaterExt;
 
-
 pub const EVENT_NAME: &str = "update";
 const FIRST_CHECK_DELAY: Duration = Duration::from_secs(30);
 const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -72,7 +71,12 @@ pub struct UpdateStatus {
 
 /// Reads Keygate's required-update fields from the plugin's raw JSON. A missing or
 /// unparseable minimum makes it a normal update: a bad field never locks anyone in.
-pub fn describe(version: &str, notes: Option<String>, raw: &serde_json::Value, current: &str) -> UpdateInfo {
+pub fn describe(
+    version: &str,
+    notes: Option<String>,
+    raw: &serde_json::Value,
+    current: &str,
+) -> UpdateInfo {
     let minimum = raw
         .get("minimum_supported_version")
         .and_then(|v| v.as_str())
@@ -107,8 +111,17 @@ pub fn feed_url(base_url: &str, slug: &str) -> String {
 }
 
 /// One line of `update.log`.
-pub fn log_line(at: chrono::DateTime<chrono::Utc>, current: &str, target: Option<&str>, event: &str) -> String {
-    format!("{} current={current} target={} {event}\n", at.to_rfc3339(), target.unwrap_or("-"))
+pub fn log_line(
+    at: chrono::DateTime<chrono::Utc>,
+    current: &str,
+    target: Option<&str>,
+    event: &str,
+) -> String {
+    format!(
+        "{} current={current} target={} {event}\n",
+        at.to_rfc3339(),
+        target.unwrap_or("-")
+    )
 }
 
 pub struct Updates {
@@ -124,17 +137,16 @@ pub struct Updates {
 pub type SharedUpdates = Arc<Updates>;
 
 impl Updates {
-    pub fn new(
-        app: AppHandle,
-        log: PathBuf,
-        license_key: LicenseKey,
-        enabled: bool,
-    ) -> Updates {
+    pub fn new(app: AppHandle, log: PathBuf, license_key: LicenseKey, enabled: bool) -> Updates {
         Updates {
             app,
             status: Mutex::new(UpdateStatus {
                 current_version: env!("CARGO_PKG_VERSION").to_owned(),
-                phase: if enabled { Phase::Idle } else { Phase::Disabled },
+                phase: if enabled {
+                    Phase::Idle
+                } else {
+                    Phase::Disabled
+                },
                 update: None,
                 done: 0,
                 total: None,
@@ -163,7 +175,10 @@ impl Updates {
     /// The plugin's updater, pointed at Keygate's feed with the license key in a header.
     /// The address and key are build-time (see `build.rs`), so `tauri.conf.json` carries
     /// neither.
-    fn updater(&self, license_key: &str) -> tauri_plugin_updater::Result<tauri_plugin_updater::Updater> {
+    fn updater(
+        &self,
+        license_key: &str,
+    ) -> tauri_plugin_updater::Result<tauri_plugin_updater::Updater> {
         let endpoint = feed_url(env!("KEYGATE_BASE_URL"), env!("KEYGATE_PRODUCT_SLUG"))
             .parse()
             .map_err(|_| tauri_plugin_updater::Error::EmptyEndpoints)?;
@@ -181,7 +196,11 @@ impl Updates {
         if let Some(dir) = self.log.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&self.log) {
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.log)
+        {
             let _ = file.write_all(line.as_bytes());
         }
     }
@@ -216,7 +235,12 @@ impl Updates {
         };
         match result {
             Ok(Some(update)) => {
-                let info = describe(&update.version, update.body.clone(), &update.raw_json, env!("CARGO_PKG_VERSION"));
+                let info = describe(
+                    &update.version,
+                    update.body.clone(),
+                    &update.raw_json,
+                    env!("CARGO_PKG_VERSION"),
+                );
                 *self.pending.lock().await = Some((update, None));
                 self.set(|s| {
                     s.phase = Phase::Available;
@@ -361,7 +385,9 @@ pub fn get_update_status(updates: tauri::State<'_, SharedUpdates>) -> UpdateStat
 }
 
 #[tauri::command]
-pub async fn check_for_updates(updates: tauri::State<'_, SharedUpdates>) -> Result<UpdateStatus, String> {
+pub async fn check_for_updates(
+    updates: tauri::State<'_, SharedUpdates>,
+) -> Result<UpdateStatus, String> {
     updates.check().await;
     Ok(updates.status())
 }
@@ -391,7 +417,8 @@ mod tests {
 
     #[test]
     fn below_the_minimum_supported_version_is_required() {
-        let raw = json!({"minimum_supported_version": "1.3.0", "minimum_supported_message": "安全修复"});
+        let raw =
+            json!({"minimum_supported_version": "1.3.0", "minimum_supported_message": "安全修复"});
 
         let info = describe("1.4.0", None, &raw, "1.2.0");
 
@@ -412,8 +439,24 @@ mod tests {
     #[test]
     fn a_missing_or_unparseable_minimum_is_a_normal_update() {
         assert!(!describe("1.4.0", None, &json!({}), "1.2.0").required);
-        assert!(!describe("1.4.0", None, &json!({"minimum_supported_version": "soon"}), "1.2.0").required);
-        assert!(describe("1.4.0", None, &json!({"minimum_supported_version": "v1.3.0"}), "1.2.0").required);
+        assert!(
+            !describe(
+                "1.4.0",
+                None,
+                &json!({"minimum_supported_version": "soon"}),
+                "1.2.0"
+            )
+            .required
+        );
+        assert!(
+            describe(
+                "1.4.0",
+                None,
+                &json!({"minimum_supported_version": "v1.3.0"}),
+                "1.2.0"
+            )
+            .required
+        );
     }
 
     #[test]
@@ -434,17 +477,32 @@ mod tests {
     #[test]
     fn the_placeholder_updater_config_parses() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tauri.conf.json");
-        let conf: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let conf: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         let config: tauri_plugin_updater::Config =
             serde_json::from_value(conf["plugins"]["updater"].clone()).unwrap();
-        assert!(config.endpoints.is_empty(), "the endpoint is Keygate's, set at run time");
-        assert!(config.pubkey.is_empty(), "the key comes from keygate.json through build.rs");
+        assert!(
+            config.endpoints.is_empty(),
+            "the endpoint is Keygate's, set at run time"
+        );
+        assert!(
+            config.pubkey.is_empty(),
+            "the key comes from keygate.json through build.rs"
+        );
     }
 
     #[test]
     fn log_lines_carry_time_and_both_versions() {
-        let line = log_line("2026-10-02T09:00:00Z".parse().unwrap(), "0.1.0", Some("0.2.0"), "failed: signature");
-        assert_eq!(line, "2026-10-02T09:00:00+00:00 current=0.1.0 target=0.2.0 failed: signature\n");
+        let line = log_line(
+            "2026-10-02T09:00:00Z".parse().unwrap(),
+            "0.1.0",
+            Some("0.2.0"),
+            "failed: signature",
+        );
+        assert_eq!(
+            line,
+            "2026-10-02T09:00:00+00:00 current=0.1.0 target=0.2.0 failed: signature\n"
+        );
         assert!(log_line(chrono::Utc::now(), "0.1.0", None, "up to date").contains("target=-"));
     }
 

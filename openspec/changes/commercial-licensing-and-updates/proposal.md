@@ -1,5 +1,7 @@
 ## Why
 
+> **Packaging supersession:** `protected-backend-runtime-download` supersedes the later Nuitka packaging direction and keeps this change's downloaded Python runtime, while adding PyArmor source protection and content-defined model sets.
+
 FileSeek 要从开发者工具变成可售卖的桌面产品，需要付费激活、可信的自动更新，以及普通用户能装能用的分发方式。目前生产环境甚至没有拉起后端的路径（`sidecar.rs` 已在前端重构中删除），后端运行时和模型都依赖开发环境。
 
 许可和更新统一对接自部署的 Keygate（`https://licenses.tuodianyuan.com`，产品 `fileseek`），套餐、有效期、设备数、更新期、强制更新都由 Keygate 后台配置，客户端不内置任何套餐知识。

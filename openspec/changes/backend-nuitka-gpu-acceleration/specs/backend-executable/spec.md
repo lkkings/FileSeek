@@ -1,5 +1,7 @@
 ## Purpose
 
+> **Superseded:** `protected-backend-runtime-download` replaces Nuitka compilation with PyArmor-protected source launched by the downloaded Python runtime.
+
 后端编译为自包含的可执行产物，随安装包分发，由桌面端直接启动，不依赖也不受用户 Python 环境影响。推理只使用 CPU。
 
 ## ADDED Requirements

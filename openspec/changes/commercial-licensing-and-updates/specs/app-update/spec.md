@@ -1,5 +1,7 @@
 ## Purpose
 
+> **Packaging supersession:** `protected-backend-runtime-download` supersedes the Nuitka packaging direction; code-only updates carry protected backend source while dependency changes use the downloaded runtime identity.
+
 通过 tauri-plugin-updater 从自部署 Keygate 的更新 feed 检查、下载并安装经过签名的应用更新，支持强制更新，并在需要时先更新后端运行时，保证新版本启动时运行时已经就绪。
 
 ## ADDED Requirements

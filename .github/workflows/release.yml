@@ -2,10 +2,10 @@
 #
 #   plan ──> app (per platform) ──> publish
 #
-# Only the app goes to Keygate, with the backend compiled into it by Nuitka
-# (backend/build_nuitka.py, run from `pnpm build`). The model is downloaded by the app on
-# first run from its official source and mirrors, checked against the sha256 in
-# desktop/src-tauri/runtime-sources/.
+# Only the app goes to Keygate, with the PyArmor-protected backend source inside it
+# (backend/build_protected.py, run from `pnpm build`). The Python interpreter, dependency
+# wheels, and model are downloaded on first run from their official sources and mirrors,
+# checked against the sha256s in desktop/src-tauri/runtime-sources/.
 #
 # Push a `v<version>` tag matching `tauri.conf.json`: everything is built and uploaded to
 # Keygate as a draft, to check in the dashboard before publishing it there. Or run it by
@@ -110,17 +110,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: desktop
 
-      # Nuitka's C compilation cache: a full compile takes about 25 minutes, a cached one
-      # a fraction of that. `pnpm tauri build` compiles the backend (stage-backend.mjs).
-      - name: Nuitka cache location
-        shell: bash
-        run: echo "NUITKA_CACHE_DIR=$RUNNER_TEMP/nuitka-cache" >> "$GITHUB_ENV"
-      - uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/nuitka-cache
-          key: nuitka-${{ matrix.target }}-${{ hashFiles('backend/uv.lock', 'backend/build_nuitka.py') }}
-          restore-keys: nuitka-${{ matrix.target }}-
-
       # `createUpdaterArtifacts` needs a key to sign the update bundle with. Keygate signs
       # every artifact again when it publishes and the feed serves its signature, so this
       # one is thrown away: a fresh key per run, never stored.
@@ -145,14 +134,14 @@ jobs:
           pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} \
             --config "$RUNNER_TEMP/updater.conf.json"
 
-      # The size limit is checked by build_nuitka.py during the build above; this starts the
-      # staged backend and asks /health, so a module Nuitka missed fails here, not for users.
-      - name: Smoke test the compiled backend
+      # Downloads the exact interpreter and wheel closure for this platform, then imports
+      # the protected backend with that interpreter. The model is reduced to its tokenizer
+      # files so this tests runtime installation without another 874 MB download.
+      - name: Smoke test the protected backend with the downloaded runtime
         shell: bash
+        working-directory: desktop/src-tauri
         run: |
-          ext=""; [[ "$RUNNER_OS" == "Windows" ]] && ext=".exe"
-          uv run --no-project --python "$PYTHON_VERSION" backend/scripts/smoke_compiled.py \
-            "desktop/src-tauri/resources/backend/fileseek-backend$ext"
+          cargo test --lib real_sources_install_a_working_runtime -- --ignored --nocapture
 
       - name: Collect
         shell: bash

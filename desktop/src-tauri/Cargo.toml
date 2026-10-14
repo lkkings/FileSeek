@@ -31,6 +31,8 @@ serde_json = "1"
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 dirs = "6.0"
 sha2 = "=0.10.9"
+flate2 = "=1.1.10"
+tar = "=0.4.46"
 # Licensing: decoding Keygate's base64url tokens.
 base64 = "=0.22.1"
 # Free-space check before the first-run model download.

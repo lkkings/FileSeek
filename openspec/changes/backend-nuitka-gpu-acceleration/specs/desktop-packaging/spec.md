@@ -1,5 +1,7 @@
 ## Purpose
 
+> **Superseded:** `protected-backend-runtime-download` ships PyArmor-protected backend source and downloads the interpreter, wheels, and model on first run.
+
 桌面安装包包含编译后的后端，不含 Python 源码和模型文件；release 版首次启动只下载模型。
 
 ## ADDED Requirements

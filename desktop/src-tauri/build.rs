@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::path::Path;
 
 /// The target triple, which keys the model source list (`runtime-sources/<target>.json`).
@@ -8,8 +9,40 @@ fn emit_runtime_target() {
     );
 }
 
+/// The runtime identity this app expects, matching `release/runtime_id.py`.
+fn emit_runtime_id() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let release_config = manifest_dir.join("../../release/runtime.json");
+    let uv_lock = manifest_dir.join("../../backend/uv.lock");
+    println!("cargo:rerun-if-changed={}", release_config.display());
+    println!("cargo:rerun-if-changed={}", uv_lock.display());
+
+    let config: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(&release_config).expect("release/runtime.json is required to build"),
+    )
+    .expect("release/runtime.json is not valid JSON");
+    let python_version = config["python_version"].as_str().expect("python_version");
+    let pbs_release = config["pbs_release"].as_str().expect("pbs_release");
+    let lock = std::fs::read(&uv_lock).expect("backend/uv.lock is required to build");
+    let normalized: Vec<u8> = lock.iter().copied().filter(|byte| *byte != b'\r').collect();
+
+    let mut hasher = Sha256::new();
+    hasher.update(&normalized);
+    hasher.update(b"\0");
+    hasher.update(python_version.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(pbs_release.as_bytes());
+    let digest = hasher.finalize();
+    let hex: String = digest
+        .iter()
+        .take(8)
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    println!("cargo:rustc-env=FILESEEK_EXPECTED_RUNTIME_ID=rt-{hex}");
+}
+
 /// `tauri.conf.json` bundles `resources/backend/`, which `scripts/stage-backend.mjs`
-/// fills with the compiled backend (`backend/build_nuitka.py`) during `pnpm build`. Dev
+/// fills with the protected backend (`backend/build_protected.py`) during `pnpm build`. Dev
 /// builds run the backend with `uv` from the checkout and never stage it, so the directory
 /// may not exist; tauri-build refuses a missing resource path, so create it empty.
 fn ensure_backend_resource_dir() {
@@ -32,7 +65,10 @@ fn emit_runtime_sources() {
         std::fs::write(&out, "").unwrap();
         out
     };
-    println!("cargo:rustc-env=FILESEEK_RUNTIME_SOURCES={}", path.display());
+    println!(
+        "cargo:rustc-env=FILESEEK_RUNTIME_SOURCES={}",
+        path.display()
+    );
 }
 
 /// The Keygate server licenses come from, baked in as compile-time constants so an
@@ -97,6 +133,7 @@ fn emit_keygate_config() {
 
 fn main() {
     emit_runtime_target();
+    emit_runtime_id();
     emit_runtime_sources();
     emit_keygate_config();
     ensure_backend_resource_dir();

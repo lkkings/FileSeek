@@ -38,8 +38,8 @@ dev = [
     # Drives the FastAPI TestClient.
     "httpx==0.28.1",
     "types-pyyaml==6.0.12.20250915",
-    # Compiles the backend into the executable the desktop app ships (build_nuitka.py).
-    "nuitka==4.3",
+    # Obfuscates the backend package the desktop app ships (build_protected.py).
+    "pyarmor==9.2.6",
 ]
 
 [project.scripts]

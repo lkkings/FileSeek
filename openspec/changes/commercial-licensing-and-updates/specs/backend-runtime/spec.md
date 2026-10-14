@@ -1,5 +1,7 @@
 ## Purpose
 
+> **Supersession:** `protected-backend-runtime-download` supersedes the Nuitka packaging direction and restores this runtime-download design, additionally requiring PyArmor-protected backend source and content-defined model sets.
+
 在生产环境中下载、校验、安装并启动 FileSeek 后端运行时（Python + 依赖）和模型文件，并由桌面应用管理后端进程的生命周期。
 
 > 注意：`backend-nuitka-gpu-acceleration` 把后端改为 Nuitka 编译产物随安装包发布，首次只下载模型。下文标注"已被取代"的需求以该变更的 `backend-executable`、`desktop-packaging` spec 为准；两个变更归档前需按此合并。

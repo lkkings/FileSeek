@@ -306,21 +306,18 @@ pkill -TERM -f "uvicorn fileseek"        # 开发模式（--reload）
 # 4. 关闭模型子进程
 ```
 
-### 编译发布版后端
+### 构建保护版后端
 
-release 版桌面端不带 Python 源码，而是带 Nuitka 编译出的产物，由 `desktop/scripts/stage-backend.mjs` 在 `pnpm build` 时调用。
+release 版桌面端带 PyArmor 混淆后的后端源码，由 `desktop/scripts/stage-backend.mjs` 在 `pnpm build` 时调用；Python 解释器和依赖在应用首次运行时下载并校验。
 
 ```bash
-uv sync --extra dev                 # 含 nuitka
-uv run python build_nuitka.py       # 产物：dist/fileseek-backend.dist/fileseek-backend[.exe]
-uv run python scripts/smoke_compiled.py   # 启动产物并检查 /health
+uv sync --extra dev                 # 含 pyarmor
+uv run python build_protected.py    # 产物：dist/fileseek-backend-protected/
+uv run python scripts/smoke_protected.py   # 启动产物并检查 /health
 ```
 
-- 需要 C 编译器：macOS 装 Xcode Command Line Tools，Windows 装 MSVC（Visual Studio Build Tools）。
-- 全量编译约 25 分钟，之后 Nuitka 的 ccache 缓存（macOS 在 `~/Library/Caches/Nuitka`）会让重编快很多。
-- 产物超过 `build_nuitka.py` 里的 `SIZE_LIMIT_MB` 时脚本失败。
-- 新增依赖如果按字符串导入自己的模块（像 chromadb、uvicorn、tortoise 那样），Nuitka 跟踪不到，启动时会报 `ModuleNotFoundError`；在 `build_nuitka.py` 里用 `--include-package` 整包加入。
-- 想让 debug 版桌面端走 release 路径（编译产物 + 下载模型），先编译，再用 `FILESEEK_DEV_USE_RUNTIME=1 pnpm tauri dev`。
+- 构建脚本会检查所有 `.py` 文件都包含 `__pyarmor__`，避免误发布明文源码。
+- 想让 debug 版桌面端走 release 路径（保护产物 + 下载运行时和模型），先构建，再用 `FILESEEK_DEV_USE_RUNTIME=1 pnpm tauri dev`。
 
 ### 目录结构
 

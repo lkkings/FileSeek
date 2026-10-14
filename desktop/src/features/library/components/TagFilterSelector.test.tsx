@@ -41,7 +41,7 @@ describe("TagFilterSelector", () => {
 
     renderWithI18n(<TagFilterSelector selectedTag="全部" onTagChange={() => undefined} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+    fireEvent.click(screen.getByRole("button", { name: "重新加载" }));
 
     expect(mocks.refetch).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "文档" })).toBeInTheDocument();

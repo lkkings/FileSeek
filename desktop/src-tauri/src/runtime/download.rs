@@ -443,7 +443,11 @@ mod tests {
         download(&spec, &no_wait(0), &AtomicBool::new(false), &mut |_| {}).unwrap();
 
         assert_eq!(std::fs::read(&spec.dest).unwrap(), data);
-        assert_eq!(server.request_count(), 2, "the mirror once, then the official source");
+        assert_eq!(
+            server.request_count(),
+            2,
+            "the mirror once, then the official source"
+        );
     }
 
     #[test]
