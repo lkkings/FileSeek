@@ -141,9 +141,9 @@ fn is_readable(path: &Path) -> bool {
 mod tests {
     use super::*;
     use std::fs;
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
-    #[cfg(unix)]
     fn temp_file(name: &str) -> PathBuf {
         let mut path = std::env::temp_dir();
         path.push(format!(
@@ -277,16 +277,11 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn rejects_windows_missing_directory_and_unreadable_paths() {
+    fn rejects_windows_missing_directory_paths() {
         let missing = PathBuf::from(r"C:\definitely-missing-fileseek-path");
         let directory = std::env::temp_dir();
-        let unreadable = temp_file("windows-unreadable");
-        let mut permissions = fs::metadata(&unreadable).expect("metadata").permissions();
-        permissions.set_mode(0o000);
-        fs::set_permissions(&unreadable, permissions).expect("permissions");
 
         assert!(normalize_paths(vec![missing]).is_err());
         assert!(normalize_paths(vec![directory]).is_err());
-        assert!(normalize_paths(vec![unreadable]).is_err());
     }
 }
