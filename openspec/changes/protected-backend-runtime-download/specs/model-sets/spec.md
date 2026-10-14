@@ -27,6 +27,8 @@ The system SHALL download every file in a model set and verify its size and SHA-
 - **THEN** completed files are retained and the interrupted file resumes without marking the set complete
 
 ### Requirement: Model set selection and switching
+After every application update, the system SHALL compare the updated app's embedded model-set identity with the locally selected model set before starting the backend. On ordinary starts it SHALL perform the same local check.
+
 The system SHALL select a model set only after all files are present and verified. Switching to a new set SHALL be atomic after successful installation, and the previous complete set SHALL remain available until the new set is ready and cleanup is safe.
 
 #### Scenario: New model set download succeeds

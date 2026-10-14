@@ -111,28 +111,34 @@ pub fn prepare(
     let need_runtime = layout.installed_runtime(runtime_id).is_none();
     let mut mirror_ranker = MirrorRanker::default();
 
-    let spec = |file: &str, size: u64, sha256: &str, urls: &[String]| FileSpec {
-        urls: urls.to_vec(),
-        dest: layout.download_path(file, sha256),
-        size,
-        sha256: sha256.to_owned(),
-    };
     let python = &manifest.python;
     let mut runtime_specs = Vec::new();
     if need_runtime {
-        runtime_specs.push(spec(
-            &python.file,
-            python.size,
-            &python.sha256,
-            &mirror_ranker.ranked(&python.urls, cancel),
-        ));
+        let dest = layout.download_path(&python.file, &python.sha256);
+        let urls = if dest.is_file() {
+            python.urls.clone()
+        } else {
+            mirror_ranker.ranked(&python.urls, cancel)
+        };
+        runtime_specs.push(FileSpec {
+            urls,
+            dest,
+            size: python.size,
+            sha256: python.sha256.clone(),
+        });
         for wheel in &manifest.wheels {
-            runtime_specs.push(spec(
-                &wheel.file,
-                wheel.size,
-                &wheel.sha256,
-                &mirror_ranker.ranked(&wheel.urls, cancel),
-            ));
+            let dest = layout.download_path(&wheel.file, &wheel.sha256);
+            let urls = if dest.is_file() {
+                wheel.urls.clone()
+            } else {
+                mirror_ranker.ranked(&wheel.urls, cancel)
+            };
+            runtime_specs.push(FileSpec {
+                urls,
+                dest,
+                size: wheel.size,
+                sha256: wheel.sha256.clone(),
+            });
         }
     }
     let model_dir = layout.model_dir(&manifest.model.id);
@@ -144,8 +150,12 @@ pub fn prepare(
             .files
             .iter()
             .map(|file| FileSpec {
-                urls: mirror_ranker.ranked(&file.urls, cancel),
                 dest: model_dir.join(&file.path),
+                urls: if model_dir.join(&file.path).is_file() {
+                    file.urls.clone()
+                } else {
+                    mirror_ranker.ranked(&file.urls, cancel)
+                },
                 size: file.size,
                 sha256: file.sha256.clone(),
             })
@@ -175,7 +185,10 @@ pub fn prepare(
     // Downloads, counted together so the bar moves once from 0 to the total. The model
     // goes last: it is the biggest single file, and the runtime is usable without it.
     let files: Vec<&FileSpec> = runtime_specs.iter().chain(&model_specs).collect();
-    let total: u64 = files.iter().map(|spec| spec.size).sum();
+    let total: u64 = files
+        .iter()
+        .map(|spec| spec.size - download::bytes_present(spec))
+        .sum();
     let mut finished_before = 0;
     for (index, spec) in files.iter().enumerate() {
         // Shared by both callbacks: the phase callback switches it, and every progress
@@ -183,12 +196,14 @@ pub fn prepare(
         let step = std::cell::Cell::new(Step::Downloading);
         let last_done = std::cell::Cell::new(finished_before);
         let progress = std::cell::RefCell::new(&mut *on_progress);
+        let already_present = download::bytes_present(spec);
         download::download_with_phases(
             spec,
             retry,
             cancel,
             &mut |bytes| {
-                last_done.set(finished_before + bytes);
+                let transferred = bytes.saturating_sub(already_present);
+                last_done.set(finished_before + transferred);
                 (progress.borrow_mut())(Progress {
                     step: step.get(),
                     done: last_done.get(),
@@ -208,7 +223,7 @@ pub fn prepare(
             },
         )
         .map_err(PrepareError::Download)?;
-        finished_before += spec.size;
+        finished_before += spec.size - already_present;
 
         if need_runtime && index + 1 == runtime_specs.len() {
             on_progress(Progress {
@@ -239,7 +254,9 @@ pub fn prepare(
 mod tests {
     use super::*;
     use crate::runtime::manifest::{ModelFile, ModelSet, PythonArchive, Wheel};
-    use crate::runtime::test_server::{runtime_archive, sha256_hex, Behaviour, TestServer};
+    use crate::runtime::test_server::{
+        runtime_archive, runtime_archive_with, sha256_hex, Behaviour, TestServer,
+    };
 
     /// A source list pointing at files served by `server`, with a mirror that has none of
     /// them listed first: every file falls through to its "official" URL.
@@ -341,6 +358,55 @@ mod tests {
     }
 
     #[test]
+    fn existing_dependency_and_model_files_are_not_counted_as_downloads() {
+        let server = TestServer::start();
+        let wheel_server = TestServer::start();
+        let model_server = TestServer::start();
+        let mut manifest = serve(&server);
+        let archive = runtime_archive_with(Some(b"#!/bin/sh\nexit 0\n"));
+        server.put("official/cpython.tar.gz", archive.clone());
+        manifest.python.size = archive.len() as u64;
+        manifest.python.sha256 = sha256_hex(&archive);
+
+        let wheel = b"PK wheel bytes".to_vec();
+        wheel_server.put("official/demo-1.0-py3-none-any.whl", wheel.clone());
+        manifest.wheels.push(Wheel {
+            file: "demo-1.0-py3-none-any.whl".into(),
+            size: wheel.len() as u64,
+            sha256: sha256_hex(&wheel),
+            urls: vec![wheel_server.url("official/demo-1.0-py3-none-any.whl")],
+        });
+        let onnx = vec![7u8; 50_000];
+        model_server.put("official/model_quantized.onnx", onnx.clone());
+        manifest.model.files[0].urls = vec![model_server.url("official/model_quantized.onnx")];
+
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().to_owned());
+        let wheel_path = layout.download_path(&manifest.wheels[0].file, &manifest.wheels[0].sha256);
+        std::fs::create_dir_all(wheel_path.parent().unwrap()).unwrap();
+        std::fs::write(&wheel_path, &wheel).unwrap();
+        let model_path = layout.model_dir("m").join("model_quantized.onnx");
+        std::fs::create_dir_all(model_path.parent().unwrap()).unwrap();
+        std::fs::write(&model_path, &onnx).unwrap();
+
+        let mut steps = Vec::new();
+        run(&layout, &manifest, &mut steps).unwrap();
+
+        assert_eq!(wheel_server.request_count(), 0);
+        assert_eq!(model_server.request_count(), 0);
+        let downloading = steps
+            .iter()
+            .find(|progress| progress.step == Step::Downloading)
+            .expect("download progress");
+        assert_eq!(
+            downloading.total,
+            manifest.python.size + manifest.model.files[1].size
+        );
+        let last = steps.last().unwrap();
+        assert_eq!(last.done, last.total);
+    }
+
+    #[test]
     fn a_second_run_downloads_nothing() {
         let server = TestServer::start();
         let manifest = serve(&server);
@@ -373,6 +439,35 @@ mod tests {
             "rollback runtime remains"
         );
         assert!(layout.installed_runtime("rt-y").is_some());
+    }
+
+    #[test]
+    fn an_app_update_checks_both_runtime_and_model_manifests() {
+        let server = TestServer::start();
+        let first = serve(&server);
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().to_owned());
+        run(&layout, &first, &mut Vec::new()).unwrap();
+        let requests = server.request_count();
+
+        let mut update = serve(&server);
+        update.runtime_id = "rt-update".into();
+        update.model.id = "m-update".into();
+        let changed_model = vec![9u8; 50_000];
+        server.put("official/model_quantized.onnx", changed_model.clone());
+        update.model.files[0].sha256 = sha256_hex(&changed_model);
+
+        let ready = run(&layout, &update, &mut Vec::new()).unwrap();
+
+        assert!(server.request_count() > requests);
+        assert!(layout.installed_runtime("rt-x").is_some());
+        assert!(layout.installed_runtime("rt-update").is_some());
+        assert_eq!(ready.model_cache_dir, dir.path().join("models/m-update"));
+        assert_eq!(
+            install::current_model_id(&layout).as_deref(),
+            Some("m-update")
+        );
+        assert!(layout.model_dir("m").join(".complete").is_file());
     }
 
     #[test]

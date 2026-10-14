@@ -42,6 +42,8 @@ The system SHALL install a runtime in a staging directory, verify the interprete
 - **THEN** initialization fails at the installation step and does not switch to the new runtime
 
 ### Requirement: Runtime reuse and replacement
+After every application update, the system SHALL compare the updated app's embedded runtime identity with the locally selected runtime before starting the backend. On ordinary starts it SHALL perform the same local check.
+
 The system SHALL identify a runtime by the normalized backend lock file, Python version, and interpreter release. The system SHALL reuse an already installed runtime with the same identity without network access. When the identity changes, the system SHALL download and install the new runtime, keep the previous runtime available for rollback, and remove runtimes older than the previous one only after the new runtime is complete.
 
 #### Scenario: Code-only app update
