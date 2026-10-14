@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 import av
-import imagehash
 from io import BytesIO
 from PIL import Image
 
@@ -14,6 +13,7 @@ from fileseek.features.tasks.domain.ports.video_sampler import (
     VideoSamplerPort,
 )
 from fileseek.features.tasks.domain.exceptions import VideoProcessError
+from fileseek.features.tasks.infrastructure.file_processor.perceptual_hash import phash
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class VideoSampler(VideoSamplerPort):
                 f"视频文件不包含视频流: {video_path}"
             ) from exc
 
-        sampled: list[tuple[float, object]] = []
+        sampled: list[tuple[float, Image.Image]] = []
         total_duration = 0.0
 
         try:
@@ -90,11 +90,11 @@ class VideoSampler(VideoSamplerPort):
         if not sampled:
             return ()
 
-        selected: list[tuple[float, object]] = []
+        selected: list[tuple[float, Image.Image]] = []
         previous_hash = None
 
         for timestamp, image in sampled:
-            current_hash = imagehash.phash(image)
+            current_hash = phash(image)
 
             if (
                 previous_hash is None

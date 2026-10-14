@@ -16,9 +16,9 @@ _ONNX_FILENAME = "onnx/model_quantized.onnx"
 
 # 落到同一个目录里的随行文件。
 #
-# `AutoTokenizer` 和 `AutoImageProcessor` 都是 `from_pretrained(tokenizer_dir)`，各自去这个
-# 目录里找自己那份配置。少了 preprocessor_config.json，图片处理器就没有 size/mean/std 可读，
-# 报的是"找不到 preprocessor config"，和缺 torchvision 是两回事——两个都得满足。
+# 分词读 tokenizer.json 和 tokenizer_config.json（截断长度、填充符），图片预处理读
+# preprocessor_config.json（size/mean/std）。special_tokens_map.json 现在没人读，但它在
+# release/runtime.json 的模型清单里，桌面端会预先下载，这里保持一致，免得再走一次网络。
 _MODEL_FILES = (
     "tokenizer.json",
     "tokenizer_config.json",

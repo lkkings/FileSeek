@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 
 from fileseek.infrastructure.embedding.base import EmbeddingPort
+from fileseek.infrastructure.embedding.clip_preprocess import ClipImagePreprocessor
+from fileseek.infrastructure.embedding.clip_tokenizer import ClipTokenizer
 from fileseek.shared.domain.exceptions import (
     InferenceError,
     ModelLoadError,
@@ -21,10 +23,6 @@ from fileseek.shared.utils.model_cache import (
 if TYPE_CHECKING:
     import onnxruntime as ort
     from PIL import Image
-    from transformers import (
-        AutoImageProcessor,
-        PreTrainedTokenizerBase,
-    )
 
 
 logger = logging.getLogger(__name__)
@@ -36,24 +34,6 @@ TEXT_INFERENCE_BATCH_SIZE = 32
 # 峰值约 4GB，而把它和 31 条短文本拼成一批会直接 OOM。这个预算约等于
 # 8 条 1024 token，超长文本会自动单独成批。
 TEXT_INFERENCE_MAX_ATTENTION_COST = 8 * 1024 * 1024
-
-
-def _as_numpy(pixel_values: object) -> np.ndarray:
-    """把图片处理器的输出统一成 numpy 数组。
-
-    `return_tensors="np"` 对这个模型不起作用：jina-clip-v2 用 auto_map 指向
-    `jinaai/jina-clip-implementation` 的 `JinaCLIPImageProcessor`，那份远程代码里的
-    transform 直接返回 torch 张量，不看这个参数。而下游 `_build_image_inputs` 要调
-    `.astype()`、ONNX Runtime 也只吃 numpy，于是报 `'Tensor' object has no attribute
-    'astype'`。类型在这里收口，推理侧就不必知道处理器到底给的是什么。
-    """
-    # 不在模块顶层 import torch：这个文件其余部分是纯 ONNX 路径，torch 只是远程预处理代码
-    # 的连带依赖，没必要为了一个 isinstance 把它拉进导入链。
-    detach = getattr(pixel_values, "detach", None)
-    if detach is not None:
-        return cast("np.ndarray", detach().cpu().numpy())
-
-    return cast("np.ndarray", pixel_values)
 
 
 class JinaClipV2Embedding(EmbeddingPort):
@@ -131,8 +111,8 @@ class JinaClipV2Embedding(EmbeddingPort):
         self._text_only = text_only
 
         self._session: ort.InferenceSession | None = None
-        self._tokenizer: PreTrainedTokenizerBase | None = None
-        self._image_processor: AutoImageProcessor | None = None
+        self._tokenizer: ClipTokenizer | None = None
+        self._image_processor: ClipImagePreprocessor | None = None
 
         self._load_lock = threading.Lock()
 
@@ -175,13 +155,8 @@ class JinaClipV2Embedding(EmbeddingPort):
                 texts,
                 query=query,
             )
-            token_ids: list[list[int]] = tokenizer(
-                prepared_texts,
-                padding=False,
-                truncation=True,
-                max_length=self._get_max_sequence_length(tokenizer),
-            )["input_ids"]
-            pad_token_id = getattr(tokenizer, "pad_token_id", None) or 0
+            token_ids = tokenizer.encode_batch(prepared_texts)
+            pad_token_id = tokenizer.pad_token_id
             embeddings: list[list[float] | None] = [None] * len(texts)
 
             # 按长度分批，短文本不会被 padding 到同批最长文本的长度；
@@ -299,12 +274,7 @@ class JinaClipV2Embedding(EmbeddingPort):
                 for image in images
             ]
 
-            pixel_values = _as_numpy(
-                image_processor(
-                    pil_images,
-                    return_tensors="np",
-                )["pixel_values"]
-            )
+            pixel_values = image_processor(pil_images)
 
             outputs = self._run_image_inference(
                 session=session,
@@ -334,8 +304,8 @@ class JinaClipV2Embedding(EmbeddingPort):
         self,
     ) -> tuple[
         ort.InferenceSession,
-        PreTrainedTokenizerBase,
-        AutoImageProcessor | None,
+        ClipTokenizer,
+        ClipImagePreprocessor | None,
     ]:
         """确保模型资源已经加载。
 
@@ -396,8 +366,8 @@ class JinaClipV2Embedding(EmbeddingPort):
         self,
     ) -> tuple[
         ort.InferenceSession,
-        PreTrainedTokenizerBase,
-        AutoImageProcessor | None,
+        ClipTokenizer,
+        ClipImagePreprocessor | None,
     ]:
         """加载 ONNX Session、Tokenizer 和 ImageProcessor。
 
@@ -407,10 +377,6 @@ class JinaClipV2Embedding(EmbeddingPort):
         全部成功以后才由 _ensure_loaded() 提交到实例状态。
         """
         import onnxruntime as ort
-        from transformers import (
-            AutoImageProcessor,
-            AutoTokenizer,
-        )
 
         onnx_path, tokenizer_dir = ensure_model_cached(
             self._model_name,
@@ -429,18 +395,12 @@ class JinaClipV2Embedding(EmbeddingPort):
                 providers=["CPUExecutionProvider"],
             )
 
-        tokenizer = AutoTokenizer.from_pretrained(
-            str(tokenizer_dir),
-            trust_remote_code=True,
-        )
+        tokenizer = ClipTokenizer.from_dir(tokenizer_dir)
 
-        # 查询进程用不到图片处理器；它的远程代码会连带 import torchvision，能省则省。
+        # 查询进程用不到图片处理器。
         image_processor = None
         if not self._text_only:
-            image_processor = AutoImageProcessor.from_pretrained(
-                str(tokenizer_dir),
-                trust_remote_code=True,
-            )
+            image_processor = ClipImagePreprocessor.from_dir(tokenizer_dir)
 
         self._validate_model_outputs(session, text_only=self._text_only)
 
@@ -763,23 +723,6 @@ class JinaClipV2Embedding(EmbeddingPort):
             cls.QUERY_INSTRUCTION + text
             for text in texts
         ]
-
-    @staticmethod
-    def _get_max_sequence_length(
-        tokenizer: PreTrainedTokenizerBase,
-    ) -> int:
-        """从 tokenizer 获取最大序列长度。"""
-        max_length = tokenizer.model_max_length
-
-        # 某些 tokenizer 在没有真实限制时会返回极大值。
-        # 这种情况下不主动设置一个虚假的固定长度。
-        if max_length is None:
-            return 8192
-
-        if max_length > 1_000_000:
-            return 8192
-
-        return int(max_length)
 
     @staticmethod
     def _validate_texts(

@@ -8,8 +8,13 @@ def _make_embedding(token_ids: dict[str, list[int]], batches: list[np.ndarray]):
     """构造一个不加载模型的实例，tokenizer 按映射返回 token ids。"""
     embedding = object.__new__(JinaClipV2Embedding)
 
-    def tokenizer(texts: list[str], **_: object):
-        return {"input_ids": [token_ids[text] for text in texts]}
+    class Tokenizer:
+        pad_token_id = 1
+
+        def encode_batch(self, texts: list[str]) -> list[list[int]]:
+            return [token_ids[text] for text in texts]
+
+    tokenizer = Tokenizer()
 
     def run_text_inference(*, session, input_ids):
         batches.append(input_ids)
@@ -19,7 +24,6 @@ def _make_embedding(token_ids: dict[str, list[int]], batches: list[np.ndarray]):
     embedding._ensure_loaded = lambda: (object(), tokenizer, object())
     embedding._run_text_inference = run_text_inference
     embedding._to_embedding_list = lambda outputs: outputs.tolist()
-    embedding._get_max_sequence_length = lambda tokenizer: 8192
     return embedding
 
 

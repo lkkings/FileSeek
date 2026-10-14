@@ -8,37 +8,18 @@ dependencies = [
     "uvicorn==0.53.0",
     # Drives the `python -m fileseek` command line.
     "click==8.5.0",
-    "faiss-cpu==1.15.1",
-    "torch==2.14.0",
-    # 图片检索必须有它，两道坎叠在一起：
-    #   1. transformers 5.x 的 `AutoImageProcessor` 是个 requires_backends("torchvision")
-    #      存根，取属性就抛 ImportError——连 `use_fast=False` 都来不及传。
-    #   2. jina-clip-v2 的 preprocessor_config.json 用 auto_map 指向
-    #      `jinaai/jina-clip-implementation`，那边的 transform.py 顶层
-    #      `import torchvision.transforms`。
-    # 所以换个非门禁的 PIL 处理器类也绕不开。版本跟 torch 2.14.0 配对。
-    "torchvision==0.29.0",
-    # 同上那份 transform.py 的连带要求。它里面 timm 其实是懒加载（只在
-    # `if use_timm:` 分支里 import，我们没走那条路），但 transformers 载入远程代码前会用
-    # `check_imports()` 静态扫描 import 行，扫到就要求装上，装不上直接 ImportError。
-    "timm==1.0.30",
-    "transformers==5.17.0",
-    "sentence-transformers==6.0.1",
+    # jina-clip-v2 的分词直接读 tokenizer.json，不经过 transformers。
+    "tokenizers==0.23.2",
     "rapidocr-onnxruntime==1.4.4",
     "av==18.1.0",
-    "zeroconf==0.151.3",
-    "keyring==25.7.0",
     "pyyaml==6.0.3",
     "pypdf==6.19.0",
     "pypdfium2==5.13.0",
     "python-docx==1.2.0",
     "pillow==12.3.0",
     "chromadb>=1.5.9",
-    "imagehash>=4.3.2",
     "huggingface-hub==1.31.0",
     "onnxruntime==1.30.0",
-    "smbprotocol==1.17.0",
-    "webdavclient3==3.14.7",
     "tortoise-orm==0.25.1",
     # Tortoise 0.25.1 calls aiosqlite.Connection.start(), removed in 0.22.
     "aiosqlite==0.21.0",
@@ -57,6 +38,8 @@ dev = [
     # Drives the FastAPI TestClient.
     "httpx==0.28.1",
     "types-pyyaml==6.0.12.20250915",
+    # Compiles the backend into the executable the desktop app ships (build_nuitka.py).
+    "nuitka==4.3",
 ]
 
 [project.scripts]
