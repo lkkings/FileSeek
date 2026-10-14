@@ -1,24 +1,40 @@
-// Copies the backend's Python source into `src-tauri/resources/backend/` so Tauri bundles
-// it as a resource. Production builds run it on the downloaded runtime with
-// `PYTHONPATH=<resources>/backend` (see `src-tauri/src/sidecar.rs`).
+// Compiles the backend with Nuitka (`backend/build_nuitka.py`) and copies the result into
+// `src-tauri/resources/backend/` so Tauri bundles it as a resource. Release builds run
+// `<resources>/backend/fileseek-backend[.exe]` directly (see `src-tauri/src/readiness.rs`).
 //
-// Only `.py` files are copied: `__pycache__` from a dev checkout would ship bytecode for
-// whatever Python the developer happens to run, and the backend has no data files.
-import { cpSync, existsSync, rmSync, statSync } from "node:fs";
+// The compiled directory holds no `.py` source; the whole directory is copied because the
+// executable loads its extension modules and data files from next to itself.
+import { spawnSync } from "node:child_process";
+import { chmodSync, cpSync, existsSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const source = path.resolve(root, "..", "backend", "src", "fileseek");
-const output = path.join(root, "src-tauri", "resources", "backend", "fileseek");
+const backend = path.resolve(root, "..", "backend");
+const compiled = path.join(backend, "dist", "fileseek-backend.dist");
+const output = path.join(root, "src-tauri", "resources", "backend");
+const exe = process.platform === "win32" ? "fileseek-backend.exe" : "fileseek-backend";
 
-if (!existsSync(source)) {
-  console.error(`backend source not found at ${source}`);
+// `--extra dev`: nuitka is a dev dependency, absent from a fresh checkout's environment.
+const build = spawnSync("uv", ["run", "--directory", backend, "--extra", "dev", "python", "build_nuitka.py"], {
+  stdio: "inherit",
+  shell: process.platform === "win32",
+});
+if (build.error) {
+  console.error(`could not run uv to compile the backend: ${build.error.message}`);
+  process.exit(1);
+}
+if (build.status !== 0) {
+  console.error(`compiling the backend failed (exit ${build.status}); see the Nuitka output above`);
+  process.exit(build.status ?? 1);
+}
+if (!existsSync(path.join(compiled, exe))) {
+  console.error(`compiled backend not found at ${path.join(compiled, exe)}`);
   process.exit(1);
 }
 
-rmSync(path.dirname(output), { recursive: true, force: true });
-cpSync(source, output, {
-  recursive: true,
-  filter: (entry) => statSync(entry).isDirectory() ? path.basename(entry) !== "__pycache__" : entry.endsWith(".py"),
-});
-console.log(`staged backend into ${output}`);
+rmSync(output, { recursive: true, force: true });
+cpSync(compiled, output, { recursive: true, verbatimSymlinks: true });
+if (process.platform !== "win32") {
+  chmodSync(path.join(output, exe), 0o755);
+}
+console.log(`staged compiled backend into ${output}`);

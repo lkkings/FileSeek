@@ -306,6 +306,22 @@ pkill -TERM -f "uvicorn fileseek"        # 开发模式（--reload）
 # 4. 关闭模型子进程
 ```
 
+### 编译发布版后端
+
+release 版桌面端不带 Python 源码，而是带 Nuitka 编译出的产物，由 `desktop/scripts/stage-backend.mjs` 在 `pnpm build` 时调用。
+
+```bash
+uv sync --extra dev                 # 含 nuitka
+uv run python build_nuitka.py       # 产物：dist/fileseek-backend.dist/fileseek-backend[.exe]
+uv run python scripts/smoke_compiled.py   # 启动产物并检查 /health
+```
+
+- 需要 C 编译器：macOS 装 Xcode Command Line Tools，Windows 装 MSVC（Visual Studio Build Tools）。
+- 全量编译约 25 分钟，之后 Nuitka 的 ccache 缓存（macOS 在 `~/Library/Caches/Nuitka`）会让重编快很多。
+- 产物超过 `build_nuitka.py` 里的 `SIZE_LIMIT_MB` 时脚本失败。
+- 新增依赖如果按字符串导入自己的模块（像 chromadb、uvicorn、tortoise 那样），Nuitka 跟踪不到，启动时会报 `ModuleNotFoundError`；在 `build_nuitka.py` 里用 `--include-package` 整包加入。
+- 想让 debug 版桌面端走 release 路径（编译产物 + 下载模型），先编译，再用 `FILESEEK_DEV_USE_RUNTIME=1 pnpm tauri dev`。
+
 ### 目录结构
 
 启动后产生的文件（macOS 示例，其他平台路径见配置节）：

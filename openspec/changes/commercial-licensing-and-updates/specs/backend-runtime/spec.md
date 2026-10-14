@@ -2,9 +2,13 @@
 
 在生产环境中下载、校验、安装并启动 FileSeek 后端运行时（Python + 依赖）和模型文件，并由桌面应用管理后端进程的生命周期。
 
+> 注意：`backend-nuitka-gpu-acceleration` 把后端改为 Nuitka 编译产物随安装包发布，首次只下载模型。下文标注"已被取代"的需求以该变更的 `backend-executable`、`desktop-packaging` spec 为准；两个变更归档前需按此合并。
+
 ## ADDED Requirements
 
 ### Requirement: 从官方源安装运行时
+（部分已被取代：不再下载解释器和 wheel，也不再用 pip 安装；模型文件的来源、镜像回退和 sha256 校验规则不变。）
+
 系统 SHALL 从官方源或其镜像下载 Python 解释器（python-build-standalone）、`backend/uv.lock` 锁定的每个依赖 wheel 和固定 revision 的模型文件，SHALL NOT 从 FileSeek 自有的服务器或 Keygate 下载这些文件。要下载的文件及其 sha256 SHALL 在构建时确定并编译进应用。每个文件 SHALL 依次尝试其各个地址；任何来源的文件都 SHALL 按 sha256 校验后才使用。依赖 SHALL 用该解释器自带的 pip 离线安装（只安装下载并校验过的文件，不解析依赖）。
 
 #### Scenario: 镜像不可达
@@ -49,6 +53,8 @@
 - **THEN** 系统删除该 `.part`，从头重新下载该文件，并计入重试次数
 
 ### Requirement: 原子安装运行时
+（已被取代：没有要安装的运行时。旧版本留下的 `<data_dir>/runtime/` 在启动时删除，见 `desktop-packaging` 的"清理旧运行时"。）
+
 系统 SHALL 把运行时包解压到临时目录，确认关键文件（`bin/python` 或 `python.exe`）存在后，再 rename 为 `<data_dir>/runtime/<runtime_id>/`，最后写入内容为清单 sha256 的 `.complete` 标记。系统 SHALL 保留上一个运行时版本，并删除更早的版本。
 
 #### Scenario: 解压过程中断
@@ -67,6 +73,8 @@
 - **THEN** `ensure_model_cached` 发现所有文件已存在，不访问 Hugging Face
 
 ### Requirement: 启动和停止后端进程
+（启动命令部分已被取代：生产构建直接运行 `<resource_dir>/backend/fileseek-backend[.exe]`，不设 `PYTHONPATH`；进程组、pidfile、就绪判断和停止流程不变。）
+
 桌面应用 SHALL 只在许可有效（见 licensing-activation）且运行时就绪后启动后端：生产构建用清单中记录的运行时解释器执行 `-m fileseek`，`PYTHONPATH` 指向随应用分发的后端代码，`EMBEDDING_MODEL_CACHE_DIR` 指向已安装的模型目录；debug 构建同样由桌面应用启动后端，用 `uv run`；两者都可被 `FILESEEK_BACKEND` 覆盖。后端 SHALL 运行在独立进程组中，并记录在 pidfile 里；下次启动时，若 pidfile 指向的进程组仍是 FileSeek 后端，系统 SHALL 先结束它。系统 SHALL 等待 `connection.json` 被重写且 `/health` 返回成功后，才认为后端就绪。停止后端时 SHALL 先请求优雅停止（Unix 发 SIGTERM；Windows 调用后端 `POST /shutdown`，以 `connection.json` 中的 token 鉴权），15 秒后仍未退出则强制终止。强制终止时限 SHALL 大于后端等待在飞任务的时限，使在飞任务能落地或被放回队列。
 
 #### Scenario: 正常启动
@@ -90,6 +98,8 @@
 - **THEN** 新的应用实例先结束遗留的后端进程组，再启动新的后端
 
 ### Requirement: 修复运行时
+（已被取代：修复改为重新校验模型文件的 sha256，只删除并重新下载不匹配的文件；后端本身随签名的应用分发，不在这里修复。）
+
 后端启动后 30 秒内连续崩溃 2 次时，系统 SHALL 提示用户修复运行时。用户确认后，系统 SHALL 删除当前运行时的 `.complete`，并重新执行下载和安装流程。
 
 #### Scenario: 运行时文件损坏

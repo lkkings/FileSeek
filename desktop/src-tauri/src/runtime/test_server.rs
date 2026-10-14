@@ -81,35 +81,6 @@ impl TestServer {
     }
 }
 
-/// A tar.zst laid out like a real runtime pack: an executable `python/bin/python3`
-/// (when `with_python`) and a library file.
-pub fn runtime_archive(with_python: bool) -> Vec<u8> {
-    runtime_archive_with(with_python.then_some(b"#!/bin/sh\n".as_slice()))
-}
-
-/// As [`runtime_archive`], with `python` as the interpreter's contents (a shell script
-/// standing in for it).
-pub fn runtime_archive_with(python: Option<&[u8]>) -> Vec<u8> {
-    // python-build-standalone ships `.tar.gz`.
-    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-    {
-        let mut tar = tar::Builder::new(&mut encoder);
-        let mut add = |name: &str, body: &[u8], mode: u32| {
-            let mut header = tar::Header::new_gnu();
-            header.set_size(body.len() as u64);
-            header.set_mode(mode);
-            header.set_cksum();
-            tar.append_data(&mut header, name, body).unwrap();
-        };
-        if let Some(python) = python {
-            add("python/bin/python3", python, 0o755);
-        }
-        add("python/lib/site.py", b"", 0o644);
-        tar.finish().unwrap();
-    }
-    encoder.finish().unwrap()
-}
-
 pub fn sha256_hex(bytes: &[u8]) -> String {
     use sha2::Digest;
     sha2::Sha256::digest(bytes)

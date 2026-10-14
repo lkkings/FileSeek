@@ -8,7 +8,7 @@ type Translate = ReturnType<typeof useTranslate>;
 
 function problemMessage(readiness: Readiness, t: Translate): string {
   if (readiness.state === "repair_needed") {
-    return t("readiness.repairPrompt", "后端无法启动，是否修复运行时？修复会重新下载运行时，不影响文件库。");
+    return t("readiness.repairPrompt", "后端无法启动，是否修复？修复会重新校验模型文件，只重新下载损坏的部分，不影响文件库。");
   }
   switch (readiness.errorKind) {
     case "network":
@@ -28,7 +28,7 @@ function problemMessage(readiness: Readiness, t: Translate): string {
         path: readiness.unwritablePath ?? "",
       });
     case "install":
-      return t("readiness.errorInstall", "安装运行时失败。请重试。");
+      return t("readiness.errorInstall", "安装模型失败。请重试。");
     case "unsupported":
       return t("readiness.errorUnsupported", "当前平台暂不支持。");
     case "backend":
@@ -78,13 +78,13 @@ export function ReadinessProblem({ readiness }: { readiness: Readiness }) {
         )}
         {repairable && !confirmingRepair && (
           <button type="button" className="readiness-button is-primary" disabled={busy} onClick={() => setConfirmingRepair(true)}>
-            {t("readiness.repair", "修复运行时")}
+            {t("readiness.repair", "修复模型")}
           </button>
         )}
         {repairable && confirmingRepair && (
           <>
             <span className="readiness-problem-confirm">
-              {t("readiness.repairConfirm", "将删除并重新下载运行时，确定吗？")}
+              {t("readiness.repairConfirm", "将校验模型文件并重新下载损坏的部分，确定吗？")}
             </span>
             <button type="button" className="readiness-button is-primary" disabled={busy} onClick={() => void run(repairRuntime)}>
               {t("readiness.repairConfirmYes", "确定修复")}

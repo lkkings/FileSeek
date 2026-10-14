@@ -1,4 +1,5 @@
 import { i18n } from "@lingui/core";
+import { compileMessage } from "@lingui/message-utils/compileMessage";
 
 export type SupportedLocale = "zh-CN" | "en-US";
 
@@ -237,12 +238,12 @@ const englishMessages: Record<string, string> = {
   "license.unbind": "Unbind this device",
   "license.unbindConfirm": "After unbinding, this device needs to be activated again before it can be used, and the license can be activated on another device. Continue?",
   "license.unbindYes": "Unbind",
-  "readiness.lead": "The first run downloads the runtime and model search needs (about 1.2 GB). This happens only once.",
+  "readiness.lead": "The first run downloads the model search needs (about 890 MB). This happens only once.",
   "readiness.starting": "Starting the service…",
   "readiness.stepSpaceCheck": "Check disk space",
-  "readiness.stepDownloading": "Download runtime and model",
+  "readiness.stepDownloading": "Download the model",
   "readiness.stepVerifying": "Verify files",
-  "readiness.stepInstalling": "Install runtime",
+  "readiness.stepInstalling": "Install the model",
   "readiness.stepStarting": "Start the service",
   "readiness.statusDone": "done",
   "readiness.statusActive": "in progress",
@@ -253,20 +254,20 @@ const englishMessages: Record<string, string> = {
   "readiness.etaHours": "about {n} h left",
   "readiness.hideToTray": "Minimize to tray and notify me when done",
   "readiness.reconnecting": "The backend service is restarting…",
-  "readiness.repairPrompt": "The backend cannot start. Repair the runtime? This downloads it again and leaves your library untouched.",
+  "readiness.repairPrompt": "The backend cannot start. Repair it? This re-checks the model files and downloads only damaged ones again; your library is untouched.",
   "readiness.errorNetwork": "Network connection failed. Retry once you are back online; the download resumes where it stopped.",
   "readiness.errorIntegrity": "A downloaded file failed verification and was discarded. Please retry.",
   "readiness.errorDiskSpace": "Not enough disk space: {required} needed, only {available} free on the disk holding {path}.",
   "readiness.errorDiskSpaceShort": "Not enough disk space.",
   "readiness.errorUnwritable": "Cannot write to {path}. Check the folder's permissions.",
-  "readiness.errorInstall": "Installing the runtime failed. Please retry.",
+  "readiness.errorInstall": "Installing the model failed. Please retry.",
   "readiness.errorUnsupported": "This platform is not supported yet.",
   "readiness.errorBackend": "The backend service could not start.",
   "readiness.details": "Details",
   "readiness.logPath": "Log: ",
   "readiness.retry": "Retry",
-  "readiness.repair": "Repair runtime",
-  "readiness.repairConfirm": "This deletes and re-downloads the runtime. Continue?",
+  "readiness.repair": "Repair model",
+  "readiness.repairConfirm": "This checks the model files and downloads damaged ones again. Continue?",
   "readiness.repairConfirmYes": "Repair",
   "readiness.suggestedTitle": "Suggested settings",
   "readiness.suggestedLead": "You can change these later under Settings → System integration.",
@@ -293,6 +294,9 @@ const englishMessages: Record<string, string> = {
   "update.bannerRequired": "This version is no longer supported. Please update to {version}.",
   "update.bannerRecommended": "Version {version} is available.",
 };
+
+// 设置运行时消息编译器，使 Lingui 能处理模板字符串中的占位符（如 {range}）
+i18n.setMessagesCompiler(compileMessage);
 
 i18n.load("zh-CN", chineseMessages);
 i18n.load("en-US", englishMessages);

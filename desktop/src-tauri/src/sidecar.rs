@@ -71,17 +71,15 @@ impl BackendCommand {
         }
     }
 
-    /// Runs the bundled backend source on a downloaded runtime.
-    pub fn production(python: &Path, backend_src: &Path, model_cache_dir: &Path) -> BackendCommand {
+    /// Runs the compiled backend bundled with the app (`backend/build_nuitka.py`).
+    ///
+    /// The executable embeds its own interpreter; the user's Python variables are removed
+    /// anyway so nothing in their environment can redirect its imports.
+    pub fn production(backend_exe: &Path, model_cache_dir: &Path) -> BackendCommand {
         BackendCommand {
-            program: python.to_owned(),
-            args: vec!["-m".into(), "fileseek".into()],
+            program: backend_exe.to_owned(),
+            args: Vec::new(),
             env: vec![
-                (
-                    "PYTHONPATH".into(),
-                    backend_src.to_string_lossy().into_owned(),
-                ),
-                ("PYTHONNOUSERSITE".into(), "1".into()),
                 ("PYTHONUTF8".into(), "1".into()),
                 (
                     "EMBEDDING_MODEL_CACHE_DIR".into(),
@@ -90,6 +88,7 @@ impl BackendCommand {
             ],
             env_remove: vec![
                 "PYTHONHOME".into(),
+                "PYTHONPATH".into(),
                 "VIRTUAL_ENV".into(),
                 "PYTHONSTARTUP".into(),
             ],
@@ -730,19 +729,22 @@ while True:
     #[test]
     fn production_command_isolates_the_interpreter() {
         let command = BackendCommand::production(
-            Path::new("/data/runtime/rt-x/python/bin/python3"),
-            Path::new("/app/Resources/backend"),
+            Path::new("/app/Resources/backend/fileseek-backend"),
             Path::new("/data/models/m"),
         );
 
-        assert_eq!(command.args, ["-m", "fileseek"]);
-        assert!(command
-            .env
-            .contains(&("PYTHONPATH".into(), "/app/Resources/backend".into())));
+        assert_eq!(
+            command.program,
+            Path::new("/app/Resources/backend/fileseek-backend")
+        );
+        assert!(command.args.is_empty());
         assert!(command
             .env
             .contains(&("EMBEDDING_MODEL_CACHE_DIR".into(), "/data/models/m".into())));
-        assert!(command.env_remove.contains(&"PYTHONHOME".to_owned()));
+        assert!(!command.env.iter().any(|(key, _)| key == "PYTHONPATH"));
+        for key in ["PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV", "PYTHONSTARTUP"] {
+            assert!(command.env_remove.contains(&key.to_owned()), "{key}");
+        }
     }
 
     #[test]

@@ -2,9 +2,10 @@
 #
 #   plan ──> app (per platform) ──> publish
 #
-# Only the app's own code goes to Keygate. The Python runtime, the backend's dependencies
-# and the model are downloaded by the app on first run from their official sources and
-# mirrors, each checked against the sha256 in desktop/src-tauri/runtime-sources/.
+# Only the app goes to Keygate, with the backend compiled into it by Nuitka
+# (backend/build_nuitka.py, run from `pnpm build`). The model is downloaded by the app on
+# first run from its official source and mirrors, checked against the sha256 in
+# desktop/src-tauri/runtime-sources/.
 #
 # Push a `v<version>` tag matching `tauri.conf.json`: everything is built and uploaded to
 # Keygate as a draft, to check in the dashboard before publishing it there. Or run it by
@@ -59,8 +60,8 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Runtime sources match uv.lock
-        run: uv run --no-project --python "$PYTHON_VERSION" --with packaging release/build_sources.py --check
+      - name: Model sources match runtime.json
+        run: uv run --no-project --python "$PYTHON_VERSION" release/build_sources.py --check
 
   app:
     needs: plan
@@ -109,6 +110,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: desktop
 
+      # Nuitka's C compilation cache: a full compile takes about 25 minutes, a cached one
+      # a fraction of that. `pnpm tauri build` compiles the backend (stage-backend.mjs).
+      - name: Nuitka cache location
+        shell: bash
+        run: echo "NUITKA_CACHE_DIR=$RUNNER_TEMP/nuitka-cache" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/nuitka-cache
+          key: nuitka-${{ matrix.target }}-${{ hashFiles('backend/uv.lock', 'backend/build_nuitka.py') }}
+          restore-keys: nuitka-${{ matrix.target }}-
+
       # `createUpdaterArtifacts` needs a key to sign the update bundle with. Keygate signs
       # every artifact again when it publishes and the feed serves its signature, so this
       # one is thrown away: a fresh key per run, never stored.
@@ -132,6 +144,15 @@ jobs:
         run: |
           pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} \
             --config "$RUNNER_TEMP/updater.conf.json"
+
+      # The size limit is checked by build_nuitka.py during the build above; this starts the
+      # staged backend and asks /health, so a module Nuitka missed fails here, not for users.
+      - name: Smoke test the compiled backend
+        shell: bash
+        run: |
+          ext=""; [[ "$RUNNER_OS" == "Windows" ]] && ext=".exe"
+          uv run --no-project --python "$PYTHON_VERSION" backend/scripts/smoke_compiled.py \
+            "desktop/src-tauri/resources/backend/fileseek-backend$ext"
 
       - name: Collect
         shell: bash

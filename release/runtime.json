@@ -1,24 +1,6 @@
 {
-  "python_version": "3.12.15",
-  "pbs_release": "20261001",
-  "pbs_sha256": {
-    "aarch64-apple-darwin": "10cab8f6ed6202fdd81637aa6eda4af8d5b7eaa8fc42f9df3c6bea4923de0d93",
-    "x86_64-apple-darwin": "d101ac54bc34afff54741406261325dc896b7b646a36a58fff4845ef0a00b2ce",
-    "x86_64-pc-windows-msvc": "52124cee54126f3f360eaa378288f6f64c402c983a3c14c95eff67f4af986aaa",
-    "x86_64-unknown-linux-gnu": "7bb1659e3235077b7f63d5b6eb6ce653c6fcd6c5041e9d5f73b42ce10421464d",
-    "aarch64-unknown-linux-gnu": "0b35f4dc08d58534eb82e024989e2db9873885dccd4f2a316ff55c0cec146123"
-  },
   "mirrors": {
     "_comment": "Tried in order; every file is checked against the sha256 pinned in the app, so a mirror can only be slow or fail, never serve something else.",
-    "python": [
-      "https://registry.npmmirror.com/-/binary/python-build-standalone/{release}/{file}",
-      "https://github.com/astral-sh/python-build-standalone/releases/download/{release}/{file}"
-    ],
-    "pypi": [
-      "https://mirrors.aliyun.com/pypi/packages/{path}",
-      "https://pypi.tuna.tsinghua.edu.cn/packages/{path}",
-      "https://files.pythonhosted.org/packages/{path}"
-    ],
     "model": [
       "https://hf-mirror.com/{repo}/resolve/{revision}/{file}",
       "https://huggingface.co/{repo}/resolve/{revision}/{file}"
@@ -60,11 +42,5 @@
         "sha256": "920bc482e3dad0de2bffe4e534181a1f61a4a6baefa1aee53b75849557786301"
       }
     ]
-  },
-  "pbs_size": {
-    "aarch64-apple-darwin": 25023573,
-    "x86_64-pc-windows-msvc": 22013771,
-    "x86_64-unknown-linux-gnu": 34289539,
-    "aarch64-unknown-linux-gnu": 29212084
   }
 }

@@ -25,15 +25,15 @@ function formatEta(seconds: number, t: ReturnType<typeof useTranslate>): string 
 
 /**
  * Shown instead of the library until the backend first becomes ready: the honest version
- * of "starting", because without the runtime there is nothing to use yet.
+ * of "starting", because without the model there is nothing to use yet.
  */
 export function SetupScreen({ readiness, installing }: { readiness: Readiness | null; installing: boolean }) {
   const t = useTranslate();
   const labels: Record<string, string> = {
     space_check: t("readiness.stepSpaceCheck", "检查磁盘空间"),
-    downloading: t("readiness.stepDownloading", "下载运行时和模型"),
+    downloading: t("readiness.stepDownloading", "下载模型"),
     verifying: t("readiness.stepVerifying", "校验文件"),
-    installing: t("readiness.stepInstalling", "安装运行时"),
+    installing: t("readiness.stepInstalling", "安装模型"),
     starting: t("readiness.stepStarting", "启动服务"),
   };
   const statusText: Record<StepStatus, string> = {
@@ -54,7 +54,7 @@ export function SetupScreen({ readiness, installing }: { readiness: Readiness | 
         </h1>
         {installing && (
           <p className="readiness-setup-lead">
-            {t("readiness.lead", "首次使用需要下载搜索所需的运行时和模型（约 1.2 GB），完成后不再需要。")}
+            {t("readiness.lead", "首次使用需要下载搜索所需的模型（约 890 MB），完成后不再需要。")}
           </p>
         )}
 

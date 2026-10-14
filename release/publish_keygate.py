@@ -34,8 +34,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from runtime_id import REPO_ROOT
-
+REPO_ROOT = Path(__file__).resolve().parent.parent
 KEYGATE_CONFIG = REPO_ROOT / "desktop" / "src-tauri" / "keygate.json"
 # 决策 16：只发布依赖齐全的 4 个平台。
 PLATFORMS = ("darwin-arm64", "windows-x64", "linux-x64", "linux-arm64")

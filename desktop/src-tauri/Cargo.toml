@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "1.0.2"
+version = "1.0.3"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -31,11 +31,9 @@ serde_json = "1"
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 dirs = "6.0"
 sha2 = "=0.10.9"
-# Backend runtime download: python-build-standalone's `.tar.gz` (flate2 is already in the
-# tree) and free-space checks. Every file is checked against a sha256 compiled in.
+# Licensing: decoding Keygate's base64url tokens.
 base64 = "=0.22.1"
-flate2 = "=1.1.10"
-tar = "=0.4.46"
+# Free-space check before the first-run model download.
 fs4 = "=1.1.0"
 # "FileSeek is ready" once a background first-run download finishes.
 tauri-plugin-notification = "=2.5.1"

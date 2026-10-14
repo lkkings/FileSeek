@@ -1,33 +1,7 @@
 use std::path::Path;
 
-#[path = "src/runtime/runtime_id.rs"]
-mod runtime_id;
-
-/// Bakes the backend runtime this build expects into `FILESEEK_RUNTIME_ID`.
-///
-/// Computed from `backend/uv.lock` and `release/runtime.json` only, so a change to the
-/// backend's own code leaves it unchanged and users keep the runtime they have.
-fn emit_runtime_id() {
-    let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let lock_path = repo.join("backend/uv.lock");
-    let config_path = repo.join("release/runtime.json");
-    println!("cargo:rerun-if-changed={}", lock_path.display());
-    println!("cargo:rerun-if-changed={}", config_path.display());
-
-    let lock = std::fs::read(&lock_path).expect("backend/uv.lock is required to build");
-    let config: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(&config_path).expect("release/runtime.json is required to build"),
-    )
-    .expect("release/runtime.json is not valid JSON");
-    let field = |name: &str| {
-        config[name]
-            .as_str()
-            .unwrap_or_else(|| panic!("release/runtime.json is missing `{name}`"))
-            .to_owned()
-    };
-
-    let id = runtime_id::compute_runtime_id(&lock, &field("python_version"), &field("pbs_release"));
-    println!("cargo:rustc-env=FILESEEK_RUNTIME_ID={id}");
+/// The target triple, which keys the model source list (`runtime-sources/<target>.json`).
+fn emit_runtime_target() {
     println!(
         "cargo:rustc-env=FILESEEK_RUNTIME_TARGET={}",
         std::env::var("TARGET").expect("cargo sets TARGET for build scripts")
@@ -35,15 +9,15 @@ fn emit_runtime_id() {
 }
 
 /// `tauri.conf.json` bundles `resources/backend/`, which `scripts/stage-backend.mjs`
-/// fills during `pnpm build`. Dev builds run the backend with `uv` from the checkout and
-/// never stage it, so the directory may not exist; tauri-build refuses a missing resource
-/// path, so create it empty.
+/// fills with the compiled backend (`backend/build_nuitka.py`) during `pnpm build`. Dev
+/// builds run the backend with `uv` from the checkout and never stage it, so the directory
+/// may not exist; tauri-build refuses a missing resource path, so create it empty.
 fn ensure_backend_resource_dir() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/backend");
     std::fs::create_dir_all(dir).expect("could not create resources/backend");
 }
 
-/// The list of files the first run downloads for this target (`release/build_sources.py`),
+/// The model files the first run downloads for this target (`release/build_sources.py`),
 /// compiled into the app so their sha256s cannot be swapped after signing. A target with
 /// no list gets an empty one, and the app reports the platform as unsupported.
 fn emit_runtime_sources() {
@@ -122,7 +96,7 @@ fn emit_keygate_config() {
 }
 
 fn main() {
-    emit_runtime_id();
+    emit_runtime_target();
     emit_runtime_sources();
     emit_keygate_config();
     ensure_backend_resource_dir();

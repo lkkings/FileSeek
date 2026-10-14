@@ -118,7 +118,6 @@ impl ErrorKind {
             PrepareError::Manifest(_) => ErrorKind::Integrity,
             PrepareError::Space(_) => ErrorKind::DiskSpace,
             PrepareError::Download(DownloadError::Cancelled | DownloadError::Io(_))
-            | PrepareError::Install(_)
             | PrepareError::Io(_) => ErrorKind::Install,
         }
     }
@@ -162,12 +161,11 @@ pub type SourceList = Arc<
 pub enum BackendSource {
     /// Run a fixed command (debug builds: `uv run`, or `FILESEEK_BACKEND`).
     Command(BackendCommand),
-    /// Download the runtime if needed, then run the bundled backend source on it.
+    /// Download the model if needed, then run the compiled backend.
     Runtime {
         layout: Layout,
-        runtime_id: String,
         sources: SourceList,
-        backend_src: PathBuf,
+        backend_exe: PathBuf,
     },
 }
 
@@ -352,6 +350,14 @@ enum Watch {
 
 impl Supervisor {
     fn run(mut self) {
+        if let BackendSource::Runtime { layout, .. } = &self.config.source {
+            if let Err(error) = crate::runtime::install::remove_legacy_runtime(layout) {
+                eprintln!(
+                    "could not remove the old Python runtime at {}: {error}",
+                    layout.legacy_runtime_dir().display()
+                );
+            }
+        }
         let mut early_crashes = 0;
         loop {
             if !self.licensed() {
@@ -397,7 +403,7 @@ impl Supervisor {
                 Ok(Command::Retry) => early_crashes = 0,
                 Ok(Command::Repair) => {
                     early_crashes = 0;
-                    self.invalidate_runtime();
+                    self.repair_model();
                 }
                 // Back to the top, which checks the license again.
                 Ok(Command::Licensed | Command::Unlicensed) => early_crashes = 0,
@@ -441,15 +447,14 @@ impl Supervisor {
             BackendSource::Command(command) => command,
             BackendSource::Runtime {
                 layout,
-                runtime_id,
                 sources,
-                backend_src,
+                backend_exe,
             } => {
-                let ready = match prepare::installed(&layout, &runtime_id) {
+                let ready = match prepare::installed(&layout) {
                     Some(ready) => ready,
                     None => self.download(&layout, &sources)?,
                 };
-                BackendCommand::production(&ready.python, &backend_src, &ready.model_cache_dir)
+                BackendCommand::production(&backend_exe, &ready.model_cache_dir)
             }
         };
 
@@ -560,12 +565,17 @@ impl Supervisor {
         }
     }
 
-    fn invalidate_runtime(&self) {
+    /// The backend is part of the signed app and cannot be repaired here; what can be is
+    /// the model it loads on start. Files that no longer match their pin are deleted, so
+    /// the next start downloads only those.
+    fn repair_model(&self) {
         if let BackendSource::Runtime {
-            layout, runtime_id, ..
+            layout, sources, ..
         } = &self.config.source
         {
-            let _ = layout.invalidate_runtime(runtime_id);
+            if let Ok(manifest) = sources() {
+                let _ = crate::runtime::install::repair_model(layout, &manifest.model);
+            }
         }
     }
 
@@ -630,12 +640,20 @@ pub fn data_dir() -> PathBuf {
     }
 }
 
+/// The compiled backend's entry point inside its directory (`backend/build_nuitka.py`).
+const BACKEND_EXE: &str = if cfg!(windows) {
+    "fileseek-backend.exe"
+} else {
+    "fileseek-backend"
+};
+
 /// Picks how to run the backend for this build.
 ///
 /// - `FILESEEK_BACKEND` set: that command, in any build.
 /// - Debug build: `uv run` from the checkout, unless `FILESEEK_DEV_USE_RUNTIME=1` asks for
-///   the download path (the same official sources a release build uses).
-/// - Release build: the downloaded runtime with the bundled backend source.
+///   the release path: the backend compiled into `backend/dist/` and the model downloaded
+///   from the same official sources a release build uses.
+/// - Release build: the compiled backend bundled with the app, and the downloaded model.
 pub fn config_for_app(resource_dir: Option<PathBuf>) -> Config {
     let connection_file = crate::preview_protocol::connection_file_path();
     let config_dir = connection_file
@@ -652,17 +670,19 @@ pub fn config_for_app(resource_dir: Option<PathBuf>) -> Config {
     let source = if let Some(command) = BackendCommand::from_override() {
         BackendSource::Command(command)
     } else if use_runtime {
-        let backend_src = if cfg!(debug_assertions) {
-            // Unstaged in dev: run the checkout's source on the downloaded runtime.
-            repo_root().join("backend").join("src")
+        let backend_dir = if cfg!(debug_assertions) {
+            // Unstaged in dev: what `uv run python build_nuitka.py` left in the checkout.
+            repo_root()
+                .join("backend")
+                .join("dist")
+                .join("fileseek-backend.dist")
         } else {
             resource_dir.unwrap_or_default().join("backend")
         };
         BackendSource::Runtime {
             layout: Layout::new(data_dir()),
-            runtime_id: crate::runtime::EXPECTED_RUNTIME_ID.to_owned(),
             sources: Arc::new(crate::runtime::manifest::built_in),
-            backend_src,
+            backend_exe: backend_dir.join(BACKEND_EXE),
         }
     } else {
         BackendSource::Command(BackendCommand::dev(&repo_root()))
@@ -695,8 +715,8 @@ pub fn repair_runtime(readiness: tauri::State<'_, Readiness>) {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
-    use crate::runtime::manifest::{Manifest, ModelFile, ModelSet, PythonArchive};
-    use crate::runtime::test_server::{runtime_archive_with, sha256_hex, Behaviour, TestServer};
+    use crate::runtime::manifest::{Manifest, ModelFile, ModelSet};
+    use crate::runtime::test_server::{sha256_hex, Behaviour, TestServer};
     use std::path::Path;
 
     const FAKE_BACKEND: &str = r#"
@@ -811,9 +831,14 @@ while True:
             }
         }
 
-        /// A runtime whose "interpreter" is a shell script running the fake backend, served
-        /// with a model by `server`. With `gate`, the script exits 1 until that file exists.
+        fn backend_exe(&self) -> PathBuf {
+            self.dir.path().join("fileseek-backend")
+        }
+
+        /// A "compiled backend" that is a shell script running the fake backend, and a
+        /// model served by `server`. With `gate`, the script exits 1 until that file exists.
         fn serve_runtime(&self, server: &TestServer, gate: Option<&Path>) -> Manifest {
+            use std::os::unix::fs::PermissionsExt;
             let check = gate
                 .map(|g| format!("[ -f '{}' ] || exit 1\n", g.display()))
                 .unwrap_or_default();
@@ -822,23 +847,14 @@ while True:
                 self.dir.path().join("fileseek_fake.py").display(),
                 self.connection_file().display()
             );
-            let archive = runtime_archive_with(Some(script.as_bytes()));
+            std::fs::write(self.backend_exe(), script).unwrap();
+            std::fs::set_permissions(self.backend_exe(), std::fs::Permissions::from_mode(0o755))
+                .unwrap();
             let model = vec![1u8; 4096];
-            server.put("python/cpython.tar.gz", archive.clone());
             server.put("models/m/model_quantized.onnx", model.clone());
             Manifest {
-                v: 2,
-                runtime_id: "rt-t".into(),
+                v: 3,
                 target: "test-target".into(),
-                python: PythonArchive {
-                    file: "cpython.tar.gz".into(),
-                    size: archive.len() as u64,
-                    sha256: sha256_hex(&archive),
-                    urls: vec![server.url("python/cpython.tar.gz")],
-                    interpreter: "python/bin/python3".into(),
-                },
-                wheels: vec![],
-                unpacked_size: 1000,
                 model: ModelSet {
                     id: "m".into(),
                     files: vec![ModelFile {
@@ -854,9 +870,8 @@ while True:
         fn runtime_source(&self, _server: &TestServer, manifest: Manifest) -> BackendSource {
             BackendSource::Runtime {
                 layout: Layout::new(self.dir.path().join("data")),
-                runtime_id: "rt-t".into(),
                 sources: Arc::new(move || Ok(manifest.clone())),
-                backend_src: self.dir.path().join("backend-src"),
+                backend_exe: self.backend_exe(),
             }
         }
 
@@ -1008,7 +1023,7 @@ while True:
     }
 
     #[test]
-    fn first_run_downloads_installs_and_starts_the_runtime() {
+    fn first_run_downloads_the_model_and_starts_the_backend() {
         let h = Harness::new();
         let server = TestServer::start();
         let manifest = h.serve_runtime(&server, None);
@@ -1038,7 +1053,7 @@ while True:
     }
 
     #[test]
-    fn an_installed_runtime_starts_without_the_network() {
+    fn an_installed_model_starts_without_the_network() {
         let h = Harness::new();
         let server = TestServer::start();
         let manifest = h.serve_runtime(&server, None);
@@ -1064,7 +1079,7 @@ while True:
         let h = Harness::new();
         let server = TestServer::start();
         let manifest = h.serve_runtime(&server, None);
-        server.set_behaviour("python/cpython.tar.gz", Behaviour::CutAfter(100));
+        server.set_behaviour("models/m/model_quantized.onnx", Behaviour::CutAfter(100));
         let readiness = h.start(h.config(h.runtime_source(&server, manifest)));
 
         let failed = h.wait_for(State::Failed, 1);
@@ -1072,7 +1087,7 @@ while True:
         assert_eq!(failed.error_kind, Some(ErrorKind::Network));
         assert!(failed.log_path.is_some());
 
-        server.set_behaviour("python/cpython.tar.gz", Behaviour::Normal);
+        server.set_behaviour("models/m/model_quantized.onnx", Behaviour::Normal);
         readiness.send(Command::Retry);
         h.wait_for(State::Ready, 1);
         readiness.shutdown(Duration::from_secs(8));
@@ -1084,28 +1099,44 @@ while True:
     }
 
     #[test]
-    fn a_runtime_that_keeps_crashing_asks_for_repair_and_repair_reinstalls_it() {
+    fn a_backend_that_keeps_crashing_asks_for_repair_and_repair_replaces_a_damaged_model() {
         let h = Harness::new();
         let server = TestServer::start();
-        let gate = h.dir.path().join("runtime-is-fixed");
+        let gate = h.dir.path().join("backend-is-fixed");
         let manifest = h.serve_runtime(&server, Some(&gate));
         let readiness = h.start(h.config(h.runtime_source(&server, manifest)));
 
         let repair = h.wait_for(State::RepairNeeded, 1);
         assert!(repair.log_path.is_some());
-        let archive_downloads = || server.ranges().len();
-        let before = archive_downloads();
+        // Same size, other contents: looks installed until its sha256 is checked.
+        let model = h.dir.path().join("data/models/m/model_quantized.onnx");
+        std::fs::write(&model, vec![2u8; 4096]).unwrap();
+        let downloads = || server.ranges().len();
+        let before = downloads();
 
         std::fs::write(&gate, b"").unwrap();
         readiness.send(Command::Repair);
         h.wait_for(State::Ready, 1);
         readiness.shutdown(Duration::from_secs(8));
 
-        assert_eq!(
-            archive_downloads(),
-            before + 1,
-            "repair downloaded the runtime again, not the model"
-        );
+        assert_eq!(downloads(), before + 1, "repair downloaded the damaged file again");
+        assert_eq!(std::fs::read(&model).unwrap(), vec![1u8; 4096]);
+    }
+
+    #[test]
+    fn the_old_python_runtime_is_removed_on_start() {
+        let h = Harness::new();
+        let server = TestServer::start();
+        let manifest = h.serve_runtime(&server, None);
+        let old = h.dir.path().join("data/runtime/rt-old/python/bin/python3");
+        std::fs::create_dir_all(old.parent().unwrap()).unwrap();
+        std::fs::write(&old, b"#!/bin/sh\n").unwrap();
+        let readiness = h.start(h.config(h.runtime_source(&server, manifest)));
+
+        h.wait_for(State::Ready, 1);
+        readiness.shutdown(Duration::from_secs(8));
+
+        assert!(!h.dir.path().join("data/runtime").exists());
     }
 }
 
