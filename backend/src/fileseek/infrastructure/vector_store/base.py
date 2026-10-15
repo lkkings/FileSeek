@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from typing import Protocol, Sequence
 from enum import StrEnum
 
+
 class DistanceMetric(StrEnum):
     L2 = "l2"
     COSINE = "cosine"
     INNER_PRODUCT = "ip"
+
 
 @dataclass(frozen=True, slots=True)
 class VectorSearchResult:
@@ -16,7 +18,6 @@ class VectorSearchResult:
 
 
 class VectorIndexPort(Protocol):
-
     def add_batch(
         self,
         ids: Sequence[str],

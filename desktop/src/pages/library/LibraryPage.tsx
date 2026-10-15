@@ -7,6 +7,7 @@ import {
   FolderDialog,
   DeleteFolderDialog,
   ImportFileDialog,
+  FolderSourceBindingsDialog,
   SystemImportDialog,
   useFileLibrary,
   useSystemImportRequest,
@@ -25,10 +26,27 @@ import { errorText } from "../../services/api/client";
 import type { FileItem } from "../../services/api/search";
 import "./library-page.css";
 
-export function LibraryPage() {
+export function LibraryPage({
+  onNavigateSettings,
+}: {
+  onNavigateSettings?: () => void;
+}) {
   const t = useTranslate();
   const [notice, setNotice] = useState("");
-  const { filters, updateFilter, resetFilters, searchState, submitSearch, changePage, changeSorting } = useFileSearch();
+  const {
+    searchMode,
+    setSearchMode,
+    agentSettingsConfigured,
+    agentSettingsLoading,
+    agentSettingsError,
+    filters,
+    updateFilter,
+    resetFilters,
+    searchState,
+    submitSearch,
+    changePage,
+    changeSorting,
+  } = useFileSearch();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<FolderRecord | null>(null);
@@ -50,7 +68,9 @@ export function LibraryPage() {
     deleteFolder,
   } = useFileLibrary();
 
-  const [activeDialog, setActiveDialog] = useState<"create" | "edit" | "delete" | "import" | null>(null);
+  const [activeDialog, setActiveDialog] = useState<
+    "create" | "edit" | "delete" | "import" | "sources" | null
+  >(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderRecord | undefined>(undefined);
   const batchImport = useBatchImport(selectedFolder?.id ?? "", setNotice);
   const systemImportBatch = useBatchImport("", setNotice);
@@ -75,11 +95,13 @@ export function LibraryPage() {
   }
 
   function handleSearch() {
+    if (searchState.status === "loading") return;
+    setIsSearching(true);
     submitSearch({ folderId: currentFolder ? currentFolder.id : null }).then((res) => {
       if (res.ok) {
         setNotice(`${t("search.found", "找到")} ${res.resultCount} ${t("search.results", "条结果")}`);
+        setIsSearching(true);
       }
-      setIsSearching(true);
     });
   }
 
@@ -127,7 +149,7 @@ export function LibraryPage() {
   };
 
   const handleSortByChange = (sortBy: "relevance" | "created_at" | "size") => {
-    void changeSorting(sortBy, searchState.sortOrder);
+    void changeSorting(sortBy, "desc");
   };
 
   const handleSortOrderChange = (sortOrder: "asc" | "desc") => {
@@ -194,13 +216,37 @@ export function LibraryPage() {
             <>
               <SearchBar
                 query={filters.globalQuery}
+                mode={searchMode}
+                onModeChange={setSearchMode}
                 onQueryChange={(value) => updateFilter("globalQuery", value)}
                 onClear={() => updateFilter("globalQuery", "")}
                 onSubmit={handleSearch}
                 advancedOpen={advancedOpen}
                 onOpenAdvanced={() => setAdvancedOpen((current) => !current)}
+                loading={searchState.status === "loading"}
               />
-              {advancedOpen && <AdvancedFilters filters={filters} onUpdate={updateFilter} onReset={handleResetFilters} />}
+              {searchMode === "advanced" && advancedOpen && (
+                <AdvancedFilters filters={filters} onUpdate={updateFilter} onReset={handleResetFilters} />
+              )}
+              {searchMode === "enhanced" && !agentSettingsLoading && agentSettingsConfigured === false && (
+                <div className="agent-settings-guide" role="alert">
+                  <span>{t("search.agentSettingsGuide", "检索增强需要先配置 Agent 地址、模型和 API Key")}</span>
+                  <button type="button" onClick={onNavigateSettings}>
+                    {t("search.goToSettings", "前往系统设置")}
+                  </button>
+                </div>
+              )}
+              {searchMode === "enhanced" && agentSettingsError && (
+                <div className="agent-settings-guide" role="alert">
+                  <span>{agentSettingsError}</span>
+                </div>
+              )}
+              {searchMode === "advanced" && searchState.status === "loading" && (
+                <div className="search-loading-overlay" role="status" aria-live="polite">
+                  <span className="search-loading-spinner" aria-hidden="true" />
+                  <p>{t("search.loadingPage", "正在搜索，请稍候...")}</p>
+                </div>
+              )}
             </>
           )}
           
@@ -227,6 +273,7 @@ export function LibraryPage() {
               data={searchState.data ?? undefined}
               status={searchState.status}
               error={searchState.error}
+              progressEvents={searchState.progressEvents}
               onBack={handleReturnToLibrary}
             />
           ) : currentFolder ? (
@@ -265,6 +312,11 @@ export function LibraryPage() {
                 setSelectedFolder(folder);
                 setDialogError(null);
                 setActiveDialog("import");
+              }}
+              onManageSources={(folder) => {
+                setSelectedFolder(folder);
+                setDialogError(null);
+                setActiveDialog("sources");
               }}
               onRetry={reloadLibrary}
               onEnterFolder={(folder) => { setCurrentFolder(folder); setShowFolderSearch(false); }}
@@ -312,6 +364,15 @@ export function LibraryPage() {
           storageLocations={preferences.storageDrives}
           importState={batchImport.state}
           onStart={batchImport.start}
+          onClose={() => setActiveDialog(null)}
+        />
+      )}
+
+      {activeDialog === "sources" && selectedFolder && (
+        <FolderSourceBindingsDialog
+          folderId={selectedFolder.id}
+          folderName={selectedFolder.name}
+          storageLocations={preferences.storageDrives}
           onClose={() => setActiveDialog(null)}
         />
       )}

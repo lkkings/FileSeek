@@ -6,7 +6,7 @@ export interface RawResponse {
 }
 
 export type Transport = (
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: string,
 ) => Promise<RawResponse>;
@@ -81,11 +81,15 @@ export class ApiClient {
     return this.send<T>("PUT", path, body);
   }
 
+  patch<T>(path: string, body?: unknown) {
+    return this.send<T>("PATCH", path, body);
+  }
+
   delete<T>(path: string, body?: unknown) {
     return this.send<T>("DELETE", path, body);
   }
 
-  private async send<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<ApiResponse<T>> {
+  private async send<T>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<ApiResponse<T>> {
     const response = await this.transport(method, withApiPrefix(path), body === undefined ? undefined : JSON.stringify(body));
     try {
       return JSON.parse(response.body) as ApiResponse<T>;

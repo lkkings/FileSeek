@@ -2,10 +2,13 @@ from fileseek.features.settings.application.commands import (
     CreateStorageLocationCommand,
     DeleteStorageLocationCommand,
     ReplaceClassifierLabelsCommand,
+    TestAgentSettingsCommand,
     TestStorageConnectionCommand,
+    UpdateAgentSettingsCommand,
     UpdateStorageLocationCommand,
 )
 from fileseek.features.settings.application.dto import (
+    AgentSettingsDTO,
     ClassifierLabelsDTO,
     ConnectionTestResultDTO,
     StorageDirectoryDTO,
@@ -18,6 +21,8 @@ from fileseek.features.settings.application.queries import (
     ListStorageLocationsQuery,
 )
 from fileseek.features.settings.interfaces.http.schemas import (
+    AgentSettingsRequest,
+    AgentSettingsResponse,
     ClassifierLabelsRequest,
     ClassifierLabelsResponse,
     ConnectionTestResponse,
@@ -28,6 +33,34 @@ from fileseek.features.settings.interfaces.http.schemas import (
     StorageLocationResponse,
     StorageLocationUpdateRequest,
 )
+
+
+def agent_settings_to_schema(value: AgentSettingsDTO) -> AgentSettingsResponse:
+    return AgentSettingsResponse(
+        base_url=value.base_url,
+        model=value.model,
+        api_key_configured=value.api_key_configured,
+    )
+
+
+def agent_settings_request_to_command(
+    body: AgentSettingsRequest,
+) -> UpdateAgentSettingsCommand:
+    return UpdateAgentSettingsCommand(
+        base_url=body.base_url,
+        model=body.model,
+        api_key=body.api_key,
+    )
+
+
+def agent_settings_request_to_test_command(
+    body: AgentSettingsRequest,
+) -> TestAgentSettingsCommand:
+    return TestAgentSettingsCommand(
+        base_url=body.base_url,
+        model=body.model,
+        api_key=body.api_key,
+    )
 
 
 def classifier_labels_to_schema(value: ClassifierLabelsDTO) -> ClassifierLabelsResponse:

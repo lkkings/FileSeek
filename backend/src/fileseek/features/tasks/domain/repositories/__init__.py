@@ -26,6 +26,18 @@ class TaskRepository(Protocol):
 
     async def cancel(self, task_id: str) -> Task | None: ...
 
+    async def cancel_incomplete(self) -> tuple[int, tuple[str, ...]]:
+        """批量取消未完成任务，返回取消数量与原处理中任务 id。"""
+        ...
+
+    async def continue_cancelled(self) -> int:
+        """批量恢复已取消任务，返回恢复数量。"""
+        ...
+
+    async def delete_completed(self) -> int:
+        """批量删除已完成任务，返回删除数量。"""
+        ...
+
     async def delete(self, task_id: str) -> bool:
         """删除非处理中的任务，返回任务是否被删除。"""
         ...

@@ -53,11 +53,7 @@ class VideoHandler(FileHandler):
             completed_count=0,
             total_count=1,
         )
-        keyframes = (
-            self._video_sampler.extract_keyframes(
-                path
-            )
-        )
+        keyframes = self._video_sampler.extract_keyframes(path)
         progress.report(
             TaskStage.EXTRACTED,
             completed_count=1,
@@ -79,9 +75,7 @@ class VideoHandler(FileHandler):
         for start in range(0, total, self._batch_size):
             batch = keyframes[start : start + self._batch_size]
             embeddings.extend(
-                self._embedding_service.embed_image(
-                    [keyframe.frame.data for keyframe in batch]
-                )
+                self._embedding_service.embed_image([keyframe.frame.data for keyframe in batch])
             )
             indexed_keyframes.extend(
                 {
@@ -113,13 +107,8 @@ class VideoHandler(FileHandler):
             classifier = self._classifier.get_classifier(
                 ClassifierLabelSnapshot.from_metadata(spec.metadata)
             )
-            scores = classifier.classify_video(
-                embeddings
-            )
-            tags = tuple(
-                score.label
-                for score in scores
-            )
+            scores = classifier.classify_video(embeddings)
+            tags = tuple(score.label for score in scores)
         progress.report(
             TaskStage.CLASSIFY,
             completed_count=1,

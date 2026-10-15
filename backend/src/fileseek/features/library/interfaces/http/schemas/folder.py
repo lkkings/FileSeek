@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FolderCreateRequest(BaseModel):
@@ -33,3 +33,35 @@ class FolderResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+class FolderSourceBindingCreateRequest(BaseModel):
+    """Create a folder source binding request."""
+
+    storage_id: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    recursive: bool = True
+    enabled: bool = True
+
+
+class FolderSourceBindingUpdateRequest(BaseModel):
+    """Update a folder source binding request."""
+
+    storage_id: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    recursive: bool = True
+    enabled: bool = True
+
+
+class FolderSourceBindingResponse(BaseModel):
+    """Folder source binding response."""
+
+    id: str
+    folder_id: str
+    storage_id: str
+    source_path: str
+    recursive: bool
+    enabled: bool
+    watch_status: str
+    last_error: str | None
+    last_error_at: str | None

@@ -14,16 +14,30 @@ import type { TaskStatus } from "../../services/api/tasks";
 
 import "../../features/tasks/components/tasks.css";
 
-const STATUS_FILTERS: Array<TaskStatus | null> = [null, "queued", "processing", "completed", "failed", "cancelled"];
-
 export function TasksPage() {
   const t = useTranslate();
   const [notice, setNotice] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [retryingAll, setRetryingAll] = useState(false);
-  const { data, loading, error, page, setPage, pageSize, reload, retryTask, cancelTask, removeTask } = useTasks(statusFilter);
+  const [terminatingAll, setTerminatingAll] = useState(false);
+  const [continuingAll, setContinuingAll] = useState(false);
+  const [deletingCompleted, setDeletingCompleted] = useState(false);
+  const {
+    data,
+    loading,
+    error,
+    page,
+    setPage,
+    pageSize,
+    reload,
+    retryTask,
+    cancelTask,
+    removeTask,
+    cancelIncompleteTasks,
+    continueCancelledTasks,
+    deleteCompletedTasks,
+  } = useTasks();
   const fileViewer = useFileViewer();
 
   const viewResults = useMemo(() => data?.tasks ?? [], [data]);
@@ -48,6 +62,11 @@ export function TasksPage() {
       chunks: null,
     };
   }, [selectedTask]);
+
+  const statusCount = (status: TaskStatus) => data?.counts[status] ?? 0;
+  const incompleteCount = statusCount("queued") + statusCount("processing");
+  const cancelledCount = statusCount("cancelled");
+  const completedCount = statusCount("completed");
 
   const handleRetry = async (taskId: string) => {
     const response = await retryTask.mutateAsync(taskId);
@@ -102,12 +121,54 @@ export function TasksPage() {
     }
   };
 
-  const handleFilterChange = (status: TaskStatus | null) => {
-    setStatusFilter(status);
-    setPage(1);
-    setSelectedTaskId(null);
-    setSidebarOpen(false);
+  const handleCancelIncomplete = async () => {
+    if (incompleteCount === 0) return;
+    setTerminatingAll(true);
+    try {
+      const response = await cancelIncompleteTasks.mutateAsync();
+      if (response.status === "success") {
+        setNotice(`${t("tasks.terminateAllSuccess", "已终止")} ${response.data?.count ?? 0} ${t("tasks.taskUnit", "个任务")}`);
+        void reload();
+      } else {
+        setNotice(errorText(response.error) || t("tasks.terminateAllFailed", "终止任务失败"));
+      }
+    } finally {
+      setTerminatingAll(false);
+    }
   };
+
+  const handleContinueCancelled = async () => {
+    if (cancelledCount === 0) return;
+    setContinuingAll(true);
+    try {
+      const response = await continueCancelledTasks.mutateAsync();
+      if (response.status === "success") {
+        setNotice(`${t("tasks.continueAllSuccess", "已继续")} ${response.data?.count ?? 0} ${t("tasks.taskUnit", "个任务")}`);
+        void reload();
+      } else {
+        setNotice(errorText(response.error) || t("tasks.continueAllFailed", "继续任务失败"));
+      }
+    } finally {
+      setContinuingAll(false);
+    }
+  };
+
+  const handleDeleteCompleted = async () => {
+    if (completedCount === 0) return;
+    setDeletingCompleted(true);
+    try {
+      const response = await deleteCompletedTasks.mutateAsync();
+      if (response.status === "success") {
+        setNotice(`${t("tasks.deleteCompletedSuccess", "已删除")} ${response.data?.count ?? 0} ${t("tasks.completedTaskUnit", "个已完成任务")}`);
+        void reload();
+      } else {
+        setNotice(errorText(response.error) || t("tasks.deleteCompletedFailed", "删除已完成任务失败"));
+      }
+    } finally {
+      setDeletingCompleted(false);
+    }
+  };
+
 
   const handleOpenDetails = (taskId: string) => {
     setSelectedTaskId(taskId);
@@ -127,22 +188,7 @@ export function TasksPage() {
     });
   };
 
-  const filterLabel = (status: TaskStatus | null) => {
-    if (status === null) return t("tasks.all", "全部");
-    const labels: Record<TaskStatus, string> = {
-      queued: t("tasks.statusQueued", "等待中"),
-      processing: t("tasks.statusProcessing", "处理中"),
-      completed: t("tasks.statusCompleted", "已完成"),
-      failed: t("tasks.statusFailed", "失败"),
-      cancelled: t("tasks.statusCancelled", "已终止"),
-    };
-    return labels[status];
-  };
-
-  const filterCount = (status: TaskStatus | null) => {
-    if (!data) return 0;
-    return status === null ? data.total : data.counts[status] ?? 0;
-  };
+  const totalCount = data?.total ?? 0;
 
   return (
     <>
@@ -161,44 +207,62 @@ export function TasksPage() {
             <dl className="task-summary" aria-label={t("tasks.summary", "任务状态摘要")}>
               <div className="task-summary-item">
                 <dt>{t("tasks.total", "总数")}</dt>
-                <dd>{filterCount(null)}</dd>
+                <dd>{totalCount}</dd>
               </div>
               <div className="task-summary-item is-processing">
                 <dt>{t("tasks.statusProcessing", "处理中")}</dt>
-                <dd>{filterCount("processing")}</dd>
+                <dd>{statusCount("processing")}</dd>
               </div>
               <div className="task-summary-item is-failed">
                 <dt>{t("tasks.statusFailed", "失败")}</dt>
-                <dd>{filterCount("failed")}</dd>
+                <dd>{statusCount("failed")}</dd>
               </div>
             </dl>
           </header>
 
           <div className="task-toolbar">
-            <div className="task-filters" role="group" aria-label={t("tasks.statusFilter", "任务状态筛选")}>
-              {STATUS_FILTERS.map((status) => (
-                <button
-                  key={status ?? "all"}
-                  type="button"
-                  className={`task-filter ${statusFilter === status ? "is-active" : ""}`}
-                  aria-pressed={statusFilter === status}
-                  onClick={() => handleFilterChange(status)}
-                >
-                  <span>{filterLabel(status)}</span>
-                  <span className="task-filter-count">{filterCount(status)}</span>
-                </button>
-              ))}
+            <div className="task-bulk-actions" role="group" aria-label={t("tasks.bulkActions", "任务批量操作")}>
+              <button
+                type="button"
+                className="task-bulk-button is-retry"
+                onClick={handleRetryAll}
+                disabled={retryingAll || failedTasks.length === 0}
+              >
+                <Icon name="refresh" size={16} />
+                <span>{t("tasks.retryAll", "一键重试")}</span>
+                <span className="task-bulk-count">{failedTasks.length}</span>
+              </button>
+              <button
+                type="button"
+                className="task-bulk-button is-terminate"
+                onClick={handleCancelIncomplete}
+                disabled={terminatingAll || incompleteCount === 0}
+              >
+                <Icon name="close" size={16} />
+                <span>{t("tasks.terminateAll", "一键终止")}</span>
+                <span className="task-bulk-count">{incompleteCount}</span>
+              </button>
+              <button
+                type="button"
+                className="task-bulk-button is-continue"
+                onClick={handleContinueCancelled}
+                disabled={continuingAll || cancelledCount === 0}
+              >
+                <Icon name="refresh" size={16} />
+                <span>{t("tasks.continueAll", "一键继续")}</span>
+                <span className="task-bulk-count">{cancelledCount}</span>
+              </button>
+              <button
+                type="button"
+                className="task-bulk-button is-delete"
+                onClick={handleDeleteCompleted}
+                disabled={deletingCompleted || completedCount === 0}
+              >
+                <Icon name="trash" size={16} />
+                <span>{t("tasks.deleteCompleted", "删除已完成")}</span>
+                <span className="task-bulk-count">{completedCount}</span>
+              </button>
             </div>
-            <button
-              type="button"
-              className="task-retry-all"
-              onClick={handleRetryAll}
-              disabled={retryingAll || failedTasks.length === 0}
-            >
-              <Icon name="refresh" size={16} />
-              <span>{t("tasks.retryAll", "一键重试")}</span>
-              <span className="task-retry-count">{failedTasks.length}</span>
-            </button>
           </div>
 
           <div className={`results-content-split ${sidebarOpen && selectedFile ? "sidebar-expanded" : "sidebar-collapsed"}`}>
@@ -227,7 +291,7 @@ export function TasksPage() {
                         <Icon name="pulse" size={26} />
                       </span>
                       <h2>{t("tasks.emptyTitle", "没有符合条件的任务")}</h2>
-                      <p>{t("tasks.emptyHint", "切换状态筛选，或返回文件库创建新的处理任务。")}</p>
+                      <p>{t("tasks.emptyHint", "返回文件库创建新的处理任务。")}</p>
                     </div>
                   ) : (
                     viewResults.map((task) => (

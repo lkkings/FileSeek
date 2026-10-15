@@ -14,10 +14,11 @@
 //!   first, instead of leaving one more backend running per rebuild.
 
 use std::fmt;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
@@ -150,6 +151,7 @@ pub struct Sidecar {
     token: String,
     started_at: Instant,
     files: SidecarFiles,
+    log_forward_cancel: Option<Arc<AtomicBool>>,
 }
 
 impl Sidecar {
@@ -242,22 +244,30 @@ impl Sidecar {
             std::thread::sleep(POLL_INTERVAL);
         }
 
+        let log_forward_cancel = start_log_forwarder(&files.log);
+
         Ok(Sidecar {
             child,
             port,
             token,
             started_at,
             files: files.clone(),
+            log_forward_cancel,
         })
     }
 
     /// The exit code, once the backend has exited on its own.
     pub fn exited(&mut self) -> Option<Option<i32>> {
-        self.child
+        let status = self
+            .child
             .try_wait()
             .ok()
             .flatten()
-            .map(|status| status.code())
+            .map(|status| status.code());
+        if status.is_some() {
+            self.stop_log_forwarder();
+        }
+        status
     }
 
     pub fn log_tail(&self) -> String {
@@ -267,6 +277,7 @@ impl Sidecar {
     /// A graceful signal to the backend first, so it drains its task queue and saves its
     /// indexes, then the whole group is killed if it does not exit in time.
     pub fn stop(&mut self) {
+        self.stop_log_forwarder();
         terminate_gracefully(&mut self.child, self.port, &self.token);
         let deadline = Instant::now() + STOP_GRACE_PERIOD;
         while Instant::now() < deadline {
@@ -278,6 +289,12 @@ impl Sidecar {
         // Even after a clean exit: model workers in the group may still be winding down.
         kill_group(&mut self.child);
         let _ = std::fs::remove_file(&self.files.pidfile);
+    }
+
+    fn stop_log_forwarder(&self) {
+        if let Some(cancel) = &self.log_forward_cancel {
+            cancel.store(true, Ordering::SeqCst);
+        }
     }
 }
 
@@ -311,6 +328,55 @@ pub fn read_log_tail(path: &Path) -> String {
     let mut buffer = Vec::new();
     let _ = file.read_to_end(&mut buffer);
     String::from_utf8_lossy(&buffer).into_owned()
+}
+
+fn start_log_forwarder(path: &Path) -> Option<Arc<AtomicBool>> {
+    if !cfg!(debug_assertions)
+        || std::env::var("FILESEEK_BACKEND_LOG_TO_TERMINAL").as_deref() == Ok("0")
+    {
+        return None;
+    }
+
+    let path = path.to_path_buf();
+    let cancel = Arc::new(AtomicBool::new(false));
+    let thread_cancel = cancel.clone();
+    let spawned = std::thread::Builder::new()
+        .name("fileseek-backend-log".into())
+        .spawn(move || {
+            println!("FileSeek backend log: {}", path.to_string_lossy());
+            let Ok(mut file) = std::fs::File::open(&path) else {
+                return;
+            };
+            let mut position = 0u64;
+            let mut buffer = Vec::new();
+            loop {
+                if thread_cancel.load(Ordering::SeqCst) {
+                    break;
+                }
+                let len = file.metadata().map(|meta| meta.len()).unwrap_or(position);
+                if len < position {
+                    break;
+                }
+                if len > position {
+                    let read_len = (len - position) as usize;
+                    buffer.resize(read_len, 0);
+                    if file
+                        .seek(SeekFrom::Start(position))
+                        .and_then(|_| file.read_exact(&mut buffer))
+                        .is_err()
+                    {
+                        break;
+                    }
+                    let _ = std::io::stdout().write_all(&buffer);
+                    let _ = std::io::stdout().flush();
+                    position = len;
+                    continue;
+                }
+                std::thread::sleep(POLL_INTERVAL);
+            }
+        });
+
+    spawned.is_ok().then_some(cancel)
 }
 
 fn file_mtime(path: &Path) -> Option<std::time::SystemTime> {

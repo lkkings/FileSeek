@@ -7,6 +7,7 @@ mod lifecycle;
 mod preview_protocol;
 mod readiness;
 mod runtime;
+mod search_progress_stream;
 mod sidecar;
 mod startup_args;
 mod system_import;
@@ -56,6 +57,7 @@ pub fn run() {
         )
         .manage(transport_state)
         .manage(pending_import)
+        .manage(search_progress_stream::SearchProgressStreams::default())
         .invoke_handler(tauri::generate_handler![
             connection::api_request,
             readiness::get_readiness,
@@ -73,6 +75,8 @@ pub fn run() {
             update::cancel_update_download,
             update::install_update,
             import_stream::open_import_event_stream,
+            search_progress_stream::open_search_progress_stream,
+            search_progress_stream::cancel_search_progress_stream,
             system_integration::get_system_integration_status,
             system_integration::set_silent_startup,
             system_integration::set_file_manager_integration,

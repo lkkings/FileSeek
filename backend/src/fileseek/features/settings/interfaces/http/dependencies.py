@@ -3,11 +3,14 @@ from fastapi import Request
 from fileseek.features.settings.application.use_cases import (
     CreateStorageLocationUseCase,
     DeleteStorageLocationUseCase,
+    GetAgentSettingsUseCase,
     GetClassifierLabelsUseCase,
-    ListStorageLocationsUseCase,
     ListStorageDirectoryUseCase,
+    ListStorageLocationsUseCase,
     ReplaceClassifierLabelsUseCase,
+    TestAgentSettingsUseCase,
     TestStorageConnectionUseCase,
+    UpdateAgentSettingsUseCase,
     UpdateStorageLocationUseCase,
 )
 from fileseek.shared.application.dependencies import resolve_dependency
@@ -17,6 +20,24 @@ def get_classifier_labels_use_case(
     request: Request,
 ) -> GetClassifierLabelsUseCase:
     return resolve_dependency(request, "get_classifier_labels_use_case")
+
+
+def get_agent_settings_use_case(
+    request: Request,
+) -> GetAgentSettingsUseCase:
+    return resolve_dependency(request, "get_agent_settings_use_case")
+
+
+def get_update_agent_settings_use_case(
+    request: Request,
+) -> UpdateAgentSettingsUseCase:
+    return resolve_dependency(request, "update_agent_settings_use_case")
+
+
+def get_test_agent_settings_use_case(
+    request: Request,
+) -> TestAgentSettingsUseCase:
+    return resolve_dependency(request, "test_agent_settings_use_case")
 
 
 def get_replace_classifier_labels_use_case(

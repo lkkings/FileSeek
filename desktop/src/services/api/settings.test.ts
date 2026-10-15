@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiClient, type RawResponse } from "./client";
 import {
+  getAgentSettings,
   createStorageLocation,
   deleteStorageLocation,
   listClassifierLabels,
@@ -9,6 +10,8 @@ import {
   listStorageDirectory,
   replaceClassifierLabels,
   testStorageLocation,
+  testAgentSettings,
+  updateAgentSettings,
 } from "./settings";
 
 function createClient() {
@@ -20,6 +23,53 @@ function createClient() {
 }
 
 describe("settings API service", () => {
+  it("requests and updates agent settings", async () => {
+    const { client, transport } = createClient();
+    await getAgentSettings(client);
+    await updateAgentSettings(
+      {
+        base_url: "https://api.example.com/v1",
+        model: "retrieval-expert",
+      },
+      client,
+    );
+    await testAgentSettings(
+      {
+        base_url: "https://api.example.com/v1",
+        model: "retrieval-expert",
+        api_key: "secret-key",
+      },
+      client,
+    );
+
+    expect(transport).toHaveBeenNthCalledWith(
+      1,
+      "GET",
+      "/api/v1/settings/agent",
+      undefined,
+    );
+    expect(transport).toHaveBeenNthCalledWith(
+      2,
+      "PUT",
+      "/api/v1/settings/agent",
+      JSON.stringify({
+        base_url: "https://api.example.com/v1",
+        model: "retrieval-expert",
+        api_key: null,
+      }),
+    );
+    expect(transport).toHaveBeenNthCalledWith(
+      3,
+      "POST",
+      "/api/v1/settings/agent/test",
+      JSON.stringify({
+        base_url: "https://api.example.com/v1",
+        model: "retrieval-expert",
+        api_key: "secret-key",
+      }),
+    );
+  });
+
   it("requests labels and locations without request bodies", async () => {
     const { client, transport } = createClient();
     await listClassifierLabels(client);

@@ -44,12 +44,13 @@
 }
 
 .search-results-screen .advanced-button {
-  height: 38px;
-  min-width: 120px;
-  padding: 0 12px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  box-shadow: 0 8px 18px rgba(14, 103, 248, .24);
+  height: 30px;
+  min-height: 30px;
+  min-width: 104px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(14, 103, 248, .22);
 }
 
 .results-workspace {
@@ -247,6 +248,131 @@
 
 .results-error {
   color: #ff4d4f;
+}
+
+.search-progress-timeline {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(34, 104, 199, .62);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(9, 33, 76, .94), rgba(6, 22, 54, .9));
+}
+
+.search-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-progress-header h2 {
+  margin: 0;
+  color: #eaf2ff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-progress-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(96, 164, 247, .32);
+  border-top-color: #62aaff;
+  border-radius: 50%;
+  animation: search-progress-spin .9s linear infinite;
+}
+
+.search-progress-timeline ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-progress-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.search-progress-marker {
+  width: 10px;
+  height: 10px;
+  margin: 6px auto 0;
+  border: 2px solid rgba(93, 160, 246, .8);
+  border-radius: 50%;
+  background: #0b2c61;
+}
+
+.search-progress-item.is-reasoning .search-progress-marker {
+  border-color: #8f7dff;
+}
+
+.search-progress-item.is-tool_call .search-progress-marker,
+.search-progress-item.is-tool_result .search-progress-marker {
+  border-color: #38bdf8;
+}
+
+.search-progress-item.is-terminal.is-success .search-progress-marker {
+  border-color: #34d399;
+  background: rgba(52, 211, 153, .35);
+}
+
+.search-progress-item.is-error .search-progress-marker,
+.search-progress-item.is-terminal.is-error .search-progress-marker {
+  border-color: #ff7a7a;
+  background: rgba(255, 122, 122, .25);
+}
+
+.search-progress-title {
+  margin: 0;
+  color: #dce9ff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.search-progress-detail {
+  margin: 3px 0 0;
+  color: #a7bce4;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.search-progress-disclosure {
+  margin-bottom: 14px;
+  border: 1px solid rgba(31, 98, 193, .55);
+  border-radius: 13px;
+  background: rgba(8, 27, 62, .76);
+}
+
+.search-progress-disclosure summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #c4d5f2;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.search-progress-disclosure[open] summary {
+  border-bottom: 1px solid rgba(31, 98, 193, .5);
+}
+
+.search-progress-disclosure .search-progress-timeline {
+  margin: 10px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+}
+
+@keyframes search-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .result-row {

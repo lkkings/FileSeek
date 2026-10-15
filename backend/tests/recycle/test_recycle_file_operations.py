@@ -220,3 +220,51 @@ async def test_recycle_resolves_and_restores_mounted_nas_relative_path(
     ).execute(RestoreItemsCommand(item_ids=[item.id]))
 
     assert source.read_text(encoding="utf-8") == "nas recycle content"
+
+
+@pytest.mark.asyncio
+async def test_recycle_infers_storage_for_legacy_local_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "legacy.txt"
+    source.write_text("legacy recycle content", encoding="utf-8")
+    file = _file(source)
+    file.storage_id = None
+    monkeypatch.setattr(
+        "fileseek.features.recycle.application.use_cases.add_files2recycle.get_settings",
+        lambda: _settings(tmp_path / "library"),
+    )
+    resolver = StorageSourceResolver(
+        FakeStorageLocationRepository(
+            StorageLocation(
+                id="local",
+                type="local",
+                name="本地存储",
+                protocol="file",
+                endpoint="file://localhost",
+                root_path=str(tmp_path),
+            )
+        )
+    )
+    recycle_repository = FakeRecycleRepository()
+
+    await AddFiles2RecycleUseCase(
+        FakeFileRepository(file),
+        recycle_repository,
+        TTLLRUCache(),
+        resolver,
+    ).execute(AddFiles2RecycleCommand(file_ids=["file-1"]))
+
+    item = next(iter(recycle_repository.items.values()))
+    assert item.storage_id == "local"
+    assert not source.exists()
+
+    await RestoreRecycleUseCase(
+        recycle_repository,
+        FakeFileRepository(file),
+        TTLLRUCache(),
+        resolver,
+    ).execute(RestoreItemsCommand(item_ids=[item.id]))
+
+    assert source.read_text(encoding="utf-8") == "legacy recycle content"

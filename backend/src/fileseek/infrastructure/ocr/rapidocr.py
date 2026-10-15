@@ -48,9 +48,7 @@ class RapidOCROCR(OCRPort):
         OCR 识别异常按照无文本处理，不向上层传播模型异常。
         """
         if not image_path.is_file():
-            raise ImageProcessError(
-                f"图片文件不存在: {image_path}"
-            )
+            raise ImageProcessError(f"图片文件不存在: {image_path}")
 
         ocr = self._ensure_loaded()
 
@@ -67,8 +65,4 @@ class RapidOCROCR(OCRPort):
         if not result:
             return ""
 
-        return "\n".join(
-            str(item[1])
-            for item in result
-            if len(item) > 1 and item[1]
-        )
+        return "\n".join(str(item[1]) for item in result if len(item) > 1 and item[1])

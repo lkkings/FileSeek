@@ -27,10 +27,7 @@ async def _to_entity(model: FileModel) -> File:
         storage_id=model.storage_id,
         access_state=model.access_state or "unknown",
         last_checked_at=model.last_checked_at,
-        tags=[
-            tag.name
-            for tag in model.tags
-        ],
+        tags=[tag.name for tag in model.tags],
         chunks=[
             FileChunk(
                 id=chunk.id,
@@ -42,7 +39,6 @@ async def _to_entity(model: FileModel) -> File:
     )
 
 
-
 async def _to_entities(models: list[FileModel]) -> list[File]:
     """批量将数据库模型转换为 Domain Entity。"""
     return [await _to_entity(model) for model in models]
@@ -52,23 +48,16 @@ class FileRepositoryImpl(FileRepository):
     async def list_tags(self) -> list[str]:
         return await TagModel.all().order_by("name").values_list("name", flat=True)
 
-
     async def get_by_id(self, file_id: str) -> File | None:
         return await self._get_by_id(file_id)
 
     async def _get_by_id(self, file_id: str) -> File | None:
-        model = (
-            await FileModel
-            .filter(id=file_id)
-            .prefetch_related("tags","filechunks")
-            .first()
-        )
+        model = await FileModel.filter(id=file_id).prefetch_related("tags", "filechunks").first()
 
         return await _to_entity(model) if model else None
 
     async def save(self, file: File) -> None:
         await self._save(file)
-
 
     async def save_batch(self, files: Sequence[File]) -> None:
         if not files:
@@ -77,7 +66,6 @@ class FileRepositoryImpl(FileRepository):
         async with in_transaction():
             for file in files:
                 await self._save(file)
-
 
     async def _save(self, file: File) -> None:
         model, _ = await FileModel.update_or_create(
@@ -99,7 +87,6 @@ class FileRepositoryImpl(FileRepository):
         # ManyToManyField 必须单独维护。
         # file.tags 可以是 tag name 列表。
         if file.tags is not None:
-
             tag_models = []
 
             for tag_name in set(file.tags):
@@ -173,10 +160,7 @@ class FileRepositoryImpl(FileRepository):
             categories=categories,
         )
         rows = await (
-            query
-            .group_by("category")
-            .annotate(count=Count("id"))
-            .values("category", "count")
+            query.group_by("category").annotate(count=Count("id")).values("category", "count")
         )
 
         counts = {category.value: 0 for category in FileCategory}
@@ -185,7 +169,6 @@ class FileRepositoryImpl(FileRepository):
             counts[row["category"]] = row["count"]
 
         return counts
-
 
     async def count(
         self,
@@ -223,15 +206,13 @@ class FileRepositoryImpl(FileRepository):
         folder_id: str | None = None,
         categories: list[str] | None = None,
         page_number: int = None,
-        page_size: int  = None,
+        page_size: int = None,
         sort_by: str | None = None,
         sort_order: str | None = None,
     ) -> list[File]:
-
         # =========================
         # 分页参数
         # =========================
-
 
         # =========================
         # 基础查询
@@ -272,18 +253,12 @@ class FileRepositoryImpl(FileRepository):
             "created_at",
         )
 
-        sort_direction = (
-            sort_order or "desc"
-        ).lower()
+        sort_direction = (sort_order or "desc").lower()
 
         if sort_direction not in {"asc", "desc"}:
             sort_direction = "desc"
 
-        order_by = (
-            sort_field
-            if sort_direction == "asc"
-            else f"-{sort_field}"
-        )
+        order_by = sort_field if sort_direction == "asc" else f"-{sort_field}"
 
         # =========================
         # 分页
@@ -293,8 +268,7 @@ class FileRepositoryImpl(FileRepository):
             page_size = max(1, min(page_size, 100))
             offset = (page_number - 1) * page_size
             models = (
-                await query
-                .prefetch_related("tags","filechunks")
+                await query.prefetch_related("tags", "filechunks")
                 .order_by(
                     order_by,
                     "-id",
@@ -303,13 +277,9 @@ class FileRepositoryImpl(FileRepository):
                 .limit(page_size)
             )
         else:
-            models = (
-                await query
-                .prefetch_related("tags","filechunks")
-                .order_by(
-                    order_by,
-                    "-id",
-                )
+            models = await query.prefetch_related("tags", "filechunks").order_by(
+                order_by,
+                "-id",
             )
 
         return await _to_entities(models)
@@ -353,9 +323,7 @@ class FileRepositoryImpl(FileRepository):
 
         if categories:
             categories = [
-                category.strip()
-                for category in categories
-                if category and category.strip()
+                category.strip() for category in categories if category and category.strip()
             ]
 
             if categories:

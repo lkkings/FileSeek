@@ -15,5 +15,5 @@ __all__ = [
     "get_vector_store",
     "VectorSearchResult",
     "VectorIndexPort",
-    "DistanceMetric"
+    "DistanceMetric",
 ]

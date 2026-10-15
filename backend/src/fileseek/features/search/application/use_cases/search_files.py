@@ -61,7 +61,7 @@ class SearchFilesUseCase:
         embedder: EmbeddingPort,
         vector_store: VectorIndexPort,
         file_repo: FileRepository,
-        cache: TTLLRUCache,
+        cache: TTLLRUCache[str, object],
     ) -> None:
         self.embedder = embedder
         self.vector_store = vector_store
@@ -69,30 +69,19 @@ class SearchFilesUseCase:
         # Level 2: 全量无分页检索结果缓存 (TTL 60秒, 最大 128)
         self.cache = cache
 
-
-    async def execute(
-        self, request: SearchFilesQuery
-    ) -> SearchResultsDTO:
+    async def execute(self, request: SearchFilesQuery) -> SearchResultsDTO:
         query_key = _query_cache_key(request)
         cached = await self.cache.get(QUERY_CACHE_KEY, query_key)
         if cached is not None:
-            return cast("list[FileDTO]", cached)
+            return cast("SearchResultsDTO", cached)
         if not (request.query or "").strip() or request.sort_by != FileSortBy.RELEVANCE:
             # 如果不是通过相关性进行匹配
             items = await self._search_by_db(request)
         else:
             items = await self._search_by_vectors(request)
         categories = [category.value for category in request.categories or []]
-        min_size = (
-            request.min_size_m * BYTES_PER_MB
-            if request.min_size_m is not None
-            else None
-        )
-        max_size = (
-            request.max_size_m * BYTES_PER_MB
-            if request.max_size_m is not None
-            else None
-        )
+        min_size = request.min_size_m * BYTES_PER_MB if request.min_size_m is not None else None
+        max_size = request.max_size_m * BYTES_PER_MB if request.max_size_m is not None else None
         counter = await self.file_repo.count_by_category(
             name_query=request.name_query,
             tag=request.tag,
@@ -101,20 +90,23 @@ class SearchFilesUseCase:
             start_date=request.start_date,
             end_date=request.end_date,
             folder_id=request.folder_id,
-            categories=categories,
+            categories=None,
         )
-        total = sum(counter.values())
+        if request.categories is None:
+            total = sum(counter.values())
+        else:
+            total = sum(counter.get(category, 0) for category in categories)
         result = SearchResultsDTO(
             items=items,
             counter=counter,
             total=total,
             page_number=request.page_number,
-            page_size=request.page_size
+            page_size=request.page_size,
         )
         await self.cache.set(QUERY_CACHE_KEY, query_key, result)
         return result
 
-    async def _search_by_db(self,request:SearchFilesQuery) -> list[FileDTO]:
+    async def _search_by_db(self, request: SearchFilesQuery) -> list[FileDTO]:
         categories = [category.value for category in request.categories or []]
         files = await self.file_repo.query(
             name_query=request.name_query,
@@ -128,13 +120,14 @@ class SearchFilesUseCase:
             page_number=request.page_number,
             page_size=request.page_size,
             sort_order=request.sort_order.value,
-            sort_by=request.sort_by.value
+            sort_by=request.sort_by.value,
         )
         return [file_to_dto(file) for file in files]
 
-    async def _search_by_vectors(self,request: SearchFilesQuery) ->  list[FileDTO]:
-        query_str = request.query.strip()
-        query_vector = await self.cache.get(EMBEDDING_CACHE_KEY, query_str)
+    async def _search_by_vectors(self, request: SearchFilesQuery) -> list[FileDTO]:
+        query_str = (request.query or "").strip()
+        cached_vector = await self.cache.get(EMBEDDING_CACHE_KEY, query_str)
+        query_vector = cast("list[float] | None", cached_vector)
         if query_vector is None:
             # 兼容不接收 query 命名参数的 FakeEmbedder
             batch = await asyncio.to_thread(
@@ -142,7 +135,7 @@ class SearchFilesUseCase:
                 query_str,
                 query=True,
             )
-            query_vector = cast("list[list[float]]", batch)[0]
+            query_vector = batch[0]
             await self.cache.set(EMBEDDING_CACHE_KEY, query_str, query_vector)
         categories = [category.value for category in request.categories or []]
         files = await self.file_repo.query(
@@ -153,14 +146,10 @@ class SearchFilesUseCase:
             start_date=request.start_date,
             end_date=request.end_date,
             folder_id=request.folder_id,
-            categories=categories
+            categories=categories,
         )
-        chunk_ids = [
-            chunk.id
-            for file in files
-            for chunk in file.chunks
-        ]
-        hits =  await asyncio.to_thread(self.vector_store.search,query_vector,ids=chunk_ids)
+        chunk_ids = [chunk.id for file in files for chunk in file.chunks]
+        hits = await asyncio.to_thread(self.vector_store.search, query_vector, ids=chunk_ids)
         chunk_hit_map = {hit.id: hit.score for hit in hits}
         for file in files:
             for chunk in file.chunks:

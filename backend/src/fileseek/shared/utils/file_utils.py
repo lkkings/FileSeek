@@ -19,9 +19,9 @@ DEFAULT_HEADER_SIZE: Final = 64 * 1024
 
 PDF_MAGIC: Final = b"%PDF-"
 
-JPEG_MAGIC: Final = b"\xFF\xD8\xFF"
+JPEG_MAGIC: Final = b"\xff\xd8\xff"
 
-PNG_MAGIC: Final = b"\x89PNG\r\n\x1A\n"
+PNG_MAGIC: Final = b"\x89PNG\r\n\x1a\n"
 
 GIF_MAGIC: Final[tuple[bytes, ...]] = (
     b"GIF87a",
@@ -45,17 +45,13 @@ AVI_MAGIC: Final = b"AVI "
 
 FLV_MAGIC: Final = b"FLV"
 
-MKV_MAGIC: Final = b"\x1A\x45\xDF\xA3"
+MKV_MAGIC: Final = b"\x1a\x45\xdf\xa3"
 
 RTF_MAGIC: Final = b"{\\rtf"
 
-OLE_MAGIC: Final = bytes.fromhex(
-    "D0CF11E0A1B11AE1"
-)
+OLE_MAGIC: Final = bytes.fromhex("D0CF11E0A1B11AE1")
 
-ASF_MAGIC: Final = bytes.fromhex(
-    "3026B2758E66CF11A6D900AA0062CE6C"
-)
+ASF_MAGIC: Final = bytes.fromhex("3026B2758E66CF11A6D900AA0062CE6C")
 
 ZIP_MAGIC: Final[tuple[bytes, ...]] = (
     b"PK\x03\x04",
@@ -269,9 +265,7 @@ def _validate_header_size(
         raise TypeError("header_size must be int")
 
     if header_size <= 0:
-        raise ValueError(
-            "header_size must be greater than 0"
-        )
+        raise ValueError("header_size must be greater than 0")
 
 
 # ============================================================
@@ -346,7 +340,6 @@ def _detect_non_zip_from_bytes(
 def _detect_image(
     data: bytes,
 ) -> FileType | None:
-
     # JPEG
     if data.startswith(JPEG_MAGIC):
         return FileType.JPG
@@ -394,11 +387,7 @@ def _detect_image(
 def _is_webp(
     data: bytes,
 ) -> bool:
-    return (
-        len(data) >= 12
-        and data[:4] == RIFF_MAGIC
-        and data[8:12] == WEBP_MAGIC
-    )
+    return len(data) >= 12 and data[:4] == RIFF_MAGIC and data[8:12] == WEBP_MAGIC
 
 
 def _looks_like_svg(
@@ -406,7 +395,7 @@ def _looks_like_svg(
 ) -> bool:
     """通过 XML/SVG 文本特征检测 SVG。"""
 
-    sample = data[:16 * 1024]
+    sample = data[: 16 * 1024]
 
     try:
         text = sample.decode(
@@ -446,7 +435,6 @@ def _looks_like_svg(
 def _detect_document(
     data: bytes,
 ) -> FileType | None:
-
     # PDF
     if data.startswith(PDF_MAGIC):
         return FileType.PDF
@@ -544,10 +532,7 @@ def _looks_like_zip(
     不会把 ZIP 当成 FileType 返回。
     """
 
-    return any(
-        data.startswith(magic)
-        for magic in ZIP_MAGIC
-    )
+    return any(data.startswith(magic) for magic in ZIP_MAGIC)
 
 
 def _detect_zip_document_from_bytes(
@@ -559,12 +544,8 @@ def _detect_zip_document_from_bytes(
     """
 
     try:
-        with zipfile.ZipFile(
-            io.BytesIO(data)
-        ) as archive:
-            return _detect_zip_document(
-                archive
-            )
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            return _detect_zip_document(archive)
     except (
         zipfile.BadZipFile,
         OSError,
@@ -585,9 +566,7 @@ def _detect_zip_document_from_file(
         file.seek(0)
 
         with zipfile.ZipFile(file) as archive:
-            return _detect_zip_document(
-                archive
-            )
+            return _detect_zip_document(archive)
 
     except (
         zipfile.BadZipFile,
@@ -637,9 +616,7 @@ def _detect_odf(
         return None
 
     try:
-        mimetype = archive.read(
-            "mimetype"
-        )
+        mimetype = archive.read("mimetype")
     except (
         KeyError,
         RuntimeError,
@@ -665,22 +642,11 @@ def _detect_ooxml(
     if OOXML_REQUIRED not in names:
         return None
 
-    has_word = any(
-        name.startswith(OOXML_WORD_PREFIX)
-        for name in names
-    )
+    has_word = any(name.startswith(OOXML_WORD_PREFIX) for name in names)
 
-    has_excel = any(
-        name.startswith(OOXML_EXCEL_PREFIX)
-        for name in names
-    )
+    has_excel = any(name.startswith(OOXML_EXCEL_PREFIX) for name in names)
 
-    has_powerpoint = any(
-        name.startswith(
-            OOXML_POWERPOINT_PREFIX
-        )
-        for name in names
-    )
+    has_powerpoint = any(name.startswith(OOXML_POWERPOINT_PREFIX) for name in names)
 
     # 必须有明确 OOXML 主目录。
     if has_word:
@@ -703,7 +669,6 @@ def _detect_ooxml(
 def _detect_video(
     data: bytes,
 ) -> FileType | None:
-
     # ISO Base Media
     iso_type = _detect_iso_media(data)
 
@@ -723,11 +688,7 @@ def _detect_video(
         return FileType.MKV
 
     # AVI
-    if (
-        len(data) >= 12
-        and data[:4] == RIFF_MAGIC
-        and data[8:12] == AVI_MAGIC
-    ):
+    if len(data) >= 12 and data[:4] == RIFF_MAGIC and data[8:12] == AVI_MAGIC:
         return FileType.AVI
 
     # FLV
@@ -800,9 +761,7 @@ def _detect_iso_media(
         end - 3,
         4,
     ):
-        brands.add(
-            data[offset:offset + 4]
-        )
+        brands.add(data[offset : offset + 4])
 
     # HEIC
     if brands & HEIC_BRANDS:
@@ -847,7 +806,7 @@ def _looks_like_webm(
     # 84    = size 4
     # webm
 
-    return b"\x42\x82\x84webm" in data[:16 * 1024]
+    return b"\x42\x82\x84webm" in data[: 16 * 1024]
 
 
 # ============================================================
@@ -861,15 +820,11 @@ def _looks_like_mpeg_program_stream(
     """检测 MPEG Program Stream。"""
 
     # Pack start code
-    if data.startswith(
-        b"\x00\x00\x01\xBA"
-    ):
+    if data.startswith(b"\x00\x00\x01\xba"):
         return True
 
     # MPEG video sequence header
-    if data.startswith(
-        b"\x00\x00\x01\xB3"
-    ):
+    if data.startswith(b"\x00\x00\x01\xb3"):
         return True
 
     return False
@@ -902,11 +857,7 @@ def _looks_like_mpeg_ts(
             continue
 
         # 要求至少连续三个 packet 都正确。
-        if (
-            data[0] == 0x47
-            and data[packet_size] == 0x47
-            and data[packet_size * 2] == 0x47
-        ):
+        if data[0] == 0x47 and data[packet_size] == 0x47 and data[packet_size * 2] == 0x47:
             return True
 
     return False
@@ -976,9 +927,7 @@ def _looks_like_html(
 ) -> bool:
     """检测 HTML。"""
 
-    if text.startswith(
-        "<!doctype html"
-    ):
+    if text.startswith("<!doctype html"):
         return True
 
     if text.startswith("<html"):
@@ -988,10 +937,7 @@ def _looks_like_html(
 
     # 避免仅因为普通文本里出现 <html>
     # 就直接判定 HTML。
-    return (
-        "<html" in sample
-        and "</html" in sample
-    )
+    return "<html" in sample and "</html" in sample
 
 
 def _looks_like_xml(
@@ -1071,11 +1017,7 @@ def _looks_like_csv(
 ) -> bool:
     """启发式检测 CSV。"""
 
-    lines = [
-        line
-        for line in text.splitlines()
-        if line.strip()
-    ]
+    lines = [line for line in text.splitlines() if line.strip()]
 
     if len(lines) < 2:
         return False
@@ -1088,16 +1030,10 @@ def _looks_like_csv(
         ";",
         "\t",
     ):
-        counts = [
-            line.count(delimiter)
-            for line in lines
-        ]
+        counts = [line.count(delimiter) for line in lines]
 
         # 每一行至少一个分隔符。
-        if not all(
-            count > 0
-            for count in counts
-        ):
+        if not all(count > 0 for count in counts):
             continue
 
         # 各行列数一致。
@@ -1116,7 +1052,7 @@ def _looks_like_plain_text(
     control_count = 0
     total_count = 0
 
-    for char in text[:16 * 1024]:
+    for char in text[: 16 * 1024]:
         total_count += 1
 
         code = ord(char)
@@ -1133,6 +1069,4 @@ def _looks_like_plain_text(
         return False
 
     # 控制字符比例过高则认为不是普通文本。
-    return (
-        control_count / total_count
-    ) < 0.01
+    return (control_count / total_count) < 0.01

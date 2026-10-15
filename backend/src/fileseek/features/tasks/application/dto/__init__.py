@@ -30,3 +30,8 @@ class TaskListDTO:
     tasks: list[TaskDTO]
     total: int
     counts: dict[str, int]
+
+
+@dataclass(frozen=True)
+class TaskBulkOperationDTO:
+    count: int

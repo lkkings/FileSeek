@@ -10,7 +10,12 @@ import { Pagination } from "../../../components/Pagination";
 import { SortControls } from "../../../components/SortControls";
 import { useTranslate } from "../../../i18n/useTranslate";
 import { formatSearchMatchNotice } from "../utils/searchMatch";
-import type { FileItem, SearchResponseData } from "../../../services/api/search";
+import type {
+  EnhancedSearchProgressEvent,
+  FileItem,
+  SearchResponseData,
+} from "../../../services/api/search";
+import { SearchProgressTimeline } from "./SearchProgressTimeline";
 import "./search-results.css";
 
 type SortMode = "relevance" | "created_at" | "size";
@@ -43,6 +48,7 @@ interface SearchResultsViewProps {
   data?: SearchResponseData | undefined;
   status?: "success" | "error" | "loading" | "idle";
   error?: string | null;
+  progressEvents?: EnhancedSearchProgressEvent[] | undefined;
   onBack?: () => void;
 }
 
@@ -66,8 +72,9 @@ export function SearchResultsView({
   onSortByChange,
   onSortOrderChange,
   data,
-  status,
+  status = "idle",
   error,
+  progressEvents = [],
   onBack,
 }: SearchResultsViewProps) {
   const t = useTranslate();
@@ -222,8 +229,20 @@ export function SearchResultsView({
         />
       </div>
 
-      {status === "loading" && <div className="results-loading">{t("loading.search", "加载中...")}</div>}
+      {status === "loading" && progressEvents.length > 0 && (
+        <SearchProgressTimeline events={progressEvents} status="loading" />
+      )}
+      {status === "loading" && progressEvents.length === 0 && (
+        <div className="results-loading">{t("loading.search", "加载中...")}</div>
+      )}
       {error && <div className="results-error">{error}</div>}
+
+      {status !== "loading" && progressEvents.length > 0 && (
+        <details className="search-progress-disclosure">
+          <summary>{t("search.progress.viewProcess", "查看检索过程")}</summary>
+          <SearchProgressTimeline events={progressEvents} status={status} error={error} />
+        </details>
+      )}
 
       {status !== "loading" && !error && (
         <>

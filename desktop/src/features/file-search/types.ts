@@ -1,6 +1,7 @@
 import type { FileType as BaseFileType } from "../../types/file";
 
 export type FileType = "all" | BaseFileType;
+export type SearchMode = "advanced" | "enhanced";
 
 export interface SearchFilters {
   globalQuery: string;

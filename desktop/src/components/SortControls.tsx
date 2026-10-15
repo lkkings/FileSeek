@@ -68,7 +68,6 @@ export function SortControls({
                     onSortOrderChange(sortOrder === "asc" ? "desc" : "asc");
                   } else {
                     onSortByChange(option.value);
-                    onSortOrderChange("desc");
                   }
                   setSortOpen(false);
                 }}

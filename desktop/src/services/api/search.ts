@@ -43,6 +43,15 @@ export interface SearchRequest {
   page_size?: number;
 }
 
+export interface EnhancedSearchRequest {
+  query: string;
+  folder_id?: string | null;
+  sort_by: "relevance" | "created_at" | "size";
+  sort_order: "asc" | "desc";
+  page_number?: number;
+  page_size?: number;
+}
+
 export interface SearchResponseData {
   items: FileItem[];
   total: number;
@@ -52,8 +61,39 @@ export interface SearchResponseData {
   counter: Record<string, number>
 }
 
+export type EnhancedSearchProgressEventType =
+  | "status"
+  | "reasoning"
+  | "tool_call"
+  | "tool_result"
+  | "result"
+  | "error";
+
+export interface EnhancedSearchProgressEvent {
+  type: EnhancedSearchProgressEventType;
+  phase?: string | null;
+  message?: string | null;
+  round_number?: number | null;
+  content?: string | null;
+  tool_name?: string | null;
+  query?: string | null;
+  categories?: string[] | null;
+  name_query?: string | null;
+  candidate_count?: number | null;
+  total?: number | null;
+  result?: SearchResponseData | null;
+  error?: string | null;
+}
+
 export function searchFiles(request: SearchRequest, client: ApiClient = defaultClient): Promise<ApiResponse<SearchResponseData>> {
   return client.post<SearchResponseData>("/search", request);
+}
+
+export function enhancedSearchFiles(
+  request: EnhancedSearchRequest,
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<SearchResponseData>> {
+  return client.post<SearchResponseData>("/search/enhanced", request);
 }
 
 export interface WarmupResponseData {

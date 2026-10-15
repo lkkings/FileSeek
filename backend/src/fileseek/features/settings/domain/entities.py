@@ -52,8 +52,18 @@ class ClassifierLabelSet:
 
     @property
     def is_empty(self) -> bool:
-        return not (
-            self.document_labels
-            or self.image_labels
-            or self.video_labels
+        return not (self.document_labels or self.image_labels or self.video_labels)
+
+
+@dataclass(frozen=True)
+class AgentSettings:
+    id: str = "default"
+    base_url: str = ""
+    api_key: str | None = None
+    model: str = ""
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(
+            self.base_url.strip() and self.api_key and self.api_key.strip() and self.model.strip()
         )

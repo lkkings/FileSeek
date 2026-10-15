@@ -41,6 +41,7 @@ class FolderModel(Model):
     class Meta:
         table = "folders"
 
+
 class TagModel(Model):
     """文件标签。"""
 
@@ -60,9 +61,7 @@ class TagModel(Model):
 
     class Meta:
         table = "tags"
-        indexes = (
-            ("name",),
-        )
+        indexes = (("name",),)
 
 
 class StorageLocationModel(Model):
@@ -159,9 +158,42 @@ class ClassifierLabelModel(Model):
 
     class Meta:
         table = "classifier_labels"
-        unique_together = (
-            ("category", "label"),
-        )
+        unique_together = (("category", "label"),)
+
+
+class AgentSettingsModel(Model):
+    """Retrieval agent settings database model."""
+
+    id = fields.CharField(
+        max_length=32,
+        pk=True,
+    )
+
+    base_url = fields.CharField(
+        max_length=2048,
+        default="",
+    )
+
+    api_key = fields.CharField(
+        max_length=4096,
+        null=True,
+    )
+
+    model = fields.CharField(
+        max_length=255,
+        default="",
+    )
+
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        table = "agent_settings"
 
 
 class FileChunkModel(Model):
@@ -182,6 +214,99 @@ class FileChunkModel(Model):
         default=dict,
     )
 
+
+class FolderSourceBindingModel(Model):
+    """Folder-to-storage source directory binding database model."""
+
+    id = fields.CharField(
+        max_length=64,
+        pk=True,
+    )
+
+    folder = fields.ForeignKeyField(
+        "models.FolderModel",
+        related_name="source_bindings",
+        on_delete=fields.CASCADE,
+    )
+
+    storage_id = fields.CharField(
+        max_length=64,
+    )
+
+    source_path = fields.CharField(
+        max_length=4096,
+    )
+
+    recursive = fields.BooleanField(
+        default=True,
+    )
+
+    enabled = fields.BooleanField(
+        default=True,
+    )
+
+    watch_status = fields.CharField(
+        max_length=32,
+        default="disabled",
+    )
+
+    last_error = fields.TextField(
+        null=True,
+    )
+
+    last_error_at = fields.DatetimeField(
+        null=True,
+    )
+
+    created_at = fields.DatetimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        table = "folder_source_bindings"
+        unique_together = (("folder", "storage_id", "source_path"),)
+        indexes = (
+            ("storage_id",),
+            ("enabled",),
+            ("watch_status",),
+        )
+
+
+class FolderSourceSeenModel(Model):
+    """Per-binding seen file state used for baseline and restart scans."""
+
+    id = fields.CharField(
+        max_length=128,
+        pk=True,
+    )
+
+    binding = fields.ForeignKeyField(
+        "models.FolderSourceBindingModel",
+        related_name="seen_files",
+        on_delete=fields.CASCADE,
+    )
+
+    source_path = fields.CharField(
+        max_length=4096,
+    )
+
+    outcome = fields.CharField(
+        max_length=32,
+        default="seen",
+    )
+
+    last_seen_at = fields.DatetimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        table = "folder_source_seen_files"
+        unique_together = (("binding", "source_path"),)
+        indexes = (("outcome",),)
 
 
 class FileModel(Model):
@@ -265,6 +390,8 @@ class FileModel(Model):
             ("modified",),
             ("size",),
         )
+
+
 class RecycleItemModel(Model):
     """回收站项目数据库模型。"""
 
@@ -295,9 +422,7 @@ class RecycleItemModel(Model):
     class Meta:
         table = "recycle_bin"
 
-        indexes = (
-            ("deleted_at",),
-        )
+        indexes = (("deleted_at",),)
 
 
 class TaskModel(Model):
@@ -370,6 +495,7 @@ class TaskModel(Model):
             ("file_id",),
         )
 
+
 class RecentAccessModel(Model):
     """文件最近访问记录数据库模型。"""
 
@@ -392,7 +518,6 @@ class RecentAccessModel(Model):
             ("accessed_at",),
             ("file_id", "accessed_at"),
         )
-
 
 
 __all__ = [

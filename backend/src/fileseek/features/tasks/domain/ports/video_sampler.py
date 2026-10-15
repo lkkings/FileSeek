@@ -21,5 +21,6 @@ class VideoKeyframe:
     end_time: float
     frame: VideoFrame
 
+
 class VideoSamplerPort(Protocol):
     def extract_keyframes(self, path: Path) -> tuple[VideoKeyframe, ...]: ...

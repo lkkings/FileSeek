@@ -1,4 +1,7 @@
 import type {
+  AgentSettings,
+  AgentConnectionResult,
+  AgentSettingsInput,
   ClassifierLabels,
   StorageConnectionResult,
   StorageLocation,
@@ -17,5 +20,13 @@ export interface SettingsPreferences {
   storageDrives: StorageLocation[];
 }
 
-export type { ClassifierLabels, StorageConnectionResult, StorageLocation, StorageLocationInput, StorageProtocol };
+export type {
+  ClassifierLabels,
+  AgentConnectionResult,
+  StorageConnectionResult,
+  StorageLocation,
+  StorageLocationInput,
+  StorageProtocol,
+};
+export type { AgentSettings, AgentSettingsInput };
 export type { SystemIntegrationStatus } from "../../services/tauri/system-integration";

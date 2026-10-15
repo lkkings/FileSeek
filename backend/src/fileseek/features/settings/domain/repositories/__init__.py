@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from fileseek.features.settings.domain.entities import (
+    AgentSettings,
     ClassifierLabelSet,
     StorageLocation,
 )
@@ -30,3 +31,9 @@ class ClassifierLabelRepository(Protocol):
     async def replace(self, labels: Sequence[str], category: str) -> None: ...
 
     async def replace_label_set(self, labels: ClassifierLabelSet) -> None: ...
+
+
+class AgentSettingsRepository(Protocol):
+    async def get(self) -> AgentSettings | None: ...
+
+    async def save(self, settings: AgentSettings) -> AgentSettings: ...

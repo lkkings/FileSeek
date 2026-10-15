@@ -12,6 +12,7 @@ from fileseek.features.library.application.dto import (
     FileAvailabilityDTO,
     FileDTO,
     FolderDTO,
+    FolderSourceBindingDTO,
     ImportEventDTO,
     ImportTaskSnapshotDTO,
 )
@@ -253,6 +254,143 @@ def test_start_batch_import_normal(auth_client: TestClient, app):
             ),
         )
     )
+
+
+def test_list_folder_source_bindings(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = [
+        FolderSourceBindingDTO(
+            id="binding-1",
+            folder_id="f2",
+            storage_id="nas1",
+            source_path="documents",
+            recursive=True,
+            enabled=True,
+            watch_status="watching",
+            last_error=None,
+            last_error_at=None,
+        )
+    ]
+    app.state.dependencies["list_folder_source_bindings_use_case"] = mock_use_case
+
+    response = auth_client.get("/api/v1/library/folders/f2/source-bindings")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"][0] == {
+        "id": "binding-1",
+        "folder_id": "f2",
+        "storage_id": "nas1",
+        "source_path": "documents",
+        "recursive": True,
+        "enabled": True,
+        "watch_status": "watching",
+        "last_error": None,
+        "last_error_at": None,
+    }
+
+
+def test_create_folder_source_binding(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = FolderSourceBindingDTO(
+        id="binding-1",
+        folder_id="f2",
+        storage_id="nas1",
+        source_path="documents",
+        recursive=True,
+        enabled=True,
+        watch_status="watching",
+        last_error=None,
+        last_error_at=None,
+    )
+    mock_watcher = AsyncMock()
+    app.state.dependencies["create_folder_source_binding_use_case"] = mock_use_case
+    app.state.dependencies["folder_source_watcher_service"] = mock_watcher
+
+    response = auth_client.post(
+        "/api/v1/library/folders/f2/source-bindings",
+        json={
+            "storage_id": "nas1",
+            "path": "documents",
+            "recursive": True,
+            "enabled": True,
+        },
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"]["source_path"] == "documents"
+    mock_watcher.reload_binding.assert_awaited_once_with("binding-1")
+
+
+def test_create_folder_source_binding_overlap(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.side_effect = ApplicationError("来源目录与其他启用中的绑定重叠")
+    mock_watcher = AsyncMock()
+    app.state.dependencies["create_folder_source_binding_use_case"] = mock_use_case
+    app.state.dependencies["folder_source_watcher_service"] = mock_watcher
+
+    response = auth_client.post(
+        "/api/v1/library/folders/f2/source-bindings",
+        json={"storage_id": "nas1", "path": "documents"},
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "error"
+    assert "重叠" in json_data["error"]
+    mock_watcher.reload_binding.assert_not_awaited()
+
+
+def test_update_folder_source_binding(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_use_case.execute.return_value = FolderSourceBindingDTO(
+        id="binding-1",
+        folder_id="f2",
+        storage_id="local",
+        source_path="/Users/demo/Downloads",
+        recursive=False,
+        enabled=False,
+        watch_status="disabled",
+        last_error=None,
+        last_error_at=None,
+    )
+    mock_watcher = AsyncMock()
+    app.state.dependencies["update_folder_source_binding_use_case"] = mock_use_case
+    app.state.dependencies["folder_source_watcher_service"] = mock_watcher
+
+    response = auth_client.patch(
+        "/api/v1/library/folders/f2/source-bindings/binding-1",
+        json={
+            "storage_id": "local",
+            "path": "/Users/demo/Downloads",
+            "recursive": False,
+            "enabled": False,
+        },
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] == "success"
+    assert json_data["data"]["enabled"] is False
+    mock_watcher.reload_binding.assert_awaited_once_with("binding-1")
+
+
+def test_delete_folder_source_binding(auth_client: TestClient, app):
+    mock_use_case = AsyncMock()
+    mock_watcher = AsyncMock()
+    app.state.dependencies["delete_folder_source_binding_use_case"] = mock_use_case
+    app.state.dependencies["folder_source_watcher_service"] = mock_watcher
+
+    response = auth_client.delete(
+        "/api/v1/library/folders/f2/source-bindings/binding-1"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    mock_watcher.remove_binding.assert_awaited_once_with("binding-1")
 
 
 def test_start_batch_import_rejects_empty_items(auth_client: TestClient):

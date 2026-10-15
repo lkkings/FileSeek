@@ -17,6 +17,12 @@ from fileseek.features.library.application.use_cases.get_file_source import (
 from fileseek.features.library.application.use_cases.get_file_thumbnail import (
     GetFileThumbnailUseCase,
 )
+from fileseek.features.library.application.use_cases.folder_source_bindings import (
+    CreateFolderSourceBindingUseCase,
+    DeleteFolderSourceBindingUseCase,
+    ListFolderSourceBindingsUseCase,
+    UpdateFolderSourceBindingUseCase,
+)
 from fileseek.features.library.application.use_cases.list_folders import ListFoldersUseCase
 from fileseek.features.library.application.use_cases.list_tags import ListTagsUseCase
 from fileseek.features.library.application.use_cases.move_files import MoveFilesUseCase
@@ -37,4 +43,8 @@ __all__ = [
     "GetFileSourceUseCase",
     "GetFileThumbnailUseCase",
     "GetFileThumbnailUseCase",
+    "CreateFolderSourceBindingUseCase",
+    "DeleteFolderSourceBindingUseCase",
+    "ListFolderSourceBindingsUseCase",
+    "UpdateFolderSourceBindingUseCase",
 ]

@@ -204,6 +204,7 @@ class TaskScheduler:
                 await self._process_next()
             except Exception:
                 import traceback
+
                 traceback.print_exc()
                 logger.exception("执行任务报错")
             finally:
@@ -284,17 +285,21 @@ class TaskScheduler:
 
         任务在 claim_next_queued() 中已被原子标记为 PROCESSING，此处直接派发给子进程。
         """
-        self._cancellation_registry.remove(task.id)
         self._active += 1
         cancelled = False
         try:
-            await asyncio.to_thread(self.compute.submit, self.processor.build_spec(task))
-            result = await self._await_compute(task)
             if self._cancellation_registry.is_cancelled(task.id):
-                raise TaskCancelledError(task.id)  # noqa: TRY301 - 与计算阶段的终止走同一收尾分支
-            await self._persist(task, result)
-            task.mark_completed()
-            await self.cache.clear(QUERY_CACHE_KEY)
+                task.mark_cancelled()
+                self.processor.cleanup(task)
+                cancelled = True
+            else:
+                await asyncio.to_thread(self.compute.submit, self.processor.build_spec(task))
+                result = await self._await_compute(task)
+                if self._cancellation_registry.is_cancelled(task.id):
+                    raise TaskCancelledError(task.id)  # noqa: TRY301 - 与计算阶段的终止走同一收尾分支
+                await self._persist(task, result)
+                task.mark_completed()
+                await self.cache.clear(QUERY_CACHE_KEY)
         except TaskCancelledError:
             logger.info("任务 %s 已被用户终止", task.id)
             task.mark_cancelled()

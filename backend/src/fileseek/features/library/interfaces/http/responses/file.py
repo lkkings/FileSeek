@@ -95,9 +95,7 @@ def stream_file(
         media_type=content_type,
         headers={
             "Accept-Ranges": "bytes",
-            "Content-Range": (
-                f"bytes {start}-{end}/{size}"
-            ),
+            "Content-Range": (f"bytes {start}-{end}/{size}"),
             "Content-Length": str(length),
             "Content-Disposition": "inline",
         },

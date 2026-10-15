@@ -25,8 +25,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const enhancedChildren = isValidElement(children)
-    ? cloneElement(children as React.ReactElement<{ currentPath?: NavigationDestination }>, {
+    ? cloneElement(children as React.ReactElement<{
+      currentPath?: NavigationDestination;
+      onNavigate?: (destination: NavigationDestination) => void;
+    }>, {
       currentPath: activeNavigation,
+      onNavigate: handleNavigation,
     })
     : children;
 

@@ -4,7 +4,7 @@ from fileseek.infrastructure.classifier.factory import (
     get_classifier_for_snapshot,
     SnapshotClassifierProvider,
 )
-from fileseek.infrastructure.classifier.base import ClassifierPort,ClassificationScore
+from fileseek.infrastructure.classifier.base import ClassifierPort, ClassificationScore
 from fileseek.infrastructure.classifier.jina_clip_v2 import JinaClipV2Classifier
 
 __all__ = [
@@ -14,5 +14,5 @@ __all__ = [
     "get_classifier_for_snapshot",
     "SnapshotClassifierProvider",
     "ClassifierPort",
-    "ClassificationScore"
+    "ClassificationScore",
 ]

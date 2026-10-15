@@ -34,6 +34,9 @@ from fileseek.features.library.infrastructure.repositories import (
     FileChunkRepositoryImpl,
     FileRepositoryImpl,
 )
+from fileseek.features.library.infrastructure.watcher import (
+    FolderSourceWatcherService,
+)
 from fileseek.features.tasks.application.cancellation import (
     get_task_cancellation_registry,
 )
@@ -109,3 +112,4 @@ class Container:
 
     settings: Settings
     scheduler: TaskScheduler | None = None
+    folder_source_watcher: FolderSourceWatcherService | None = None

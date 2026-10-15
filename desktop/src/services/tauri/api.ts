@@ -10,6 +10,10 @@ export function isTauriRuntime() {
   return runtime.__TAURI__ !== undefined || runtime.__TAURI_INTERNALS__ !== undefined;
 }
 
-export function requestApi(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: string) {
+export function requestApi(
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  body?: string,
+) {
   return invoke<TauriApiResponse>("api_request", { method, path, body: body ?? null });
 }

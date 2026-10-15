@@ -21,3 +21,7 @@ class TaskListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class TaskBulkOperationResponse(BaseModel):
+    count: int

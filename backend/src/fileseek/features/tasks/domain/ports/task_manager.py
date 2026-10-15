@@ -45,3 +45,15 @@ class TaskManager(Protocol):
     ) -> None:
         """删除任务。"""
         ...
+
+    async def cancel_incomplete(self) -> int:
+        """批量取消未完成任务。"""
+        ...
+
+    async def continue_cancelled(self) -> int:
+        """批量恢复已取消任务。"""
+        ...
+
+    async def delete_completed(self) -> int:
+        """批量删除已完成任务。"""
+        ...

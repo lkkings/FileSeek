@@ -7,12 +7,13 @@ import type { NavigationDestination } from "../types/navigation";
 
 interface RouterProps {
   currentPath?: NavigationDestination;
+  onNavigate?: (destination: NavigationDestination) => void;
 }
 
-export function Router({ currentPath = "library" }: RouterProps) {
+export function Router({ currentPath = "library", onNavigate }: RouterProps) {
   switch (currentPath) {
     case "library":
-      return <LibraryPage />;
+      return <LibraryPage onNavigateSettings={() => onNavigate?.("settings")} />;
     case "recent":
       return <RecentPage />;
     case "trash":

@@ -48,6 +48,4 @@ class ShutdownMessage:
     """服务进程要求子进程收尾退出。"""
 
 
-WorkerMessage = (
-    ProgressMessage | ResultMessage | ErrorMessage | IdleExitMessage | ShutdownMessage
-)
+WorkerMessage = ProgressMessage | ResultMessage | ErrorMessage | IdleExitMessage | ShutdownMessage

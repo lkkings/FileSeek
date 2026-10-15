@@ -51,3 +51,10 @@ class StorageDirectoryEntryDTO:
     source_path: str
     size: int
     modified: datetime
+
+
+@dataclass(frozen=True)
+class AgentSettingsDTO:
+    base_url: str
+    model: str
+    api_key_configured: bool

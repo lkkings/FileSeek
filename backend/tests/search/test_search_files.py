@@ -13,10 +13,14 @@ from fileseek.shared.domain.file_types import FileCategory
 
 
 @pytest.mark.asyncio
-async def test_search_files_counts_with_request_filters() -> None:
+async def test_search_files_category_counts_ignore_selected_category() -> None:
     file_repo = AsyncMock()
     file_repo.query.return_value = []
-    file_repo.count_by_category.return_value = {"document": 1}
+    file_repo.count_by_category.return_value = {
+        "document": 2,
+        "image": 3,
+        "video": 4,
+    }
     cache = AsyncMock()
     cache.get.return_value = None
     use_case = SearchFilesUseCase(AsyncMock(), AsyncMock(), file_repo, cache)
@@ -24,7 +28,7 @@ async def test_search_files_counts_with_request_filters() -> None:
         query="",
         tag="travel",
         folder_id="folder-1",
-        categories=[FileCategory.DOCUMENT],
+        categories=[FileCategory.IMAGE],
         name_query="report",
         min_size_m=1,
         max_size_m=2,
@@ -43,8 +47,37 @@ async def test_search_files_counts_with_request_filters() -> None:
         "start_date": "2026-09-01T00:00:00",
         "end_date": "2026-09-30T23:59:59",
         "folder_id": "folder-1",
-        "categories": ["document"],
+        "categories": None,
     }
     file_repo.count_by_category.assert_awaited_once_with(**expected_filters)
-    assert result.counter == {"document": 1}
-    assert result.total == 1
+    assert result.counter == {
+        "document": 2,
+        "image": 3,
+        "video": 4,
+    }
+    assert result.total == 3
+
+
+@pytest.mark.asyncio
+async def test_search_files_total_includes_all_categories_when_unfiltered() -> None:
+    file_repo = AsyncMock()
+    file_repo.query.return_value = []
+    file_repo.count_by_category.return_value = {
+        "document": 2,
+        "image": 3,
+        "video": 4,
+    }
+    cache = AsyncMock()
+    cache.get.return_value = None
+    use_case = SearchFilesUseCase(AsyncMock(), AsyncMock(), file_repo, cache)
+    request = SearchFilesQuery(
+        query="travel",
+        tag=None,
+        folder_id=None,
+        categories=None,
+        sort_by=FileSortBy.CREATED_AT,
+    )
+
+    result = await use_case.execute(request)
+
+    assert result.total == 9

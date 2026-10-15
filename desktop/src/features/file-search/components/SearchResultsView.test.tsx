@@ -2,7 +2,11 @@ import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithI18n } from "../../../test/test-utils";
-import type { FileItem, SearchResponseData } from "../../../services/api/search";
+import type {
+  EnhancedSearchProgressEvent,
+  FileItem,
+  SearchResponseData,
+} from "../../../services/api/search";
 import { SearchResultsView } from "./SearchResultsView";
 
 const file: FileItem = {
@@ -27,6 +31,25 @@ const data: SearchResponseData = {
   has_more: true,
   counter: {},
 };
+
+const progressEvents: EnhancedSearchProgressEvent[] = [
+  { type: "status", phase: "starting", message: "正在理解搜索意图" },
+  { type: "reasoning", content: "先按用户描述检索一次" },
+  {
+    type: "tool_call",
+    round_number: 1,
+    tool_name: "search_files",
+    query: "旅行 猫",
+    categories: ["image"],
+  },
+  {
+    type: "tool_result",
+    round_number: 1,
+    tool_name: "search_files",
+    candidate_count: 3,
+    total: 3,
+  },
+];
 
 async function longPress(row: Element) {
   fireEvent.touchStart(row);
@@ -76,6 +99,79 @@ describe("SearchResultsView", () => {
     const pagination = screen.getByRole("group", { name: "分页" });
     expect(within(pagination).getByRole("button", { name: "1" })).toHaveClass("is-active");
     expect(within(pagination).getByRole("button", { name: "下一页" })).toBeDisabled();
+  });
+
+  it("renders a readable retrieval timeline while enhanced search is loading", () => {
+    renderWithI18n(
+      <SearchResultsView
+        query="旅行 猫"
+        onNotice={() => undefined}
+        status="loading"
+        progressEvents={progressEvents}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "智能体检索中" })).toBeInTheDocument();
+    expect(screen.getByText("先按用户描述检索一次")).toBeInTheDocument();
+    expect(screen.getByText("正在执行文件搜索")).toBeInTheDocument();
+    expect(screen.getByText("关键词：旅行 猫；类型：图片")).toBeInTheDocument();
+    expect(screen.getByText("找到 3 个候选文件")).toBeInTheDocument();
+    expect(screen.queryByText('{"query":"旅行 猫"}')).not.toBeInTheDocument();
+    expect(screen.queryByText("search_files")).not.toBeInTheDocument();
+    expect(screen.queryByText("加载中...")).not.toBeInTheDocument();
+  });
+
+  it("shows final non-empty results and keeps the process collapsed", () => {
+    renderWithI18n(
+      <SearchResultsView
+        query="旅行 猫"
+        onNotice={() => undefined}
+        status="success"
+        data={data}
+        progressEvents={progressEvents}
+      />,
+    );
+
+    expect(screen.getByText("Result.pdf")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "智能体检索中" })).not.toBeInTheDocument();
+    const disclosure = screen.getByText("查看检索过程").closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("查看检索过程"));
+    expect(screen.getByText("检索完成")).toBeInTheDocument();
+    expect(screen.getByText("先按用户描述检索一次")).toBeInTheDocument();
+  });
+
+  it("shows the existing empty state after an empty final result", () => {
+    renderWithI18n(
+      <SearchResultsView
+        query="不存在"
+        onNotice={() => undefined}
+        status="success"
+        data={{ ...data, items: [], total: 0, has_more: false }}
+        progressEvents={progressEvents}
+      />,
+    );
+
+    expect(screen.getByText("没有找到匹配的文件")).toBeInTheDocument();
+    expect(screen.getByText("查看检索过程")).toBeInTheDocument();
+    expect(screen.queryByText("Result.pdf")).not.toBeInTheDocument();
+  });
+
+  it("shows a retrieval failure with the process available", () => {
+    renderWithI18n(
+      <SearchResultsView
+        query="旅行 猫"
+        onNotice={() => undefined}
+        status="error"
+        error="Agent 请求超时"
+        progressEvents={progressEvents}
+      />,
+    );
+
+    expect(screen.getAllByText("Agent 请求超时").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText("查看检索过程"));
+    expect(screen.getByText("检索失败")).toBeInTheDocument();
+    expect(screen.queryByText("Result.pdf")).not.toBeInTheDocument();
   });
 
   it("opens the file detail drawer after a single row click", async () => {

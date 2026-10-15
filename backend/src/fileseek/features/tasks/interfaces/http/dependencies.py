@@ -3,7 +3,10 @@ from __future__ import annotations
 from fastapi import Request
 
 from fileseek.features.tasks.application.use_cases import (
+    CancelIncompleteTasksUseCase,
     CancelTaskUseCase,
+    ContinueCancelledTasksUseCase,
+    DeleteCompletedTasksUseCase,
     DeleteTaskUseCase,
     ListTasksUseCase,
     RetryTaskUseCase,
@@ -25,3 +28,15 @@ def get_delete_task_use_case(request: Request) -> DeleteTaskUseCase:
 
 def get_cancel_task_use_case(request: Request) -> CancelTaskUseCase:
     return resolve_dependency(request, "cancel_task_use_case")
+
+
+def get_cancel_incomplete_tasks_use_case(request: Request) -> CancelIncompleteTasksUseCase:
+    return resolve_dependency(request, "cancel_incomplete_tasks_use_case")
+
+
+def get_continue_cancelled_tasks_use_case(request: Request) -> ContinueCancelledTasksUseCase:
+    return resolve_dependency(request, "continue_cancelled_tasks_use_case")
+
+
+def get_delete_completed_tasks_use_case(request: Request) -> DeleteCompletedTasksUseCase:
+    return resolve_dependency(request, "delete_completed_tasks_use_case")

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class ListFoldersQuery:
     pass
 
+
 @dataclass(frozen=True)
 class GetFileQuery:
     file_id: str

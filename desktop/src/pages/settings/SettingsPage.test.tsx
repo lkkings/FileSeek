@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsPreferencesProvider } from "../../features/settings";
@@ -47,6 +47,11 @@ function createSettingsClient() {
   let labels = structuredClone(initialLabels);
   let locations = structuredClone(initialLocations);
   const calls: Array<{ method: string; path: string; body?: string }> = [];
+  let agentSettings = {
+    base_url: "https://api.example.com/v1",
+    model: "retrieval-expert",
+    api_key_configured: false,
+  };
 
   const transport = vi.fn(async (method: string, path: string, body?: string): Promise<RawResponse> => {
     calls.push({ method, path, body });
@@ -55,6 +60,21 @@ function createSettingsClient() {
     }
     if (method === "GET" && path === "/api/v1/settings/storage-locations") {
       return success(locations);
+    }
+    if (method === "GET" && path === "/api/v1/settings/agent") {
+      return success(agentSettings);
+    }
+    if (method === "PUT" && path === "/api/v1/settings/agent") {
+      const request = JSON.parse(body ?? "{}") as { base_url: string; model: string };
+      agentSettings = {
+        base_url: request.base_url,
+        model: request.model,
+        api_key_configured: true,
+      };
+      return success(agentSettings);
+    }
+    if (method === "POST" && path === "/api/v1/settings/agent/test") {
+      return success({ success: true, message: "Agent 连接成功" });
     }
     if (method === "PUT" && path === "/api/v1/settings/classifier-labels") {
       const request = JSON.parse(body ?? "{}") as Omit<ClassifierLabels, "version">;
@@ -160,7 +180,8 @@ describe("SettingsPage", () => {
     const { client, calls } = createSettingsClient();
     renderSettingsPage(client);
 
-    await screen.findByText("本地存储");
+    await screen.findByText("合同");
+    await screen.findByDisplayValue("https://api.example.com/v1");
     fireEvent.click(screen.getByRole("button", { name: "添加存储驱动" }));
     fireEvent.change(screen.getByLabelText("驱动名称"), { target: { value: "家庭 NAS" } });
     fireEvent.change(screen.getByLabelText("存储标识"), { target: { value: "nas1" } });
@@ -187,6 +208,45 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "测试连接" }).at(-1)!);
     expect(await screen.findByText("连接正常")).toBeInTheDocument();
     expect(calls).toContainEqual({ method: "POST", path: "/api/v1/settings/storage-locations/nas1/test" });
+  });
+
+  it("tests the current agent settings", async () => {
+    const { client, calls } = createSettingsClient();
+    renderSettingsPage(client);
+
+    await screen.findByText("合同");
+    await screen.findByDisplayValue("https://api.example.com/v1");
+    const agentSettings = screen.getByLabelText("检索智能体设置");
+    expect(within(agentSettings).getByRole("button", { name: "测试连接" })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Agent 地址"), {
+      target: { value: "https://api.updated.com/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("API Key"), {
+      target: { value: "new-secret" },
+    });
+    fireEvent.click(within(agentSettings).getByRole("button", { name: "测试连接" }));
+
+    await waitFor(() => {
+      expect(calls).toContainEqual({
+        method: "POST",
+        path: "/api/v1/settings/agent/test",
+        body: JSON.stringify({
+          base_url: "https://api.updated.com/v1",
+          model: "retrieval-expert",
+          api_key: "new-secret",
+        }),
+      });
+    });
+    expect(await screen.findByText("Agent 连接成功")).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      method: "POST",
+      path: "/api/v1/settings/agent/test",
+      body: JSON.stringify({
+        base_url: "https://api.updated.com/v1",
+        model: "retrieval-expert",
+        api_key: "new-secret",
+      }),
+    });
   });
 
   it("protects the built-in local location", async () => {

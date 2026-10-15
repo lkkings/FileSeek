@@ -27,14 +27,14 @@ Each task row SHALL communicate the file identity, task status, progress, curren
 - **WHEN** a processing task is rendered
 - **THEN** the row shows the current progress and stage using the processing visual state
 
-### Requirement: Task filtering and recovery
+### Requirement: Task recovery
 
-The Tasks page SHALL provide status filters for all supported task states and a retry action for failed tasks, while preventing retry when no failed tasks are available.
+The Tasks page SHALL provide a retry action for failed tasks, while preventing retry when no failed tasks are available.
 
-#### Scenario: Filtering by status
+#### Scenario: Retrying a failed task
 
-- **WHEN** a user selects a status filter
-- **THEN** the selected filter is clearly active and the task list and pagination update to that filter
+- **WHEN** a user activates retry for a failed task
+- **THEN** the retry action is clearly available and the task list updates after submission
 
 #### Scenario: Retrying all failed tasks
 
@@ -50,10 +50,10 @@ The Tasks page SHALL provide distinct loading, empty, and error states that do n
 - **WHEN** tasks are loading
 - **THEN** the page shows a non-blocking loading state that preserves the page layout
 
-#### Scenario: Showing no matching tasks
+#### Scenario: Showing no tasks
 
-- **WHEN** the filtered task list is empty
-- **THEN** the page shows a localized empty state with guidance to change filters or create tasks
+- **WHEN** the task list is empty
+- **THEN** the page shows a localized empty state with guidance to create tasks
 
 #### Scenario: Showing a task error
 
@@ -66,7 +66,7 @@ The Tasks page SHALL preserve keyboard access, semantic labels, localized text, 
 
 #### Scenario: Using keyboard navigation
 
-- **WHEN** a user moves keyboard focus through filters, task rows, and actions
+- **WHEN** a user moves keyboard focus through task rows and actions
 - **THEN** each interactive element receives a visible focus state
 
 #### Scenario: Using a narrow layout

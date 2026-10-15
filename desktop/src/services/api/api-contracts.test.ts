@@ -5,7 +5,14 @@ import { addFilesToRecycle, deleteRecycleBatch, listRecycle } from "./recycle";
 import { moveFilesToFolder } from "./library";
 import { addRecent, deleteRecentRecord, listRecent } from "./recent";
 import { warmupSearch } from "./search";
-import { deleteTask, listTasks, retryTask } from "./tasks";
+import {
+  cancelIncompleteTasks,
+  continueCancelledTasks,
+  deleteCompletedTasks,
+  deleteTask,
+  listTasks,
+  retryTask,
+} from "./tasks";
 
 function createClient() {
   const transport = vi.fn(async (): Promise<RawResponse> => ({
@@ -84,6 +91,18 @@ describe("Tasks API services", () => {
     expect(transport).toHaveBeenNthCalledWith(1, "GET", "/api/v1/tasks?page=2&page_size=25&status=processing", undefined);
     expect(transport).toHaveBeenNthCalledWith(2, "POST", "/api/v1/tasks/task%2F1/retry", undefined);
     expect(transport).toHaveBeenNthCalledWith(3, "DELETE", "/api/v1/tasks/task%2F1", undefined);
+  });
+
+  it("builds the bulk task operation paths", async () => {
+    const { client, transport } = createClient();
+
+    await cancelIncompleteTasks(client);
+    await continueCancelledTasks(client);
+    await deleteCompletedTasks(client);
+
+    expect(transport).toHaveBeenNthCalledWith(1, "POST", "/api/v1/tasks/cancel-incomplete", undefined);
+    expect(transport).toHaveBeenNthCalledWith(2, "POST", "/api/v1/tasks/continue-cancelled", undefined);
+    expect(transport).toHaveBeenNthCalledWith(3, "POST", "/api/v1/tasks/delete-completed", undefined);
   });
 });
 

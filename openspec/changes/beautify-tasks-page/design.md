@@ -1,6 +1,6 @@
 ## Context
 
-The Tasks page is a product-style monitoring surface rather than a marketing page. It currently reuses the search result layout and feature-local task styles, with functional status filters, task rows, pagination, and a detail drawer. The existing React architecture requires feature-local UI, Lingui-backed copy, and no behavior changes for this presentation refinement.
+The Tasks page is a product-style monitoring surface rather than a marketing page. It currently reuses the search result layout and feature-local task styles, with task rows, pagination, and a detail drawer. The existing React architecture requires feature-local UI, Lingui-backed copy, and no behavior changes for this presentation refinement.
 
 See `proposal.md` for motivation and `specs/tasks/task-page-ui/spec.md` for observable requirements.
 
@@ -36,7 +36,7 @@ Alternative: apply landing-page visual treatments from the design skill. Rejecte
 
 ### Preserve behavior and semantics
 
-Existing task statuses, filter options, retry and remove predicates, pagination, drawer behavior, and user-visible text semantics will remain unchanged. CSS classes and layout-only wrappers may change, but interactive elements will keep accessible names and source order.
+Existing task statuses, retry and remove predicates, pagination, drawer behavior, and user-visible text semantics will remain unchanged. CSS classes and layout-only wrappers may change, but interactive elements will keep accessible names and source order.
 
 Alternative: rebuild the page around new components and interactions. Rejected because this is a visual refinement and existing tests encode important behavior contracts.
 
@@ -55,7 +55,7 @@ Alternative: introduce a new breakpoint system. Rejected because it would expand
 
 ## Migration Plan
 
-1. Refine the Tasks page header, toolbar, and summary structure.
+1. Refine the Tasks page header, primary action toolbar, and summary structure.
 2. Refine task row hierarchy, progress, stage, status, and action styling.
 3. Refine loading, empty, and error states.
 4. Update focused tests only where structure or query assumptions change.

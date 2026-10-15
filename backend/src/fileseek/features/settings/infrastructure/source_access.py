@@ -149,22 +149,26 @@ def _open_remote(request: Request) -> HTTPResponse:
     return cast(HTTPResponse, urlopen(request))  # noqa: S310
 
 
-
 def _mounted_source(root_value: str, source_path: str) -> SourceFile:
     return NasSourceFile(Path(root_value), source_path)
 
 
-def _local_source(source_path: str) -> SourceFile:
+def _local_source(source_path: str, root_value: str) -> SourceFile:
     parsed = urlparse(source_path)
     if parsed.scheme == "file":
         return LocalSourceFile(Path(unquote(parsed.path)))
-    return LocalSourceFile(Path(source_path))
+    requested = Path(source_path).expanduser()
+    if requested.is_absolute():
+        return LocalSourceFile(requested)
+    if not root_value:
+        raise SourceUnavailableError("本地存储缺少根路径，无法解析相对路径")
+    return LocalSourceFile((Path(root_value).expanduser() / requested).resolve(strict=False))
 
 
-def _external_source(source_path: str) -> SourceFile:
+def _external_source(source_path: str, root_value: str) -> SourceFile:
     parsed = urlparse(source_path)
     if parsed.scheme == "file":
-        return _local_source(source_path)
+        return _local_source(source_path, root_value)
     if parsed.scheme in {"http", "https"}:
         if ".." in parsed.path.split("/"):
             raise SourceUnavailableError("来源路径不能包含上级目录")
@@ -190,13 +194,11 @@ class StorageSourceResolver(FileSourcePort):
 
         if location.type in {"local", "external"}:
             if location.type == "external":
-                return _external_source(source_path)
-            return _local_source(source_path)
+                return _external_source(source_path, location.root_path)
+            return _local_source(source_path, location.root_path)
 
         if location.protocol != "mounted":
-            raise SourceUnavailableError(
-                f"存储协议暂不支持直接读取: {location.protocol}"
-            )
+            raise SourceUnavailableError(f"存储协议暂不支持直接读取: {location.protocol}")
 
         return _mounted_source(
             location.root_path or location.endpoint,

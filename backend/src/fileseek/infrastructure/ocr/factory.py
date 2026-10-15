@@ -11,9 +11,7 @@ from fileseek.infrastructure.ocr.rapidocr import RapidOCROCR
 def get_ocr_service() -> OCRPort:
     """进程内共享的向量存储。"""
     settings = get_settings()
-    return OCRFactory.create(
-        provider=settings.ocr_provider
-    )
+    return OCRFactory.create(provider=settings.ocr_provider)
 
 
 class OCRFactory:
@@ -42,6 +40,4 @@ class OCRFactory:
         if normalized_provider == "rapidocr":
             return RapidOCROCR()
 
-        raise ValueError(
-            f"不支持的 OCR provider: {provider}"
-        )
+        raise ValueError(f"不支持的 OCR provider: {provider}")

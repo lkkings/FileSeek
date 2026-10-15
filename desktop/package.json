@@ -6,6 +6,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "vite",
+    "backend:log": "tail -f \"$HOME/Library/Application Support/FileSeek/logs/backend.log\"",
     "build": "tsc && vite build && node scripts/build-macos-finder-extension.mjs && node scripts/stage-backend.mjs",
     "preview": "vite preview",
     "lint": "eslint .",

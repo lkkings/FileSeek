@@ -40,10 +40,8 @@ class AddFileUseCase:
         self,
         command: AddFileCommand,
     ) -> AddFileResult:
-        if command.folder_id and  await self.folder_repo.get_by_id(command.folder_id) is None:
-            raise NotFoundError(
-                f"文件夹不存在: {command.folder_id}"
-            )
+        if command.folder_id and await self.folder_repo.get_by_id(command.folder_id) is None:
+            raise NotFoundError(f"文件夹不存在: {command.folder_id}")
         # 解析源文件路径
         metadata = await self.source.read_metadata(
             command.storage_id,
@@ -99,7 +97,7 @@ class AddFileUseCase:
             metadata={
                 "temp_path": str(temp_path),
                 **label_snapshot.as_metadata(),
-            }
+            },
         )
         await self.task_manager.create(task)
         return AddFileResult(file_id=file_id, task_id=task_id)

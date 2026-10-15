@@ -276,6 +276,43 @@
   min-width: 116px;
 }
 
+.settings-agent-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-agent-test {
+  border-color: var(--settings-border);
+  background: var(--settings-control);
+  box-shadow: none;
+}
+
+.settings-agent-test:not(:disabled):hover {
+  border-color: var(--settings-border-strong);
+  background: var(--settings-control-hover);
+}
+
+.settings-agent-test-result {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--settings-radius-inner);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.settings-agent-test-result.is-success {
+  border: 1px solid rgba(84, 214, 144, 0.28);
+  background: rgba(84, 214, 144, 0.1);
+  color: #69d98f;
+}
+
+.settings-agent-test-result.is-error {
+  border: 1px solid rgba(255, 146, 152, 0.28);
+  background: rgba(255, 146, 152, 0.1);
+  color: var(--settings-danger);
+}
+
 .settings-language-options button:not(:disabled):hover,
 .settings-tag-tabs button:not(:disabled):hover,
 .settings-drive-list .settings-drive-test:not(:disabled):hover,
@@ -495,6 +532,10 @@
   background: var(--settings-surface-raised);
 }
 
+.settings-agent-form {
+  margin: 0 24px 24px;
+}
+
 .settings-drive-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
@@ -538,6 +579,13 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.settings-agent-status {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .settings-drive-list li {

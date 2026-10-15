@@ -1,13 +1,15 @@
 from fileseek.features.settings.application.dto.settings import (
+    AgentSettingsDTO,
     ClassifierLabelsDTO,
     ConnectionTestResultDTO,
-    StorageLocationDeletionDTO,
-    StorageLocationDTO,
     StorageDirectoryDTO,
     StorageDirectoryEntryDTO,
+    StorageLocationDeletionDTO,
+    StorageLocationDTO,
 )
 
 __all__ = [
+    "AgentSettingsDTO",
     "ClassifierLabelsDTO",
     "ConnectionTestResultDTO",
     "StorageLocationDTO",

@@ -14,6 +14,7 @@ Namespace = str
 @dataclass(slots=True)
 class _CacheEntry(Generic[V]):
     """单个缓存项。"""
+
     expires_at: float
     value: V
 
@@ -87,11 +88,7 @@ class TTLLRUCache(Generic[K, V]):
         if bucket is None:
             return
 
-        expired_keys = [
-            key
-            for key, entry in bucket.items()
-            if entry.expires_at <= now
-        ]
+        expired_keys = [key for key, entry in bucket.items() if entry.expires_at <= now]
 
         for key in expired_keys:
             del bucket[key]
@@ -118,18 +115,12 @@ class TTLLRUCache(Generic[K, V]):
 
                 key, entry = next(iter(bucket.items()))
 
-                if (
-                    oldest_entry is None
-                    or entry.expires_at < oldest_entry.expires_at
-                ):
+                if oldest_entry is None or entry.expires_at < oldest_entry.expires_at:
                     oldest_namespace = namespace
                     oldest_key = key
                     oldest_entry = entry
 
-            if (
-                oldest_namespace is None
-                or oldest_key is None
-            ):
+            if oldest_namespace is None or oldest_key is None:
                 break
 
             bucket = self._cache[oldest_namespace]

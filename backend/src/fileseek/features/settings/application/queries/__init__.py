@@ -1,7 +1,7 @@
 from fileseek.features.settings.application.queries.settings import (
     GetClassifierLabelsQuery,
-    ListStorageLocationsQuery,
     ListStorageDirectoryQuery,
+    ListStorageLocationsQuery,
 )
 
 __all__ = [

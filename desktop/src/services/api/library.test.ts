@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiClient, type RawResponse } from "./client";
-import { createFolder, startBatchImport, updateFolder } from "./library";
+import {
+  createFolder,
+  createFolderSourceBinding,
+  deleteFolderSourceBinding,
+  listFolderSourceBindings,
+  startBatchImport,
+  updateFolder,
+  updateFolderSourceBinding,
+} from "./library";
 
 function createClient() {
   const transport = vi.fn(async (): Promise<RawResponse> => ({
@@ -73,6 +81,56 @@ describe("library API service", () => {
       "PUT",
       "/api/v1/library/folders/folder-1",
       JSON.stringify({ name: "test", icon_type: "travel", description: "测试文件夹" }),
+    );
+  });
+
+  it("uses the nested folder source binding routes and payloads", async () => {
+    const { client, transport } = createClient();
+    const input = {
+      storageId: "nas1",
+      path: "documents",
+      recursive: true,
+      enabled: true,
+    };
+
+    await listFolderSourceBindings("folder-1", client);
+    await createFolderSourceBinding("folder-1", input, client);
+    await updateFolderSourceBinding("folder-1", "binding-1", input, client);
+    await deleteFolderSourceBinding("folder-1", "binding-1", client);
+
+    expect(transport).toHaveBeenNthCalledWith(
+      1,
+      "GET",
+      "/api/v1/library/folders/folder-1/source-bindings",
+      undefined,
+    );
+    expect(transport).toHaveBeenNthCalledWith(
+      2,
+      "POST",
+      "/api/v1/library/folders/folder-1/source-bindings",
+      JSON.stringify({
+        storage_id: "nas1",
+        path: "documents",
+        recursive: true,
+        enabled: true,
+      }),
+    );
+    expect(transport).toHaveBeenNthCalledWith(
+      3,
+      "PATCH",
+      "/api/v1/library/folders/folder-1/source-bindings/binding-1",
+      JSON.stringify({
+        storage_id: "nas1",
+        path: "documents",
+        recursive: true,
+        enabled: true,
+      }),
+    );
+    expect(transport).toHaveBeenNthCalledWith(
+      4,
+      "DELETE",
+      "/api/v1/library/folders/folder-1/source-bindings/binding-1",
+      undefined,
     );
   });
 });

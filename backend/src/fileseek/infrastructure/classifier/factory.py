@@ -11,8 +11,6 @@ from fileseek.infrastructure.classifier.jina_clip_v2 import JinaClipV2Classifier
 from fileseek.infrastructure.embedding import get_embedding_service
 
 
-
-
 @lru_cache
 def get_classifier_for_snapshot(
     snapshot: ClassifierLabelSnapshot,

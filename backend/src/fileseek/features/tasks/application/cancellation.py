@@ -30,6 +30,10 @@ class TaskCancellationRegistry:
             event = self._events.get(task_id)
         return event is not None and event.is_set()
 
+    def pending_ids(self) -> tuple[str, ...]:
+        with self._lock:
+            return tuple(task_id for task_id, event in self._events.items() if event.is_set())
+
     def remove(self, task_id: str) -> None:
         with self._lock:
             self._events.pop(task_id, None)

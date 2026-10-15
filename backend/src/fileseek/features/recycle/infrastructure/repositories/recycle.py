@@ -10,9 +10,7 @@ from fileseek.shared.domain.file_types import FileType
 
 def _to_entity(model: RecycleItemModel) -> RecycleItem:
     deleted_at = model.deleted_at
-    deleted_at_value = (
-        deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at
-    )
+    deleted_at_value = deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at
     return RecycleItem(
         id=model.id,
         original_file_id=model.file.id,
@@ -23,7 +21,7 @@ def _to_entity(model: RecycleItemModel) -> RecycleItem:
         recycle_path=model.recycle_path,
         deleted_at=deleted_at_value,
         file_type=FileType(model.file.file_type),
-        size=model.file.size
+        size=model.file.size,
     )
 
 
@@ -48,7 +46,12 @@ class RecycleRepositoryImpl(RecycleRepository):
         return await self._list_all_items()
 
     async def _list_all_items(self) -> list[RecycleItem]:
-        return [_to_entity(model) for model in await RecycleItemModel.all().prefetch_related("file").order_by("-deleted_at")]
+        return [
+            _to_entity(model)
+            for model in await RecycleItemModel.all()
+            .prefetch_related("file")
+            .order_by("-deleted_at")
+        ]
 
     async def save(self, item: RecycleItem) -> None:
         await self._save(item)
@@ -60,7 +63,7 @@ class RecycleRepositoryImpl(RecycleRepository):
                 "file_id": item.original_file_id,
                 "recycle_path": item.recycle_path,
                 "deleted_at": item.deleted_at,
-            }
+            },
         )
 
     async def delete(self, item_id: str) -> None:

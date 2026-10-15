@@ -74,10 +74,7 @@ class TaskProcessor:
         )
         for start in range(0, total, batch_size):
             payloads = result.chunks[start : start + batch_size]
-            ids = [
-                f"{task.file.id}_{start + offset}"
-                for offset in range(len(payloads))
-            ]
+            ids = [f"{task.file.id}_{start + offset}" for offset in range(len(payloads))]
             vectors = result.vectors[start : start + batch_size].tolist()
             self._vector_index.add_batch(ids, vectors)
             task.add_file_chunks(

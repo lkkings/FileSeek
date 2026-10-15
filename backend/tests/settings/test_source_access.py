@@ -46,6 +46,35 @@ async def test_resolver_reads_local_file_uri(
 
 
 @pytest.mark.asyncio
+async def test_resolver_reads_local_relative_path_from_storage_root(
+    settings,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "nested" / "source.txt"
+    source.parent.mkdir()
+    source.write_bytes(b"local relative")
+    repository = TortoiseStorageLocationRepository()
+    await repository.save(
+        StorageLocation(
+            id="local",
+            type="local",
+            name="本地存储",
+            protocol="file",
+            endpoint="file://localhost",
+            root_path=str(tmp_path),
+        )
+    )
+    resolver = StorageSourceResolver(repository)
+
+    resolved = await resolver.resolve("local", "nested/source.txt")
+    metadata = await resolver.read_metadata("local", "nested/source.txt")
+
+    with resolved.open("rb") as file:
+        assert file.read() == b"local relative"
+    assert metadata.size == len(b"local relative")
+
+
+@pytest.mark.asyncio
 async def test_resolver_reads_external_uri(settings, tmp_path: Path) -> None:
     source = tmp_path / "source.txt"
     source.write_bytes(b"external")

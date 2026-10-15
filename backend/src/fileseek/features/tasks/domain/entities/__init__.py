@@ -22,10 +22,12 @@ class TaskStatus(str, Enum):
 
 class TaskStage(str, Enum):
     """任务处理阶段枚举。"""
+
     EXTRACTED = "extracted"
     ENCODED = "encoded"
     CLASSIFY = "classify"
     INDEXED = "indexed"
+
 
 @dataclass
 class TaskProgress:
@@ -41,7 +43,6 @@ class TaskProgress:
             raise ValueError("任务总数量必须大于 0")
         if self.completed_count > self.total_count:
             raise ValueError("任务完成数量不能大于总数量")
-
 
 
 @dataclass
@@ -62,7 +63,6 @@ class Task:
 
     def add_file_chunks(self, chunks: list[FileChunk]) -> None:
         self.file.add_chunks(chunks)
-
 
     def advance_stage(self, progress: TaskProgress) -> None:
         """推进任务阶段。

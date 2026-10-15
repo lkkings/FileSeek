@@ -1,6 +1,5 @@
 import numpy as np
 
-from fileseek.infrastructure.embedding import jina_clip_v2
 from fileseek.infrastructure.embedding.jina_clip_v2 import JinaClipV2Embedding
 
 
@@ -27,35 +26,35 @@ def _make_embedding(token_ids: dict[str, list[int]], batches: list[np.ndarray]):
     return embedding
 
 
-def test_text_inference_is_split_into_fixed_batches(monkeypatch):
-    monkeypatch.setattr(jina_clip_v2, "TEXT_INFERENCE_BATCH_SIZE", 4)
+def test_text_inference_submits_one_item_at_a_time():
     batches: list[np.ndarray] = []
-    texts = [str(index) for index in range(9)]
-    embedding = _make_embedding({text: [int(text)] for text in texts}, batches)
-
-    embeddings = embedding.embed_text(texts)
-
-    assert [len(batch) for batch in batches] == [4, 4, 1]
-    assert embeddings == [[0], [1], [2], [3], [4], [5], [6], [7], [8]]
-
-
-def test_long_text_is_not_batched_with_short_texts(monkeypatch):
-    # 预算只够 1 条 100 token，或 4 条 10 token。
-    monkeypatch.setattr(jina_clip_v2, "TEXT_INFERENCE_MAX_ATTENTION_COST", 100 * 100)
-    batches: list[np.ndarray] = []
-    token_ids = {"long": [9] * 100}
-    token_ids.update({f"short{index}": [index] * 10 for index in range(4)})
+    token_ids = {"short": [5], "long": [6, 7, 8]}
     embedding = _make_embedding(token_ids, batches)
 
-    embeddings = embedding.embed_text(["short0", "long", "short1", "short2", "short3"])
+    embeddings = embedding.embed_text(["short", "long"])
 
-    # 长文本独占一批，短文本只 padding 到 10，而不是 100。
-    assert [batch.shape for batch in batches] == [(1, 100), (4, 10)]
-    assert embeddings == [[0], [9], [1], [2], [3]]
+    assert [batch.tolist() for batch in batches] == [[[5]], [[6, 7, 8]]]
+    assert embeddings == [[5], [6]]
 
 
-def test_batch_is_padded_with_pad_token_id():
-    input_ids = JinaClipV2Embedding._pad_token_ids([[5, 6, 7], [8]], pad_token_id=1)
+def test_image_inference_submits_one_item_at_a_time_and_preserves_order():
+    pixel_batches: list[np.ndarray] = []
+    embedding = object.__new__(JinaClipV2Embedding)
+    embedding._text_only = False
 
-    assert input_ids.dtype == np.int64
-    assert input_ids.tolist() == [[5, 6, 7], [8, 1, 1]]
+    class ImageProcessor:
+        def __call__(self, images: list[bytes]) -> np.ndarray:
+            return np.asarray([[float(image[0])] for image in images], dtype=np.float32)
+
+    def run_image_inference(*, session, pixel_values):
+        pixel_batches.append(pixel_values.copy())
+        return np.asarray([[float(pixel_values[0, 0])]], dtype=np.float32)
+
+    embedding._ensure_loaded = lambda: (object(), object(), ImageProcessor())
+    embedding._load_image = lambda image: image
+    embedding._run_image_inference = run_image_inference
+
+    embeddings = embedding.embed_image([b"alpha", b"beta"])
+
+    assert [batch.tolist() for batch in pixel_batches] == [[[97.0]], [[98.0]]]
+    assert embeddings == [[97.0], [98.0]]

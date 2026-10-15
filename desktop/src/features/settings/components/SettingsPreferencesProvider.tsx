@@ -4,21 +4,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { activateLocale } from "../../../i18n/i18n";
 import { errorText, type ApiClient } from "../../../services/api/client";
 import {
+  getAgentSettings,
   createStorageLocation,
   deleteStorageLocation,
   listClassifierLabels,
   listStorageLocations,
   replaceClassifierLabels,
+  testAgentSettings as testAgentSettingsApi,
   testStorageLocation,
+  updateAgentSettings,
 } from "../../../services/api/settings";
 import { loadLocale, saveLocale } from "../../../services/preferences";
 import { useTranslate } from "../../../i18n/useTranslate";
-import type { ClassifierLabels, LocalePreference, SettingsPreferences, StorageLocationInput } from "../types";
+import type {
+  AgentSettings,
+  AgentConnectionResult,
+  AgentSettingsInput,
+  ClassifierLabels,
+  LocalePreference,
+  SettingsPreferences,
+  StorageLocationInput,
+} from "../types";
 import type { SettingsPreferencesContextValue } from "../hooks/settingsPreferencesContext";
 import { SettingsPreferencesContext } from "../hooks/settingsPreferencesContext";
 
 const classifierLabelsQueryKey = ["settings", "classifier-labels"] as const;
 const storageLocationsQueryKey = ["settings", "storage-locations"] as const;
+const agentSettingsQueryKey = ["settings", "agent"] as const;
 const labelKeys = {
   documentTags: "document_labels",
   imageTags: "image_labels",
@@ -31,6 +43,11 @@ const emptyLabels: ClassifierLabels = {
   image_labels: [],
   video_labels: [],
   version: "",
+};
+const emptyAgentSettings: AgentSettings = {
+  base_url: "",
+  model: "",
+  api_key_configured: false,
 };
 
 export function SettingsPreferencesProvider({
@@ -64,6 +81,17 @@ export function SettingsPreferencesProvider({
     queryKey: storageLocationsQueryKey,
     queryFn: async () => {
       const response = await listStorageLocations(client);
+      if (response.status !== "success" || !response.data) {
+        throw new Error(errorText(response.error) || t("settings.loadFailed", "无法读取设置"));
+      }
+      return response.data;
+    },
+  });
+
+  const agentSettingsQuery = useQuery({
+    queryKey: agentSettingsQueryKey,
+    queryFn: async () => {
+      const response = await getAgentSettings(client);
       if (response.status !== "success" || !response.data) {
         throw new Error(errorText(response.error) || t("settings.loadFailed", "无法读取设置"));
       }
@@ -114,8 +142,34 @@ export function SettingsPreferencesProvider({
     },
   });
 
+  const updateAgentSettingsMutation = useMutation({
+    mutationFn: async (input: AgentSettingsInput) => {
+      const response = await updateAgentSettings(input, client);
+      if (response.status !== "success" || !response.data) {
+        throw new Error(
+          errorText(response.error) || t("settings.agentSaveFailed", "保存检索智能体设置失败"),
+        );
+      }
+      return response.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: agentSettingsQueryKey }),
+  });
+
+  const testAgentSettingsMutation = useMutation({
+    mutationFn: async (input: AgentSettingsInput): Promise<AgentConnectionResult> => {
+      const response = await testAgentSettingsApi(input, client);
+      if (response.status !== "success" || !response.data) {
+        throw new Error(
+          errorText(response.error) || t("settings.agentTestFailed", "测试 Agent 连接失败"),
+        );
+      }
+      return response.data;
+    },
+  });
+
   const labels = labelsQuery.data ?? emptyLabels;
   const locations = locationsQuery.data ?? [];
+  const agentSettings = agentSettingsQuery.data ?? emptyAgentSettings;
 
   const preferences: SettingsPreferences = useMemo(() => ({
     locale,
@@ -158,31 +212,50 @@ export function SettingsPreferencesProvider({
 
   const testStorageDrive = async (driveId: string) => testLocationMutation.mutateAsync(driveId);
 
+  const saveAgentSettings = async (input: AgentSettingsInput) => {
+    await updateAgentSettingsMutation.mutateAsync(input);
+    return true;
+  };
+
+  const testAgentSettings = async (input: AgentSettingsInput) =>
+    testAgentSettingsMutation.mutateAsync(input);
+
   const value = useMemo<SettingsPreferencesContextValue>(() => ({
     preferences,
-    loading: labelsQuery.isPending || locationsQuery.isPending,
+    agentSettings,
+    loading:
+      labelsQuery.isPending || locationsQuery.isPending || agentSettingsQuery.isPending,
     loadError: labelsQuery.error instanceof Error
       ? labelsQuery.error.message
       : locationsQuery.error instanceof Error
         ? locationsQuery.error.message
-        : null,
+        : agentSettingsQuery.error instanceof Error
+          ? agentSettingsQuery.error.message
+          : null,
     setLocale,
     addTag,
     removeTag,
     addStorageDrive,
     removeStorageDrive,
     testStorageDrive,
+    saveAgentSettings,
+    testAgentSettings,
   }), [
     preferences,
+    agentSettings,
     labelsQuery.isPending,
     locationsQuery.isPending,
+    agentSettingsQuery.isPending,
     labelsQuery.error,
     locationsQuery.error,
+    agentSettingsQuery.error,
     labels,
     replaceLabelsMutation,
     createLocationMutation,
     deleteLocationMutation,
     testLocationMutation,
+    updateAgentSettingsMutation,
+    testAgentSettingsMutation,
   ]);
 
   return <SettingsPreferencesContext.Provider value={value}>{children}</SettingsPreferencesContext.Provider>;

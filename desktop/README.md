@@ -27,6 +27,16 @@ npm run tauri dev
 
 后端就绪的判定是轮询连接文件（`connection.json`）被重写 + `/health` 返回 `ok`，超时时间 30 秒（`BACKEND_READY_TIMEOUT`）。超时或后端进程提前退出，`start_backend()` 只打印错误、不阻塞窗口打开，此时前端请求会因为拿不到 token 而失败。
 
+### 查看后端日志
+
+Tauri 拉起的 Python 后端不会把 stdout/stderr 直接打到当前终端，而是写入本机配置目录：
+
+```bash
+npm run backend:log
+```
+
+上一次运行日志保留为 `backend.log.1`。开发模式下，后端日志也会实时转发到运行 `npm run tauri dev` 的终端；设置 `FILESEEK_BACKEND_LOG_TO_TERMINAL=0` 可以关闭转发。
+
 ### 只跑前端（不涉及 Rust/后端）
 
 ```bash

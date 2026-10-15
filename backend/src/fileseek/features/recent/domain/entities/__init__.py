@@ -11,4 +11,5 @@ class RecentAccessRecord:
     accessed_at: str
     id: int = field(default=0)
 
+
 __all__ = ["RecentAccessRecord"]

@@ -122,14 +122,13 @@
   -webkit-backdrop-filter: blur(10px);
 }
 
-.task-filters {
+.task-bulk-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.task-filter,
-.task-retry-all {
+.task-bulk-button {
   display: inline-flex;
   align-items: center;
   height: 34px;
@@ -143,29 +142,27 @@
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.task-filter {
+.task-bulk-button {
   gap: 8px;
   padding: 0 12px;
   white-space: nowrap;
 }
 
-.task-filter:hover {
+.task-bulk-button:not(:disabled):hover {
   border-color: var(--tasks-border-strong);
   background: var(--tasks-control-hover);
 }
 
-.task-filter:active {
+.task-bulk-button:not(:disabled):active {
   transform: translateY(1px);
 }
 
-.task-filter.is-active {
-  border-color: var(--tasks-accent-light);
-  background: var(--tasks-active);
-  color: #fff;
-  box-shadow: 0 6px 18px rgba(15, 119, 255, 0.18);
+.task-bulk-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
-.task-filter-count {
+.task-bulk-count {
   display: inline-grid;
   place-items: center;
   min-width: 22px;
@@ -178,49 +175,39 @@
   font-variant-numeric: tabular-nums;
 }
 
-.task-filter.is-active .task-filter-count {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-
-.task-retry-all {
-  gap: 8px;
-  padding: 0 14px;
+.task-bulk-button.is-retry,
+.task-bulk-button.is-terminate {
   border-color: color-mix(in srgb, var(--tasks-danger) 48%, transparent);
   background: rgba(255, 77, 79, 0.14);
   color: #ffdcdd;
-  white-space: nowrap;
 }
 
-.task-retry-all > span {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.task-retry-all:not(:disabled):hover {
+.task-bulk-button.is-retry:not(:disabled):hover,
+.task-bulk-button.is-terminate:not(:disabled):hover {
   border-color: var(--tasks-danger);
   background: rgba(255, 77, 79, 0.22);
 }
 
-.task-retry-all:not(:disabled):active {
-  transform: translateY(1px);
+.task-bulk-button.is-continue {
+  border-color: color-mix(in srgb, var(--tasks-accent-light) 48%, transparent);
+  background: color-mix(in srgb, var(--tasks-accent) 18%, transparent);
+  color: #d8ecff;
 }
 
-.task-retry-all:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
+.task-bulk-button.is-continue:not(:disabled):hover {
+  border-color: var(--tasks-accent-light);
+  background: color-mix(in srgb, var(--tasks-accent) 26%, transparent);
 }
 
-.task-retry-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 22px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 11px;
-  line-height: 1.35;
-  font-variant-numeric: tabular-nums;
+.task-bulk-button.is-delete {
+  border-color: color-mix(in srgb, #f59e0b 48%, transparent);
+  background: rgba(245, 158, 11, 0.14);
+  color: #ffe6c2;
+}
+
+.task-bulk-button.is-delete:not(:disabled):hover {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.22);
 }
 
 .tasks-page .result-list {
@@ -810,17 +797,19 @@
     padding: 12px;
   }
 
-  .task-filters {
+  .task-bulk-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
 
-  .task-filter {
+  .task-bulk-button {
     height: 32px;
     padding: 0 10px;
     font-size: 12px;
   }
 
-  .task-retry-all {
+  .task-bulk-button {
     width: 100%;
     justify-content: center;
   }

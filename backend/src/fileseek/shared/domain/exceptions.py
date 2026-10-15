@@ -14,12 +14,14 @@ class NotFoundError(ApplicationError):
 class ValidationError(ApplicationError):
     """输入验证失败异常。"""
 
+
 class FileNotSupportError(ApplicationError):
     """文件不支持"""
 
 
 class FileAlreadyExistsError(ApplicationError):
     """目标文件已存在。"""
+
 
 class ModelLoadError(RuntimeError):
     """模型加载失败。"""
@@ -28,6 +30,6 @@ class ModelLoadError(RuntimeError):
 class InferenceError(RuntimeError):
     """模型推理失败。"""
 
+
 class ImageProcessError(RuntimeError):
     """图片文件损坏或格式不支持。"""
-

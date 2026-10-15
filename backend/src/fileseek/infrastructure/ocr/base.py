@@ -12,7 +12,6 @@ class ImageContent:
     image: object | str = None
     ocr_text: str | None = None
 
+
 class OCRPort(Protocol):
     def extract_text(self, path: Path) -> str: ...
-
-

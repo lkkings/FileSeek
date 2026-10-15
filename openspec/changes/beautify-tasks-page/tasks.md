@@ -1,7 +1,7 @@
 ## 1. Page Structure
 
 - [ ] 1.1 Refactor the Tasks page header and status summary hierarchy, and verify the page title, total, processing, and failed counts remain visible in the Tasks page test.
-- [ ] 1.2 Refine the status filter and retry-all toolbar layout, and verify all status filters and the retry-all disabled state remain accessible by role.
+- [ ] 1.2 Refine the primary action toolbar and retry-all layout, and verify the retry-all disabled state remains accessible by role.
 - [ ] 1.3 Update feature-local task styles with consistent surface, border, radius, spacing, and control tokens, and verify no new shared component or dependency is introduced.
 
 ## 2. Task Row Presentation
@@ -13,7 +13,7 @@
 ## 3. State Feedback
 
 - [ ] 3.1 Refine the task loading skeleton and verify the loading state remains non-blocking and semantically labeled.
-- [ ] 3.2 Refine the filtered empty state and verify the existing localized title and hint remain visible.
+- [ ] 3.2 Refine the empty state and verify the existing localized title and hint remain visible.
 - [ ] 3.3 Refine the task list error state and verify the user-facing error text remains visible.
 
 ## 4. Validation

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "../../../components/Icon";
 import { useTranslate } from "../../../i18n/useTranslate";
 import { useSettingsPreferences } from "../hooks/useSettingsPreferences";
+import { AgentSettingsCard } from "./AgentSettingsCard";
 import { StorageDriveManager } from "./StorageDriveManager";
 import { TagManager } from "./TagManager";
 import { SystemIntegrationCard } from "./SystemIntegrationCard";
@@ -15,6 +16,9 @@ export function SettingsPageView() {
   const t = useTranslate();
   const {
     preferences,
+    agentSettings,
+    saveAgentSettings,
+    testAgentSettings,
     loading,
     loadError,
     setLocale,
@@ -83,6 +87,16 @@ export function SettingsPageView() {
       <LicenseCard />
 
       <UpdateCard />
+
+      <section className="settings-card settings-agent-card">
+        <AgentSettingsCard
+          key={`${agentSettings.base_url}\0${agentSettings.model}\0${agentSettings.api_key_configured}`}
+          settings={agentSettings}
+          onSave={saveAgentSettings}
+          onTest={testAgentSettings}
+          loading={loading}
+        />
+      </section>
 
       <SystemIntegrationCard />
 

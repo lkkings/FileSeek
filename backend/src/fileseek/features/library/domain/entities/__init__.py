@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from fileseek.features.library.domain.exceptions import FolderNotEmptyError
-from fileseek.shared.domain.file_types import FileType,FileCategory
+from fileseek.shared.domain.file_types import FileType, FileCategory
 
 
 @dataclass
@@ -47,9 +47,11 @@ class Folder:
     def _touch(self) -> None:
         self.modified = datetime.now(UTC).isoformat()
 
+
 @dataclass
 class File:
     """文件领域实体。"""
+
     id: str
     name: str
     file_type: FileType
@@ -72,11 +74,12 @@ class File:
         """
         self.folder_id = folder_id
 
-    def add_tags(self,tags:list[str]) -> None:
+    def add_tags(self, tags: list[str]) -> None:
         self.tags.extend(tags)
 
-    def add_chunks(self,chunks: list[FileChunk]) -> None:
+    def add_chunks(self, chunks: list[FileChunk]) -> None:
         self.chunks.extend(chunks)
+
 
 @dataclass
 class FileChunk:
@@ -85,7 +88,54 @@ class FileChunk:
     score: float = 0
     metadata: dict[str, object] | None = None
 
-    def set_score(self,score: float):
+    def set_score(self, score: float):
         self.score = score
 
-__all__ = ["File", "Folder"]
+
+@dataclass
+class FolderSourceBinding:
+    """Library folder to a watchable storage source directory binding."""
+
+    id: str
+    folder_id: str
+    storage_id: str
+    source_path: str
+    recursive: bool = True
+    enabled: bool = True
+    watch_status: str = "disabled"
+    last_error: str | None = None
+    last_error_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    def set_enabled(self, enabled: bool) -> None:
+        self.enabled = enabled
+        if not enabled:
+            self.watch_status = "disabled"
+
+    def mark_watching(self) -> None:
+        self.watch_status = "watching"
+        self.last_error = None
+        self.last_error_at = None
+
+    def mark_unavailable(self) -> None:
+        self.watch_status = "unavailable"
+
+    def mark_error(self, message: str) -> None:
+        self.watch_status = "error"
+        self.last_error = message
+        self.last_error_at = datetime.now(UTC)
+
+
+@dataclass(frozen=True)
+class FolderSourceSeen:
+    """A source path already observed for one binding."""
+
+    id: str
+    binding_id: str
+    source_path: str
+    outcome: str = "seen"
+    last_seen_at: datetime | None = None
+
+
+__all__ = ["File", "Folder", "FolderSourceBinding", "FolderSourceSeen"]

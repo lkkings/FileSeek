@@ -5,11 +5,11 @@ The desktop Tasks page presents useful queue information, but its current hierar
 ## What Changes
 
 - Add a clearer Tasks page header with a title, concise page context, and status summary.
-- Refine the status filter group and retry action so primary controls are easier to distinguish.
+- Refine the primary action toolbar and retry action so controls are easier to distinguish.
 - Improve task row hierarchy for file information, status, progress, stage flow, and errors.
 - Upgrade loading skeletons, empty states, and error presentation without changing their behavior.
 - Align spacing, radii, borders, status colors, hover states, and focus states with the existing dark desktop visual system.
-- Preserve the current task API contract, filtering, pagination, retry behavior, removal behavior, drawer behavior, i18n, accessibility semantics, and responsive breakpoints.
+- Preserve the current task API contract, pagination, retry behavior, removal behavior, drawer behavior, i18n, accessibility semantics, and responsive breakpoints.
 
 ## Capabilities
 

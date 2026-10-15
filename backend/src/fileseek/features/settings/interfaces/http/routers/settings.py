@@ -5,24 +5,33 @@ from fastapi import APIRouter, Depends, Query
 from fileseek.features.settings.application.use_cases import (
     CreateStorageLocationUseCase,
     DeleteStorageLocationUseCase,
+    GetAgentSettingsUseCase,
     GetClassifierLabelsUseCase,
     ListStorageDirectoryUseCase,
     ListStorageLocationsUseCase,
     ReplaceClassifierLabelsUseCase,
+    TestAgentSettingsUseCase,
     TestStorageConnectionUseCase,
+    UpdateAgentSettingsUseCase,
     UpdateStorageLocationUseCase,
 )
 from fileseek.features.settings.interfaces.http.dependencies import (
+    get_agent_settings_use_case,
     get_classifier_labels_use_case,
     get_create_storage_location_use_case,
     get_delete_storage_location_use_case,
     get_list_storage_directory_use_case,
     get_list_storage_locations_use_case,
     get_replace_classifier_labels_use_case,
+    get_test_agent_settings_use_case,
     get_test_storage_connection_use_case,
+    get_update_agent_settings_use_case,
     get_update_storage_location_use_case,
 )
 from fileseek.features.settings.interfaces.http.mappers import (
+    agent_settings_request_to_command,
+    agent_settings_request_to_test_command,
+    agent_settings_to_schema,
     classifier_labels_request_to_command,
     classifier_labels_to_schema,
     connection_result_to_schema,
@@ -38,6 +47,7 @@ from fileseek.features.settings.interfaces.http.mappers import (
     test_storage_connection_command,
 )
 from fileseek.features.settings.interfaces.http.schemas import (
+    AgentSettingsRequest,
     ClassifierLabelsRequest,
     StorageLocationCreateRequest,
     StorageLocationUpdateRequest,
@@ -46,6 +56,53 @@ from fileseek.shared.domain.exceptions import ApplicationError
 from fileseek.shared.envelope import error_response, success_response
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+
+
+@router.get("/agent")
+async def get_agent_settings(
+    use_case: Annotated[
+        GetAgentSettingsUseCase,
+        Depends(get_agent_settings_use_case),
+    ],
+) -> dict[str, object]:
+    try:
+        settings = await use_case.execute()
+    except ApplicationError as exc:
+        return error_response(str(exc))
+
+    return success_response(agent_settings_to_schema(settings).model_dump(by_alias=True))
+
+
+@router.put("/agent")
+async def update_agent_settings(
+    body: AgentSettingsRequest,
+    use_case: Annotated[
+        UpdateAgentSettingsUseCase,
+        Depends(get_update_agent_settings_use_case),
+    ],
+) -> dict[str, object]:
+    try:
+        settings = await use_case.execute(agent_settings_request_to_command(body))
+    except ApplicationError as exc:
+        return error_response(str(exc))
+
+    return success_response(agent_settings_to_schema(settings).model_dump(by_alias=True))
+
+
+@router.post("/agent/test")
+async def test_agent_settings(
+    body: AgentSettingsRequest,
+    use_case: Annotated[
+        TestAgentSettingsUseCase,
+        Depends(get_test_agent_settings_use_case),
+    ],
+) -> dict[str, object]:
+    try:
+        result = await use_case.execute(agent_settings_request_to_test_command(body))
+    except ApplicationError as exc:
+        return error_response(str(exc))
+
+    return success_response(connection_result_to_schema(result).model_dump(by_alias=True))
 
 
 @router.get("/classifier-labels")
@@ -60,9 +117,7 @@ async def get_classifier_labels(
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        classifier_labels_to_schema(labels).model_dump(by_alias=True)
-    )
+    return success_response(classifier_labels_to_schema(labels).model_dump(by_alias=True))
 
 
 @router.put("/classifier-labels")
@@ -78,9 +133,7 @@ async def replace_classifier_labels(
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        classifier_labels_to_schema(labels).model_dump(by_alias=True)
-    )
+    return success_response(classifier_labels_to_schema(labels).model_dump(by_alias=True))
 
 
 @router.get("/storage-locations")
@@ -96,10 +149,7 @@ async def list_storage_locations(
         return error_response(str(exc))
 
     return success_response(
-        [
-            storage_location_to_schema(location).model_dump(by_alias=True)
-            for location in locations
-        ]
+        [storage_location_to_schema(location).model_dump(by_alias=True) for location in locations]
     )
 
 
@@ -113,15 +163,11 @@ async def list_storage_directory(
     path: str = Query(default=""),
 ) -> dict[str, object]:
     try:
-        directory = await use_case.execute(
-            storage_directory_query(location_id, path)
-        )
+        directory = await use_case.execute(storage_directory_query(location_id, path))
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        storage_directory_to_schema(directory).model_dump(by_alias=True)
-    )
+    return success_response(storage_directory_to_schema(directory).model_dump(by_alias=True))
 
 
 @router.post("/storage-locations")
@@ -137,9 +183,7 @@ async def create_storage_location(
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        storage_location_to_schema(location).model_dump(by_alias=True)
-    )
+    return success_response(storage_location_to_schema(location).model_dump(by_alias=True))
 
 
 @router.put("/storage-locations/{location_id}")
@@ -152,15 +196,11 @@ async def update_storage_location(
     ],
 ) -> dict[str, object]:
     try:
-        location = await use_case.execute(
-            storage_update_request_to_command(location_id, body)
-        )
+        location = await use_case.execute(storage_update_request_to_command(location_id, body))
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        storage_location_to_schema(location).model_dump(by_alias=True)
-    )
+    return success_response(storage_location_to_schema(location).model_dump(by_alias=True))
 
 
 @router.delete("/storage-locations/{location_id}")
@@ -176,9 +216,7 @@ async def delete_storage_location(
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        storage_deletion_to_schema(result).model_dump(by_alias=True)
-    )
+    return success_response(storage_deletion_to_schema(result).model_dump(by_alias=True))
 
 
 @router.post("/storage-locations/{location_id}/test")
@@ -194,6 +232,4 @@ async def test_storage_connection(
     except ApplicationError as exc:
         return error_response(str(exc))
 
-    return success_response(
-        connection_result_to_schema(result).model_dump(by_alias=True)
-    )
+    return success_response(connection_result_to_schema(result).model_dump(by_alias=True))

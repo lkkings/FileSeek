@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   reload: vi.fn(),
   retryTask: { mutateAsync: vi.fn(async () => ({ status: "success", data: null, error: null })) },
   cancelTask: { mutateAsync: vi.fn(async () => ({ status: "success", data: null, error: null })) },
+  cancelIncompleteTasks: { mutateAsync: vi.fn(async () => ({ status: "success", data: { count: 3 }, error: null })) },
+  continueCancelledTasks: { mutateAsync: vi.fn(async () => ({ status: "success", data: { count: 2 }, error: null })) },
+  deleteCompletedTasks: { mutateAsync: vi.fn(async () => ({ status: "success", data: { count: 3 }, error: null })) },
 }));
 
 vi.mock("../../features/file-preview", async (importOriginal) => {
@@ -61,10 +64,10 @@ vi.mock("../../features/tasks/hooks/useTasks", () => ({
   useTasks: () => ({
     data: {
       tasks: [task],
-      counts: { queued: 1, processing: 2, completed: 3, failed: 4, cancelled: 0 },
+      counts: { queued: 1, processing: 2, completed: 3, failed: 4, cancelled: 2 },
       page: 1,
       page_size: 50,
-      total: 10,
+      total: 12,
     },
     loading: false,
     error: null,
@@ -74,6 +77,9 @@ vi.mock("../../features/tasks/hooks/useTasks", () => ({
     reload: mocks.reload,
     retryTask: mocks.retryTask,
     cancelTask: mocks.cancelTask,
+    cancelIncompleteTasks: mocks.cancelIncompleteTasks,
+    continueCancelledTasks: mocks.continueCancelledTasks,
+    deleteCompletedTasks: mocks.deleteCompletedTasks,
   }),
 }));
 
@@ -84,18 +90,17 @@ describe("TasksPage", () => {
     expect(screen.getByRole("heading", { name: "任务队列" })).toBeInTheDocument();
     const summary = screen.getByLabelText("任务状态摘要");
     expect(within(summary).getByText("总数")).toBeInTheDocument();
-    expect(within(summary).getByText("10")).toBeInTheDocument();
+    expect(within(summary).getByText("12")).toBeInTheDocument();
     expect(within(summary).getByText("处理中")).toBeInTheDocument();
-    expect(within(summary).getByText("2")).toBeInTheDocument();
-    expect(within(summary).getByText("失败")).toBeInTheDocument();
     expect(within(summary).getByText("4")).toBeInTheDocument();
+    expect(within(summary).getByText("失败")).toBeInTheDocument();
+    expect(within(summary).getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Task.pdf")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /等待中/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /处理中/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /已完成/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /失败/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /已终止/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /pending/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "任务批量操作" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "任务状态筛选" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /一键终止 3/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /一键继续 2/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /删除已完成 3/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Task.pdf 重试" }));
 
@@ -127,5 +132,24 @@ describe("TasksPage", () => {
     await waitFor(() => expect(mocks.retryTask.mutateAsync).toHaveBeenCalledWith("task-1"));
     expect(mocks.reload).toHaveBeenCalled();
     expect(screen.getByText(/已提交 1 个重试/)).toBeInTheDocument();
+  });
+
+  it("runs bulk terminate, continue, and delete completed actions", async () => {
+    renderWithI18n(<TasksPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /一键终止 3/ }));
+    await waitFor(() => expect(mocks.cancelIncompleteTasks.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.reload).toHaveBeenCalled();
+    expect(screen.getByText(/已终止 3 个任务/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /一键继续 2/ }));
+    await waitFor(() => expect(mocks.continueCancelledTasks.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.reload).toHaveBeenCalled();
+    expect(screen.getByText(/已继续 2 个任务/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /删除已完成 3/ }));
+    await waitFor(() => expect(mocks.deleteCompletedTasks.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.reload).toHaveBeenCalled();
+    expect(screen.getByText(/已删除 3 个已完成任务/)).toBeInTheDocument();
   });
 });

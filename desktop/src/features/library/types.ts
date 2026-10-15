@@ -13,6 +13,31 @@ export interface FolderFormValues {
   description: string;
 }
 
+export type FolderSourceWatchStatus =
+  | "watching"
+  | "disabled"
+  | "unavailable"
+  | "error";
+
+export interface FolderSourceBinding {
+  id: string;
+  folderId: string;
+  storageId: string;
+  sourcePath: string;
+  recursive: boolean;
+  enabled: boolean;
+  watchStatus: FolderSourceWatchStatus;
+  lastError: string | null;
+  lastErrorAt: string | null;
+}
+
+export interface FolderSourceBindingInput {
+  storageId: string;
+  path: string;
+  recursive: boolean;
+  enabled: boolean;
+}
+
 export interface ImportFileSelection {
   storageId: string;
   path: string;

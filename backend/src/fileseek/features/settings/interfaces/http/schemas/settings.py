@@ -18,6 +18,22 @@ class ClassifierLabelsResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class AgentSettingsRequest(BaseModel):
+    base_url: str = Field(alias="base_url")
+    model: str
+    api_key: str | None = Field(default=None, alias="api_key")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class AgentSettingsResponse(BaseModel):
+    base_url: str = Field(alias="base_url")
+    model: str
+    api_key_configured: bool = Field(alias="api_key_configured")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class StorageLocationCreateRequest(BaseModel):
     id: str | None = None
     name: str

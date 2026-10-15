@@ -50,4 +50,3 @@ class DeleteRecycleRequest(BaseModel):
     """批量永久删除回收站条目请求。"""
 
     item_ids: list[str]
-

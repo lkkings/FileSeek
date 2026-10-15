@@ -15,8 +15,9 @@ from fileseek.features.settings.application.use_cases import (
     CreateStorageLocationUseCase,
     DeleteStorageLocationUseCase,
 )
-from fileseek.features.settings.domain.entities import StorageLocation
+from fileseek.features.settings.domain.entities import AgentSettings, StorageLocation
 from fileseek.features.settings.infrastructure import (
+    TortoiseAgentSettingsRepository,
     TortoiseClassifierLabelRepository,
     TortoiseStorageLocationRepository,
 )
@@ -81,6 +82,25 @@ async def test_classifier_label_repository_replaces_vocabulary(
 
 
 @pytest.mark.asyncio
+async def test_agent_settings_repository_persists_singleton(settings: Settings) -> None:
+    repository = TortoiseAgentSettingsRepository()
+
+    assert await repository.get() is None
+
+    saved = await repository.save(
+        AgentSettings(
+            base_url="https://api.example.com/v1",
+            api_key="secret-key",
+            model="retrieval-expert",
+        )
+    )
+    loaded = await repository.get()
+
+    assert saved.id == "default"
+    assert loaded == saved
+
+
+@pytest.mark.asyncio
 async def test_default_seed_is_idempotent(
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
@@ -128,9 +148,7 @@ async def test_delete_storage_location_retains_file_indexes(
         access_state="available",
     )
 
-    result = await delete_use_case.execute(
-        DeleteStorageLocationCommand(location_id="nas1")
-    )
+    result = await delete_use_case.execute(DeleteStorageLocationCommand(location_id="nas1"))
     model = await FileModel.get(id="file-1")
 
     assert result.affected_files == 0

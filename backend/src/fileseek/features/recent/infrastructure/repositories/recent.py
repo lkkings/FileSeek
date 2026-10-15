@@ -64,9 +64,7 @@ class RecentAccessRepositoryImpl(RecentAccessRepository):
         )
         total = await query.count()
         models = (
-            await query.order_by("-accessed_at")
-            .offset((page - 1) * page_size)
-            .limit(page_size)
+            await query.order_by("-accessed_at").offset((page - 1) * page_size).limit(page_size)
         )
         return [_to_record(model) for model in models], total
 

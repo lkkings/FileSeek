@@ -34,6 +34,34 @@ class _TaskRepo:
         return None
 
 
+class _FakeScheduler:
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    def start(self) -> None:
+        self.events.append("scheduler-start")
+
+    async def release_stranded(self) -> int:
+        return 0
+
+    async def shutdown(self, timeout: float) -> list[object]:
+        _ = timeout
+        self.events.append("scheduler-stop")
+        return []
+
+
+class _FakeFolderSourceWatcher:
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    async def start(self) -> None:
+        self.events.append("watcher-start")
+
+    async def stop(self, timeout: float | None = None) -> None:
+        _ = timeout
+        self.events.append("watcher-stop")
+
+
 @pytest.mark.asyncio
 async def test_shutdown_leaves_no_model_subprocesses(tmp_path: Path, monkeypatch) -> None:
     async def _noop() -> None:
@@ -71,3 +99,38 @@ async def test_shutdown_leaves_no_model_subprocesses(tmp_path: Path, monkeypatch
 
     assert multiprocessing.active_children() == []
     assert not query_client.handle.is_alive()
+
+
+@pytest.mark.asyncio
+async def test_lifespan_starts_and_stops_folder_source_watcher(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    async def _noop() -> None:
+        return None
+
+    monkeypatch.setattr(lifespan_module, "init_db", _noop)
+    monkeypatch.setattr(lifespan_module, "close_db", _noop)
+    monkeypatch.setattr(
+        lifespan_module.AppPaths, "resolve", classmethod(lambda cls: _Paths(tmp_path))
+    )
+    scheduler = _FakeScheduler()
+    watcher = _FakeFolderSourceWatcher()
+    monkeypatch.setattr(
+        lifespan_module,
+        "build_task_scheduler",
+        lambda _settings: scheduler,
+    )
+    app = SimpleNamespace(
+        state=SimpleNamespace(
+            container=Container(settings=Settings(lib_root=tmp_path)),
+            dependencies={"folder_source_watcher_service": watcher},
+            publish_connection=False,
+        )
+    )
+
+    async with lifespan_module.lifespan(app):  # type: ignore[arg-type]
+        assert app.state.container.folder_source_watcher is watcher
+
+    assert scheduler.events == ["scheduler-start", "scheduler-stop"]
+    assert watcher.events == ["watcher-start", "watcher-stop"]

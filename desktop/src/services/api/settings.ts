@@ -7,6 +7,23 @@ export interface ClassifierLabels {
   version: string;
 }
 
+export interface AgentSettings {
+  base_url: string;
+  model: string;
+  api_key_configured: boolean;
+}
+
+export interface AgentSettingsInput {
+  base_url: string;
+  model: string;
+  api_key?: string | null;
+}
+
+export interface AgentConnectionResult {
+  success: boolean;
+  message: string;
+}
+
 export type StorageLocationType = "local" | "nas" | "external";
 export type StorageProtocol = "file" | "mounted" | "smb" | "nfs" | "webdav";
 export type StorageStatus = "active" | "deleted";
@@ -61,6 +78,34 @@ export function listClassifierLabels(
   client: ApiClient = defaultClient,
 ): Promise<ApiResponse<ClassifierLabels>> {
   return client.get<ClassifierLabels>("/settings/classifier-labels");
+}
+
+export function getAgentSettings(
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<AgentSettings>> {
+  return client.get<AgentSettings>("/settings/agent");
+}
+
+export function updateAgentSettings(
+  input: AgentSettingsInput,
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<AgentSettings>> {
+  return client.put<AgentSettings>("/settings/agent", {
+    base_url: input.base_url,
+    model: input.model,
+    api_key: input.api_key ?? null,
+  });
+}
+
+export function testAgentSettings(
+  input: AgentSettingsInput,
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<AgentConnectionResult>> {
+  return client.post<AgentConnectionResult>("/settings/agent/test", {
+    base_url: input.base_url,
+    model: input.model,
+    api_key: input.api_key ?? null,
+  });
 }
 
 export function replaceClassifierLabels(

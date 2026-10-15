@@ -4,14 +4,18 @@ from fileseek.features.library.application.commands import (
     BatchImportCommand,
     BatchImportItemCommand,
     CreateFolderCommand,
+    CreateFolderSourceBindingCommand,
     DeleteFolderCommand,
+    DeleteFolderSourceBindingCommand,
     MoveFilesCommand,
     UpdateFolderCommand,
+    UpdateFolderSourceBindingCommand,
 )
 from fileseek.features.library.application.dto import (
     FileAvailabilityDTO,
     FileDTO,
     FolderDTO,
+    FolderSourceBindingDTO,
 )
 from fileseek.features.library.application.queries import (
     CheckFileAvailabilityQuery,
@@ -24,6 +28,9 @@ from fileseek.features.library.interfaces.http.schemas import (
     FileResponse,
     FolderCreateRequest,
     FolderResponse,
+    FolderSourceBindingCreateRequest,
+    FolderSourceBindingResponse,
+    FolderSourceBindingUpdateRequest,
     FolderUpdateRequest,
     MoveFilesRequest,
 )
@@ -39,6 +46,23 @@ def folder_to_schema(folder: FolderDTO) -> FolderResponse:
         file_count=folder.file_count,
     )
 
+
+def folder_source_binding_to_schema(
+    binding: FolderSourceBindingDTO,
+) -> FolderSourceBindingResponse:
+    return FolderSourceBindingResponse(
+        id=binding.id,
+        folder_id=binding.folder_id,
+        storage_id=binding.storage_id,
+        source_path=binding.source_path,
+        recursive=binding.recursive,
+        enabled=binding.enabled,
+        watch_status=binding.watch_status,
+        last_error=binding.last_error,
+        last_error_at=binding.last_error_at,
+    )
+
+
 def file_to_schema(file: FileDTO) -> FileResponse:
     return FileResponse(
         id=file.id,
@@ -51,8 +75,10 @@ def file_to_schema(file: FileDTO) -> FileResponse:
         path=file.path,
     )
 
+
 def create_folder_request_to_command(body: FolderCreateRequest) -> CreateFolderCommand:
     return CreateFolderCommand(body.name, body.icon_type, body.description)
+
 
 def update_folder_request_to_command(
     folder_id: str,
@@ -60,11 +86,48 @@ def update_folder_request_to_command(
 ) -> UpdateFolderCommand:
     return UpdateFolderCommand(folder_id, body.name, body.icon_type, body.description)
 
+
+def create_folder_source_binding_request_to_command(
+    folder_id: str,
+    body: FolderSourceBindingCreateRequest,
+) -> CreateFolderSourceBindingCommand:
+    return CreateFolderSourceBindingCommand(
+        folder_id=folder_id,
+        storage_id=body.storage_id,
+        path=body.path,
+        recursive=body.recursive,
+        enabled=body.enabled,
+    )
+
+
+def update_folder_source_binding_request_to_command(
+    folder_id: str,
+    binding_id: str,
+    body: FolderSourceBindingUpdateRequest,
+) -> UpdateFolderSourceBindingCommand:
+    return UpdateFolderSourceBindingCommand(
+        binding_id=binding_id,
+        folder_id=folder_id,
+        storage_id=body.storage_id,
+        path=body.path,
+        recursive=body.recursive,
+        enabled=body.enabled,
+    )
+
+
+def delete_folder_source_binding_command(
+    binding_id: str,
+) -> DeleteFolderSourceBindingCommand:
+    return DeleteFolderSourceBindingCommand(binding_id)
+
+
 def list_folders_query() -> ListFoldersQuery:
     return ListFoldersQuery()
 
+
 def delete_folder_command(folder_id: str) -> DeleteFolderCommand:
     return DeleteFolderCommand(folder_id)
+
 
 def batch_import_request_to_command(body: BatchImportRequest) -> BatchImportCommand:
     return BatchImportCommand(
@@ -78,6 +141,7 @@ def batch_import_request_to_command(body: BatchImportRequest) -> BatchImportComm
 
 def move_files_request_to_command(body: MoveFilesRequest) -> MoveFilesCommand:
     return MoveFilesCommand(tuple(body.file_ids), body.target_folder_id)
+
 
 def get_file_query(file_id: str) -> GetFileQuery:
     return GetFileQuery(file_id)

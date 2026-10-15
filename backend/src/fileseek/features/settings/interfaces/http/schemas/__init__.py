@@ -1,4 +1,6 @@
 from fileseek.features.settings.interfaces.http.schemas.settings import (
+    AgentSettingsRequest,
+    AgentSettingsResponse,
     ClassifierLabelsRequest,
     ClassifierLabelsResponse,
     ConnectionTestResponse,
@@ -11,6 +13,8 @@ from fileseek.features.settings.interfaces.http.schemas.settings import (
 )
 
 __all__ = [
+    "AgentSettingsRequest",
+    "AgentSettingsResponse",
     "ClassifierLabelsRequest",
     "ClassifierLabelsResponse",
     "ConnectionTestResponse",

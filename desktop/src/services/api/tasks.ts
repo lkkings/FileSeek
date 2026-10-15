@@ -32,6 +32,10 @@ export interface TaskListResponse {
   total: number;
 }
 
+export interface TaskBulkOperationResponse {
+  count: number;
+}
+
 export function listTasks(
   status: TaskStatus | null = null,
   page: number = 1,
@@ -56,4 +60,22 @@ export function cancelTask(taskId: string, client: ApiClient = defaultClient): P
 
 export function deleteTask(taskId: string, client: ApiClient = defaultClient): Promise<ApiResponse<null>> {
   return client.delete<null>(`/tasks/${encodeURIComponent(taskId)}`);
+}
+
+export function cancelIncompleteTasks(
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<TaskBulkOperationResponse>> {
+  return client.post<TaskBulkOperationResponse>("/tasks/cancel-incomplete");
+}
+
+export function continueCancelledTasks(
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<TaskBulkOperationResponse>> {
+  return client.post<TaskBulkOperationResponse>("/tasks/continue-cancelled");
+}
+
+export function deleteCompletedTasks(
+  client: ApiClient = defaultClient,
+): Promise<ApiResponse<TaskBulkOperationResponse>> {
+  return client.post<TaskBulkOperationResponse>("/tasks/delete-completed");
 }

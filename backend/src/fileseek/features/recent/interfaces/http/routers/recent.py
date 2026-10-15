@@ -42,9 +42,7 @@ async def list_recent_access(
     """分页列出最近访问的文件。"""
     records, total = await use_case.execute(list_recent_query(page, page_size))
 
-    return success_response(
-        recent_access_page_to_response(records, total, page, page_size)
-    )
+    return success_response(recent_access_page_to_response(records, total, page, page_size))
 
 
 @router.post("")

@@ -7,6 +7,7 @@ from uuid import uuid4
 from tortoise.transactions import in_transaction
 
 from fileseek.features.settings.domain.entities import (
+    AgentSettings,
     ClassifierLabelSet,
     StorageLocation,
     StorageLocationType,
@@ -14,6 +15,7 @@ from fileseek.features.settings.domain.entities import (
     StorageStatus,
 )
 from fileseek.infrastructure.database.models import (
+    AgentSettingsModel,
     ClassifierLabelModel,
     StorageLocationModel,
 )
@@ -48,13 +50,10 @@ class TortoiseStorageLocationRepository:
         return _to_storage_location(model) if model else None
 
     async def list_active_manageable(self) -> list[StorageLocation]:
-        models = (
-            await StorageLocationModel.filter(
-                status="active",
-                type__in=["local", "nas"],
-            )
-            .order_by("type", "name")
-        )
+        models = await StorageLocationModel.filter(
+            status="active",
+            type__in=["local", "nas"],
+        ).order_by("type", "name")
         return [_to_storage_location(model) for model in models]
 
     async def save(self, location: StorageLocation) -> StorageLocation:
@@ -136,3 +135,29 @@ class TortoiseClassifierLabelRepository:
                     for label in category_labels
                 ]
             )
+
+
+def _to_agent_settings(model: AgentSettingsModel) -> AgentSettings:
+    return AgentSettings(
+        id=model.id,
+        base_url=model.base_url,
+        api_key=model.api_key,
+        model=model.model,
+    )
+
+
+class TortoiseAgentSettingsRepository:
+    async def get(self) -> AgentSettings | None:
+        model = await AgentSettingsModel.filter(id="default").first()
+        return _to_agent_settings(model) if model else None
+
+    async def save(self, settings: AgentSettings) -> AgentSettings:
+        model, _ = await AgentSettingsModel.update_or_create(
+            id=settings.id,
+            defaults={
+                "base_url": settings.base_url,
+                "api_key": settings.api_key,
+                "model": settings.model,
+            },
+        )
+        return _to_agent_settings(model)

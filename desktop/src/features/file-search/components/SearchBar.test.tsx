@@ -9,6 +9,8 @@ function renderBar(onWarmup: () => Promise<unknown>) {
   return renderWithI18n(
     <SearchBar
       query=""
+      mode="advanced"
+      onModeChange={() => undefined}
       onQueryChange={() => undefined}
       onOpenAdvanced={() => undefined}
       advancedOpen={false}
@@ -65,5 +67,71 @@ describe("SearchBar warmup", () => {
     expect(onWarmup).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText(/backend unavailable/)).toBeNull();
+  });
+
+  it("toggles retrieval augmentation and hides the advanced-filter entry", () => {
+    const onModeChange = vi.fn();
+    const onOpenAdvanced = vi.fn();
+    const { unmount } = renderWithI18n(
+      <SearchBar
+        query=""
+        mode="advanced"
+        onModeChange={onModeChange}
+        onQueryChange={() => undefined}
+        onOpenAdvanced={onOpenAdvanced}
+        advancedOpen={false}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "高级筛选", expanded: false })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "启动检索增强" }));
+    expect(onModeChange).toHaveBeenCalledWith("enhanced");
+
+    unmount();
+    renderWithI18n(
+      <SearchBar
+        query=""
+        mode="enhanced"
+        onModeChange={onModeChange}
+        onQueryChange={() => undefined}
+        onOpenAdvanced={onOpenAdvanced}
+        advancedOpen={false}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "高级筛选", expanded: false })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "启动检索增强" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("disables controls and ignores submissions while loading", () => {
+    const onModeChange = vi.fn();
+    const onSubmit = vi.fn();
+    renderWithI18n(
+      <SearchBar
+        query="cat"
+        mode="advanced"
+        onModeChange={onModeChange}
+        onQueryChange={() => undefined}
+        onOpenAdvanced={() => undefined}
+        advancedOpen={false}
+        onSubmit={onSubmit}
+        loading
+      />,
+    );
+
+    expect(screen.getByRole("textbox")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "启动检索增强" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "高级筛选", expanded: false })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "启动检索增强" }));
+    fireEvent.submit(screen.getByRole("textbox").closest("form"));
+
+    expect(onModeChange).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

@@ -2,23 +2,33 @@ from __future__ import annotations
 
 import pytest
 
+from fileseek.features.search.application.dto import AgentAssistantMessage
+from fileseek.features.search.application.ports import AgentConnection
+from fileseek.features.search.domain.exceptions import AgentProviderError
 from fileseek.features.settings.application.commands import (
     CreateStorageLocationCommand,
     DeleteStorageLocationCommand,
     ReplaceClassifierLabelsCommand,
+    TestAgentSettingsCommand,
     TestStorageConnectionCommand,
+    UpdateAgentSettingsCommand,
     UpdateStorageLocationCommand,
 )
+from fileseek.features.settings.application.dto import AgentSettingsDTO
 from fileseek.features.settings.application.queries import ListStorageLocationsQuery
 from fileseek.features.settings.application.use_cases import (
     CreateStorageLocationUseCase,
     DeleteStorageLocationUseCase,
+    GetAgentSettingsUseCase,
     ListStorageLocationsUseCase,
     ReplaceClassifierLabelsUseCase,
+    TestAgentSettingsUseCase,
     TestStorageConnectionUseCase,
+    UpdateAgentSettingsUseCase,
     UpdateStorageLocationUseCase,
 )
 from fileseek.features.settings.domain.entities import (
+    AgentSettings,
     ClassifierLabelSet,
     StorageLocation,
 )
@@ -86,10 +96,155 @@ class FakeStorageLocationRepository:
         location = self.locations.get(location_id)
         if location is None or location.is_system:
             return False
-        self.locations[location_id] = StorageLocation(
-            **{**location.__dict__, "status": "deleted"}
-        )
+        self.locations[location_id] = StorageLocation(**{**location.__dict__, "status": "deleted"})
         return True
+
+
+class FakeAgentSettingsRepository:
+    def __init__(self) -> None:
+        self.settings: AgentSettings | None = None
+
+    async def get(self) -> AgentSettings | None:
+        return self.settings
+
+    async def save(self, settings: AgentSettings) -> AgentSettings:
+        self.settings = settings
+        return settings
+
+
+class FakeAgentConnectionTester:
+    def __init__(self, response: AgentAssistantMessage | AgentProviderError) -> None:
+        self.response = response
+        self.connections: list[AgentConnection] = []
+
+    async def test(self, connection: AgentConnection) -> AgentAssistantMessage:
+        self.connections.append(connection)
+        if isinstance(self.response, AgentProviderError):
+            raise self.response
+        return self.response
+
+
+@pytest.mark.asyncio
+async def test_get_agent_settings_returns_empty_defaults() -> None:
+    use_case = GetAgentSettingsUseCase(FakeAgentSettingsRepository())
+
+    result = await use_case.execute()
+
+    assert result == AgentSettingsDTO(
+        base_url="",
+        model="",
+        api_key_configured=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_agent_settings_preserves_key_when_omitted() -> None:
+    repository = FakeAgentSettingsRepository()
+    repository.settings = AgentSettings(
+        base_url="https://api.example.com/v1",
+        api_key="secret-key",
+        model="old-model",
+    )
+    use_case = UpdateAgentSettingsUseCase(repository)
+
+    result = await use_case.execute(
+        UpdateAgentSettingsCommand(
+            base_url="https://api.updated.com/v1",
+            model="new-model",
+        )
+    )
+
+    assert repository.settings is not None
+    assert repository.settings.api_key == "secret-key"
+    assert result.api_key_configured is True
+    assert result.base_url == "https://api.updated.com/v1"
+
+
+@pytest.mark.asyncio
+async def test_update_agent_settings_rejects_invalid_url() -> None:
+    repository = FakeAgentSettingsRepository()
+    use_case = UpdateAgentSettingsUseCase(repository)
+
+    with pytest.raises(ValidationError) as error:
+        await use_case.execute(
+            UpdateAgentSettingsCommand(
+                base_url="ftp://api.example.com",
+                model="retrieval-expert",
+                api_key="secret-key",
+            )
+        )
+
+    assert "http" in str(error.value)
+    assert repository.settings is None
+
+
+@pytest.mark.asyncio
+async def test_agent_settings_connection_uses_saved_key_when_omitted() -> None:
+    repository = FakeAgentSettingsRepository()
+    repository.settings = AgentSettings(
+        base_url="https://api.example.com/v1",
+        api_key="secret-key",
+        model="saved-model",
+    )
+    tester = FakeAgentConnectionTester(AgentAssistantMessage(content="ok", tool_calls=()))
+    use_case = TestAgentSettingsUseCase(
+        repository,
+        lambda _: tester,
+    )
+
+    result = await use_case.execute(
+        TestAgentSettingsCommand(
+            base_url="https://api.updated.com/v1",
+            model="new-model",
+        )
+    )
+
+    assert result.success is True
+    assert result.message == "Agent 连接成功"
+    assert tester.connections == [
+        AgentConnection(
+            base_url="https://api.updated.com/v1",
+            api_key="secret-key",
+            model="new-model",
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_agent_settings_connection_reports_provider_failure() -> None:
+    repository = FakeAgentSettingsRepository()
+    tester = FakeAgentConnectionTester(AgentProviderError("Agent 服务请求失败: HTTP 401"))
+    use_case = TestAgentSettingsUseCase(
+        repository,
+        lambda _: tester,
+    )
+
+    result = await use_case.execute(
+        TestAgentSettingsCommand(
+            base_url="https://api.example.com/v1",
+            model="retrieval-expert",
+            api_key="secret-key",
+        )
+    )
+
+    assert result.success is False
+    assert result.message == "Agent 服务请求失败: HTTP 401"
+
+
+@pytest.mark.asyncio
+async def test_agent_settings_connection_requires_key() -> None:
+    use_case = TestAgentSettingsUseCase(
+        FakeAgentSettingsRepository(),
+        lambda _: FakeAgentConnectionTester(AgentAssistantMessage(content="ok", tool_calls=())),
+    )
+
+    with pytest.raises(ValidationError, match="API Key"):
+        await use_case.execute(
+            TestAgentSettingsCommand(
+                base_url="https://api.example.com/v1",
+                model="retrieval-expert",
+            )
+        )
 
 
 @pytest.mark.asyncio
@@ -136,9 +291,7 @@ async def test_storage_connection_succeeds_for_mounted_path(tmp_path) -> None:
     )
     use_case = TestStorageConnectionUseCase(repository)
 
-    result = await use_case.execute(
-        TestStorageConnectionCommand(location_id="nas2")
-    )
+    result = await use_case.execute(TestStorageConnectionCommand(location_id="nas2"))
 
     assert result.success is True
 

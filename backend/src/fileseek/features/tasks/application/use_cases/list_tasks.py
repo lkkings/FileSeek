@@ -22,10 +22,7 @@ class ListTasksUseCase:
 
         status_counts = await self.task_repo.count_by_status()
 
-        counts = {
-            status.value: count
-            for status, count in status_counts.items()
-        }
+        counts = {status.value: count for status, count in status_counts.items()}
 
         return TaskListDTO(
             tasks=[task_to_dto(task) for task in tasks],

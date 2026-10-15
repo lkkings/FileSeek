@@ -35,8 +35,6 @@ class ListStorageDirectoryUseCase:
         if not location.is_active:
             raise StorageBrowseUnavailableError(f"存储位置已删除: {location.id}")
         if location.type == "external" or location.protocol not in {"file", "mounted"}:
-            raise StorageBrowseUnsupportedError(
-                f"存储协议暂不支持目录浏览: {location.protocol}"
-            )
+            raise StorageBrowseUnsupportedError(f"存储协议暂不支持目录浏览: {location.protocol}")
 
         return await self.browser.list_entries(location, query.path)

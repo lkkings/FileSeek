@@ -63,9 +63,7 @@ class ImageHandler(FileHandler):
             completed_count=0,
             total_count=1,
         )
-        ocr_text = self._ocr_service.extract_text(
-            path
-        )
+        ocr_text = self._ocr_service.extract_text(path)
         content = ImageContent(
             image=path,
             ocr_text=ocr_text,
@@ -85,38 +83,26 @@ class ImageHandler(FileHandler):
             total_count=total_count,
         )
         image_bytes = path.read_bytes()
-        image_embeddings = (
-            self._embedding_service.embed_image(
-                image_bytes
-            )
-        )
+        image_embeddings = self._embedding_service.embed_image(image_bytes)
         image_embedding = image_embeddings[0]
         features: list[dict[str, object]] = [
             {
                 "feature_type": "image",
             }
         ]
-        embeddings: list[list[float]] = [
-            image_embedding
-        ]
+        embeddings: list[list[float]] = [image_embedding]
         # --------------------------------------------------
         # 3. OCR 文本 Embedding
         # --------------------------------------------------
         if content.ocr_text:
-            text_embedding = (
-                self._embedding_service.embed_text(
-                    content.ocr_text
-                )[0]
-            )
+            text_embedding = self._embedding_service.embed_text(content.ocr_text)[0]
             features.append(
                 {
                     "feature_type": "ocr",
                     "text": content.ocr_text,
                 }
             )
-            embeddings.append(
-                text_embedding
-            )
+            embeddings.append(text_embedding)
         progress.report(
             stage=TaskStage.ENCODED,
             completed_count=total_count,
@@ -133,13 +119,8 @@ class ImageHandler(FileHandler):
         classifier = self._classifier.get_classifier(
             ClassifierLabelSnapshot.from_metadata(spec.metadata)
         )
-        scores = classifier.classify_image(
-            embeddings[0]
-        )
-        tags = tuple(
-            score.label
-            for score in scores
-        )
+        scores = classifier.classify_image(embeddings[0])
+        tags = tuple(score.label for score in scores)
         progress.report(
             stage=TaskStage.CLASSIFY,
             completed_count=1,

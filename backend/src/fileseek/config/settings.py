@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     # 关闭时等待在飞任务落地的时限（秒），超时仍在跑的任务放回 queued。
     task_drain_timeout: float = 10.0
 
+    # 文件夹来源监听配置
+    folder_watch_settle_seconds: float = Field(default=2.0, ge=0)
+    folder_watch_stable_checks: int = Field(default=2, ge=1)
+    folder_watch_scan_interval_seconds: float = Field(default=30.0, ge=0)
+    folder_watch_worker_count: int = Field(default=1, ge=1)
+    folder_watch_max_retries: int = Field(default=3, ge=0)
+
     # 模型子进程空闲多少秒后自行退出，把模型内存完整还给系统；0 表示常驻不退出。
     # 进程内卸载模型只能收回约一半内存，且反复卸载会越积越多，所以只能靠进程退出。
     task_worker_idle_timeout: float = Field(default=300.0, ge=0)
@@ -71,7 +78,7 @@ class Settings(BaseSettings):
 
     # 向量索引配置
     vector_store_provider: Literal["chroma"] = "chroma"
-    vector_distance_metric: Literal["l2","cosine","ip"] = "cosine"
+    vector_distance_metric: Literal["l2", "cosine", "ip"] = "cosine"
     vector_db_path: Path | None = None  # 默认为 lib_root / "vectors"
 
     # 视频处理配置
@@ -106,7 +113,7 @@ class Settings(BaseSettings):
         # 设置默认派生路径
         if self.db_path is None:
             db_dir = self.lib_root / ".db"
-            db_dir.mkdir(parents=True,exist_ok=True)
+            db_dir.mkdir(parents=True, exist_ok=True)
             self.db_path = db_dir / "app.db"
         if self.vector_db_path is None:
             self.vector_db_path = self.lib_root / ".vectors"

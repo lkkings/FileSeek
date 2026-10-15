@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 
-from fileseek.infrastructure.embedding.base import (
-    EmbeddingPort
-)
+from fileseek.infrastructure.embedding.base import EmbeddingPort
 from fileseek.infrastructure.classifier.base import (
     ClassificationScore,
     ClassifierPort,
@@ -64,16 +62,12 @@ class JinaClipV2Classifier(ClassifierPort):
         scores = [
             ClassificationScore(
                 label=label,
-                score=sum(
-                    _cosine_similarity(vector, label_vector)
-                    for vector in vectors
-                ) / len(vectors),
+                score=sum(_cosine_similarity(vector, label_vector) for vector in vectors)
+                / len(vectors),
             )
             for label, label_vector in candidates
         ]
-        scores = [
-            item for item in scores if item.score >= self._thresholds[kind]
-        ]
+        scores = [item for item in scores if item.score >= self._thresholds[kind]]
         return sorted(scores, key=lambda item: item.score, reverse=True)[: self._max_labels]
 
 

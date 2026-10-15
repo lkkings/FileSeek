@@ -67,10 +67,7 @@ class ChromaVectorStore(VectorIndexPort):
 
         normalized_ids = list(ids)
 
-        normalized_vectors = [
-            list(vector)
-            for vector in vectors
-        ]
+        normalized_vectors = [list(vector) for vector in vectors]
 
         for id_, vector in zip(
             normalized_ids,
@@ -197,11 +194,7 @@ class ChromaVectorStore(VectorIndexPort):
         if count == 0:
             return []
 
-        n_results = (
-            count
-            if limit == -1
-            else min(limit, count)
-        )
+        n_results = count if limit == -1 else min(limit, count)
 
         result = self._collection.query(
             query_embeddings=[vector],
@@ -221,10 +214,7 @@ class ChromaVectorStore(VectorIndexPort):
         ):
             score = self._distance_to_score(distance)
 
-            if (
-                score_threshold is not None
-                and score < score_threshold
-            ):
+            if score_threshold is not None and score < score_threshold:
                 continue
 
             results.append(
@@ -284,10 +274,7 @@ class ChromaVectorStore(VectorIndexPort):
 
             score = self._distance_to_score(distance)
 
-            if (
-                score_threshold is not None
-                and score < score_threshold
-            ):
+            if score_threshold is not None and score < score_threshold:
                 continue
 
             results.append(
@@ -336,8 +323,7 @@ class ChromaVectorStore(VectorIndexPort):
             return -distance
 
         raise ValueError(
-            f"unsupported distance metric: "
-            f"{self._distance_metric!r}",
+            f"unsupported distance metric: {self._distance_metric!r}",
         )
 
     def _calculate_distance(
@@ -349,8 +335,7 @@ class ChromaVectorStore(VectorIndexPort):
 
         if len(a) != len(b):
             raise ValueError(
-                "vector dimensions do not match: "
-                f"{len(a)} != {len(b)}",
+                f"vector dimensions do not match: {len(a)} != {len(b)}",
             )
 
         if self._distance_metric == DistanceMetric.COSINE:
@@ -372,8 +357,7 @@ class ChromaVectorStore(VectorIndexPort):
             )
 
         raise ValueError(
-            f"unsupported distance metric: "
-            f"{self._distance_metric!r}",
+            f"unsupported distance metric: {self._distance_metric!r}",
         )
 
     @staticmethod
@@ -401,11 +385,7 @@ class ChromaVectorStore(VectorIndexPort):
                 "cosine distance is undefined for zero vector",
             )
 
-        similarity = (
-            dot
-            / (norm_a ** 0.5)
-            / (norm_b ** 0.5)
-        )
+        similarity = dot / (norm_a**0.5) / (norm_b**0.5)
 
         return 1.0 - similarity
 

@@ -41,10 +41,11 @@ class AddFiles2RecycleUseCase:
 
         if file is None:
             return
-        if file.storage_id is None:
-            raise SourceUnavailableError(f"文件缺少存储位置: {file_id}")
+        storage_id = file.storage_id or (
+            "external" if file.path.startswith(("http://", "https://")) else "local"
+        )
 
-        source_file = await self.source_resolver.resolve(file.storage_id, file.path)
+        source_file = await self.source_resolver.resolve(storage_id, file.path)
         if not source_file.exists() or not source_file.is_file():
             raise SourceUnavailableError(f"来源文件不可访问: {file.path}")
 
@@ -57,7 +58,8 @@ class AddFiles2RecycleUseCase:
         recycle_path = recycle_root / f"{file_id}.zip"
         recycle_path.parent.mkdir(parents=True, exist_ok=True)
         with (
-            ZipFile(recycle_path, "w", ZIP_DEFLATED) as archive, source_file.open("rb") as source,
+            ZipFile(recycle_path, "w", ZIP_DEFLATED) as archive,
+            source_file.open("rb") as source,
             archive.open(original_path.name, "w") as target,
         ):
             while chunk := source.read(1024 * 1024):
@@ -73,7 +75,7 @@ class AddFiles2RecycleUseCase:
             file_type=file.file_type,
             size=file.size,
             original_folder_id=file.folder_id,
-            storage_id=file.storage_id,
+            storage_id=storage_id,
         )
 
         await self.recycle_repo.save(recycle_item)

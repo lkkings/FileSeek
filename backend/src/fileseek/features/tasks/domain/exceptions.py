@@ -17,6 +17,10 @@ class TaskCancelledError(ApplicationError):
     """任务被用户终止。"""
 
 
+class TaskCancellationPendingError(ApplicationError):
+    """任务终止收尾尚未完成。"""
+
+
 class DocumentParseError(RuntimeError):
     """文档损坏或无法解析。"""
 

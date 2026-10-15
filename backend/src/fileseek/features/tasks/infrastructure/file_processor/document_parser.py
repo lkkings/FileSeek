@@ -43,7 +43,6 @@ def _remove_invalid_characters(text: str) -> str:
     )
 
 
-
 def _clean_text(text: str) -> str:
     """去除多余空白，保留段落分隔。"""
     lines = [
@@ -207,8 +206,7 @@ def _extract_pptx_pages(file_path: Path) -> list[str]:
             relationship_ids = [
                 slide_id.attrib.get(f"{{{_RELATIONSHIP_XML_NAMESPACE}}}id", "")
                 for slide_id in presentation.findall(
-                    f"{presentation_namespace}sldIdLst/"
-                    f"{presentation_namespace}sldId"
+                    f"{presentation_namespace}sldIdLst/{presentation_namespace}sldId"
                 )
             ]
             slide_targets = _ordered_relationship_targets(
@@ -307,6 +305,7 @@ _EXTRACTORS = {
     ".csv": _extract_csv_pages,
 }
 
+
 def _chunk_page_text(
     page_text: str,
     page_number: int,
@@ -384,6 +383,7 @@ def _chunk_page_text(
 
     return chunks
 
+
 class DocumentParser(DocumentParserPort):
     """文档解析与分块服务。"""
 
@@ -391,10 +391,7 @@ class DocumentParser(DocumentParserPort):
         self.chunk_size = chunk_size
         self.overlap = overlap
 
-    def parse_and_chunk(
-        self,
-        file_path: Path
-    ) -> ParsedDocument:
+    def parse_and_chunk(self, file_path: Path) -> ParsedDocument:
         """解析文档并分块。
 
         Args:

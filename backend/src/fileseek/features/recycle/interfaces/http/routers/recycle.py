@@ -37,9 +37,7 @@ from fileseek.shared.envelope import (
     success_response,
 )
 
-router = APIRouter(
-    prefix="/recycle"
-)
+router = APIRouter(prefix="/recycle")
 
 
 @router.get("")
@@ -54,9 +52,7 @@ async def list_recycle_items(
     """分页列出回收站内容。"""
     items, total = await use_case.execute(list_recycle_items_query(page, page_size))
 
-    return success_response(
-        recycle_item_page_to_response(items, total, page, page_size)
-    )
+    return success_response(recycle_item_page_to_response(items, total, page, page_size))
 
 
 @router.post("")

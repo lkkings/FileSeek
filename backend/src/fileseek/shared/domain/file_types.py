@@ -118,7 +118,6 @@ FILE_TYPE_MEDIA_TYPES: dict[FileType, str] = {
     FileType.PPT: "application/vnd.ms-powerpoint",
     FileType.PPTX: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     FileType.ODP: "application/vnd.oasis.opendocument.presentation",
-
     # Images
     FileType.JPG: "image/jpeg",
     FileType.PNG: "image/png",
@@ -130,7 +129,6 @@ FILE_TYPE_MEDIA_TYPES: dict[FileType, str] = {
     FileType.HEIF: "image/heif",
     FileType.TIFF: "image/tiff",
     FileType.ICO: "image/x-icon",
-
     # Videos
     FileType.MP4: "video/mp4",
     FileType.AVI: "video/x-msvideo",
@@ -166,7 +164,6 @@ FILE_TYPE_CATEGORIES: dict[FileType, FileCategory] = {
     FileType.PPT: FileCategory.DOCUMENT,
     FileType.PPTX: FileCategory.DOCUMENT,
     FileType.ODP: FileCategory.DOCUMENT,
-
     # Images
     FileType.JPG: FileCategory.IMAGE,
     FileType.PNG: FileCategory.IMAGE,
@@ -178,7 +175,6 @@ FILE_TYPE_CATEGORIES: dict[FileType, FileCategory] = {
     FileType.HEIF: FileCategory.IMAGE,
     FileType.TIFF: FileCategory.IMAGE,
     FileType.ICO: FileCategory.IMAGE,
-
     # Videos
     FileType.MP4: FileCategory.VIDEO,
     FileType.AVI: FileCategory.VIDEO,

@@ -21,6 +21,7 @@ from fileseek.shared.domain.file_types import FileType
 
 logger = logging.getLogger(__name__)
 
+
 class DocumentHandler(FileHandler):
     """文档文件处理器。"""
 
@@ -79,11 +80,7 @@ class DocumentHandler(FileHandler):
         embeddings: list[list[float]] = []
         for start in range(0, total, self._batch_size):
             chunks = content.chunks[start : start + self._batch_size]
-            embeddings.extend(
-                self._embedding_service.embed_text(
-                    [chunk.text for chunk in chunks]
-                )
-            )
+            embeddings.extend(self._embedding_service.embed_text([chunk.text for chunk in chunks]))
             progress.report(
                 TaskStage.ENCODED,
                 completed_count=start + len(chunks),
@@ -105,10 +102,7 @@ class DocumentHandler(FileHandler):
         classifier = self._classifier.get_classifier(
             ClassifierLabelSnapshot.from_metadata(spec.metadata)
         )
-        tags = tuple(
-            score.label
-            for score in classifier.classify_document(embeddings)
-        )
+        tags = tuple(score.label for score in classifier.classify_document(embeddings))
         progress.report(
             TaskStage.CLASSIFY,
             completed_count=1,

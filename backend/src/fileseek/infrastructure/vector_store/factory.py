@@ -4,10 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fileseek.config.settings import get_settings
-from fileseek.infrastructure.vector_store.base import (
-    VectorIndexPort,
-    DistanceMetric
-)
+from fileseek.infrastructure.vector_store.base import VectorIndexPort, DistanceMetric
 from fileseek.infrastructure.vector_store.chroma_store import (
     ChromaVectorStore,
 )
@@ -24,8 +21,9 @@ def get_vector_store() -> VectorIndexPort:
     return VectorStoreFactory.create(
         provider=settings.vector_store_provider,
         persist_directory=vector_db_path,
-        distance_metric=settings.vector_distance_metric
+        distance_metric=settings.vector_distance_metric,
     )
+
 
 class VectorStoreFactory:
     """向量存储实现工厂。"""
@@ -60,6 +58,4 @@ class VectorStoreFactory:
                 distance_metric=DistanceMetric(distance_metric),
             )
 
-        raise ValueError(
-            f"不支持的 Vector Store provider: {provider}"
-        )
+        raise ValueError(f"不支持的 Vector Store provider: {provider}")

@@ -45,10 +45,7 @@ class FolderRepositoryImpl(FolderRepository):
     async def _list_all(self) -> list[Folder]:
         models = await FolderModel.all().order_by("-modified")
         file_counts = await self._count_files_batch([model.id for model in models])
-        return [
-            _to_entity(model, file_counts.get(model.id, 0))
-            for model in models
-        ]
+        return [_to_entity(model, file_counts.get(model.id, 0)) for model in models]
 
     async def save(self, folder: Folder) -> None:
         await self._save(folder)

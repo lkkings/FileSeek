@@ -13,14 +13,19 @@ from fileseek.features.library.interfaces.http.schemas.file import (
 from fileseek.features.library.interfaces.http.schemas.folder import (
     FolderCreateRequest,
     FolderResponse,
+    FolderSourceBindingCreateRequest,
+    FolderSourceBindingResponse,
+    FolderSourceBindingUpdateRequest,
     FolderUpdateRequest,
 )
-
 
 __all__ = [
     "FolderCreateRequest",
     "FolderUpdateRequest",
     "FolderResponse",
+    "FolderSourceBindingCreateRequest",
+    "FolderSourceBindingResponse",
+    "FolderSourceBindingUpdateRequest",
     "FileResponse",
     "FileChunkData",
     "FileChunksResponse",

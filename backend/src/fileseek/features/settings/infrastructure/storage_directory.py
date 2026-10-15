@@ -8,11 +8,12 @@ from fileseek.features.settings.domain.entities import StorageLocation
 from fileseek.features.settings.domain.exceptions import StorageBrowseUnavailableError
 from fileseek.shared.domain.file_types import FileType
 
-SUPPORTED_FILE_SUFFIXES = {
-    file_type.value
-    for file_type in FileType
-    if file_type.is_support
-} | {"htm", "jpeg", "md", "tif"}
+SUPPORTED_FILE_SUFFIXES = {file_type.value for file_type in FileType if file_type.is_support} | {
+    "htm",
+    "jpeg",
+    "md",
+    "tif",
+}
 
 
 class FilesystemStorageDirectoryBrowser:

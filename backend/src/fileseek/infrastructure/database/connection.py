@@ -58,9 +58,7 @@ async def _add_missing_columns() -> None:
             continue
 
         # 表名和列名都来自上面那个常量，不是外部输入。
-        await connection.execute_script(
-            f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"
-        )
+        await connection.execute_script(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
         logger.info("已为表 %s 补上列 %s", table, column)
 
 
@@ -117,11 +115,7 @@ async def _seed_settings_and_backfill_files(settings: Settings) -> None:
         "access_state",
     )
     for model in legacy_files:
-        model.storage_id = (
-            "external"
-            if model.path.startswith(("http://", "https://"))
-            else "local"
-        )
+        model.storage_id = "external" if model.path.startswith(("http://", "https://")) else "local"
         model.access_state = model.access_state or "unknown"
         await model.save(update_fields=("storage_id", "access_state"))
 

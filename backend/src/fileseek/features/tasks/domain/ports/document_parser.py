@@ -14,6 +14,7 @@ class DocumentChunk:
     line_number: int | None = None
     chunk_index: int = 0
 
+
 @dataclass(frozen=True)
 class ParsedDocument:
     """解析后的完整文档。"""
@@ -21,8 +22,6 @@ class ParsedDocument:
     chunks: tuple[DocumentChunk, ...]
     page_count: int
 
+
 class DocumentParserPort(Protocol):
     def parse_and_chunk(self, path: Path) -> ParsedDocument: ...
-
-
-

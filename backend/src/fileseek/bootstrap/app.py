@@ -148,7 +148,6 @@ def create_app(
         search_router,
         settings_router,
         tasks_router,
-
     ):
         app.include_router(feature_router, prefix=prefix)
 

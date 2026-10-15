@@ -17,14 +17,18 @@ from fileseek.features.recycle.interfaces.http.schemas.recycle import (
 def add_files2recycle_command(body: AddFiles2RecycleRequest) -> AddFiles2RecycleCommand:
     return AddFiles2RecycleCommand(body.file_ids)
 
+
 def restore_items_command(body: RestoreRecycleRequest) -> RestoreItemsCommand:
     return RestoreItemsCommand(body.item_ids)
+
 
 def delete_permanently_command(body: DeleteRecycleRequest) -> DeletePermanentlyCommand:
     return DeletePermanentlyCommand(body.item_ids)
 
+
 def list_recycle_items_query(page: int, page_size: int) -> ListRecycleItemsQuery:
     return ListRecycleItemsQuery(page, page_size)
+
 
 def recycle_item_to_schema(dto: RecycleItemDTO) -> RecycleItemResponse:
     return RecycleItemResponse(
@@ -36,6 +40,7 @@ def recycle_item_to_schema(dto: RecycleItemDTO) -> RecycleItemResponse:
         file_type=dto.file_type,
         size=str(dto.size),
     )
+
 
 def recycle_item_page_to_response(
     dtos: list[RecycleItemDTO],

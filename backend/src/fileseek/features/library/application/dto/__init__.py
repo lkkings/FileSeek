@@ -12,6 +12,7 @@ class FolderDTO:
     modified: str
     file_count: int
 
+
 @dataclass(frozen=True)
 class FileDTO:
     id: str
@@ -70,3 +71,16 @@ class ImportTaskSnapshotDTO:
     total_count: int | None
     stage: str | None
     error_message: str | None
+
+
+@dataclass(frozen=True)
+class FolderSourceBindingDTO:
+    id: str
+    folder_id: str
+    storage_id: str
+    source_path: str
+    recursive: bool
+    enabled: bool
+    watch_status: str
+    last_error: str | None
+    last_error_at: str | None

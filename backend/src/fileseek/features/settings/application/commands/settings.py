@@ -38,3 +38,17 @@ class DeleteStorageLocationCommand:
 @dataclass(frozen=True)
 class TestStorageConnectionCommand:
     location_id: str
+
+
+@dataclass(frozen=True)
+class UpdateAgentSettingsCommand:
+    base_url: str
+    model: str
+    api_key: str | None = None
+
+
+@dataclass(frozen=True)
+class TestAgentSettingsCommand:
+    base_url: str
+    model: str
+    api_key: str | None = None

@@ -27,15 +27,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-TEXT_INFERENCE_BATCH_SIZE = 32
-
-# 单批文本推理的注意力开销上限，按 `batch_size * padded_length ** 2` 计。
-# 同批文本会 padding 到最长那条，注意力内存随长度平方增长：实测 1 条 3551 token
-# 峰值约 4GB，而把它和 31 条短文本拼成一批会直接 OOM。这个预算约等于
-# 8 条 1024 token，超长文本会自动单独成批。
-TEXT_INFERENCE_MAX_ATTENTION_COST = 8 * 1024 * 1024
-
-
 class JinaClipV2Embedding(EmbeddingPort):
     """Jina CLIP V2 ONNX 向量化实现。
 
@@ -63,15 +54,11 @@ class JinaClipV2Embedding(EmbeddingPort):
 
     DEFAULT_MODEL_NAME = "jinaai/jina-clip-v2"
 
-    DEFAULT_CACHE_DIR = (
-        Path.home() / ".cache" / "fileseek" / "models"
-    )
+    DEFAULT_CACHE_DIR = Path.home() / ".cache" / "fileseek" / "models"
 
     DEFAULT_DIMENSION = 1024
 
-    QUERY_INSTRUCTION = (
-        "Represent the query for retrieving evidence documents: "
-    )
+    QUERY_INSTRUCTION = "Represent the query for retrieving evidence documents: "
 
     def __init__(
         self,
@@ -145,7 +132,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         Returns:
             与 texts 一一对应的 1024 维向量。
         """
-        texts = [texts] if isinstance(texts,str) else texts
+        texts = [texts] if isinstance(texts, str) else texts
         self._validate_texts(texts)
 
         session, tokenizer, _ = self._ensure_loaded()
@@ -156,26 +143,17 @@ class JinaClipV2Embedding(EmbeddingPort):
                 query=query,
             )
             token_ids = tokenizer.encode_batch(prepared_texts)
-            pad_token_id = tokenizer.pad_token_id
-            embeddings: list[list[float] | None] = [None] * len(texts)
+            embeddings: list[list[float]] = []
 
-            # 按长度分批，短文本不会被 padding 到同批最长文本的长度；
-            # 结果按原索引写回，调用方看到的顺序不变。
-            for batch in self._plan_text_batches(token_ids):
-                input_ids = self._pad_token_ids(
-                    [token_ids[index] for index in batch],
-                    pad_token_id=pad_token_id,
-                )
+            # 当前 ONNX 图没有 attention mask，批量输入还会出现样本间影响。
+            # 每条文本单独推理，确保 embedding 不受批内其他文本和 padding 影响。
+            for ids in token_ids:
+                input_ids = np.asarray([ids], dtype=np.int64)
                 outputs = self._run_text_inference(
                     session=session,
                     input_ids=input_ids,
                 )
-                for index, vector in zip(
-                    batch,
-                    self._to_embedding_list(outputs),
-                    strict=True,
-                ):
-                    embeddings[index] = vector
+                embeddings.extend(self._to_embedding_list(outputs))
 
         except Exception as exc:
             logger.exception(
@@ -183,68 +161,9 @@ class JinaClipV2Embedding(EmbeddingPort):
                 len(texts),
             )
 
-            raise InferenceError(
-                f"文本向量化推理失败: {exc}"
-            ) from exc
+            raise InferenceError(f"文本向量化推理失败: {exc}") from exc
         else:
             return cast("list[list[float]]", embeddings)
-
-    @staticmethod
-    def _plan_text_batches(
-        token_ids: list[list[int]],
-    ) -> list[list[int]]:
-        """按 token 长度规划文本推理批次，返回每批的原始索引。
-
-        文本按长度降序排列后贪心装箱，每批受两条约束：
-        条数不超过 TEXT_INFERENCE_BATCH_SIZE，
-        `条数 * 最长长度 ** 2` 不超过 TEXT_INFERENCE_MAX_ATTENTION_COST。
-        单条超出预算时独占一批。
-        """
-        order = sorted(
-            range(len(token_ids)),
-            key=lambda index: len(token_ids[index]),
-            reverse=True,
-        )
-        batches: list[list[int]] = []
-        current: list[int] = []
-        current_length = 0
-
-        for index in order:
-            # 降序排列，批内第一条就是最长的，决定整批 padding 长度。
-            length = current_length if current else len(token_ids[index])
-            cost = (len(current) + 1) * length * length
-            if current and (
-                len(current) >= TEXT_INFERENCE_BATCH_SIZE
-                or cost > TEXT_INFERENCE_MAX_ATTENTION_COST
-            ):
-                batches.append(current)
-                current = []
-                length = len(token_ids[index])
-            current.append(index)
-            current_length = length
-
-        if current:
-            batches.append(current)
-
-        return batches
-
-    @staticmethod
-    def _pad_token_ids(
-        token_ids: list[list[int]],
-        *,
-        pad_token_id: int,
-    ) -> np.ndarray:
-        """把一批 token ids 右侧 padding 成二维数组。"""
-        max_length = max(len(ids) for ids in token_ids)
-        input_ids = np.full(
-            (len(token_ids), max_length),
-            pad_token_id,
-            dtype=np.int64,
-        )
-        for row, ids in enumerate(token_ids):
-            input_ids[row, : len(ids)] = ids
-
-        return input_ids
 
     def embed_image(
         self,
@@ -261,7 +180,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         """
         if self._text_only:
             raise InferenceError("text_only 模式不支持图片向量化")
-        images = [images] if isinstance(images,bytes) else images
+        images = [images] if isinstance(images, bytes) else images
         self._validate_images(images)
 
         session, _, image_processor = self._ensure_loaded()
@@ -269,19 +188,17 @@ class JinaClipV2Embedding(EmbeddingPort):
             raise InferenceError("图片处理器未加载")
 
         try:
-            pil_images = [
-                self._load_image(image)
-                for image in images
-            ]
+            pil_images = [self._load_image(image) for image in images]
 
-            pixel_values = image_processor(pil_images)
+            pixel_batches = [image_processor([image]) for image in pil_images]
 
-            outputs = self._run_image_inference(
-                session=session,
-                pixel_values=pixel_values,
-            )
-
-            return self._to_embedding_list(outputs)
+            embeddings: list[list[float]] = []
+            for pixel_values in pixel_batches:
+                outputs = self._run_image_inference(
+                    session=session,
+                    pixel_values=pixel_values,
+                )
+                embeddings.extend(self._to_embedding_list(outputs))
 
         except InferenceError:
             raise
@@ -292,9 +209,9 @@ class JinaClipV2Embedding(EmbeddingPort):
                 len(images),
             )
 
-            raise InferenceError(
-                f"图片向量化推理失败: {exc}"
-            ) from exc
+            raise InferenceError(f"图片向量化推理失败: {exc}") from exc
+        else:
+            return embeddings
 
     # ------------------------------------------------------------------
     # Model loading
@@ -320,10 +237,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         tokenizer = self._tokenizer
         image_processor = self._image_processor
 
-        if (
-            session is not None
-            and tokenizer is not None
-        ):
+        if session is not None and tokenizer is not None:
             return session, tokenizer, image_processor
 
         with self._load_lock:
@@ -331,23 +245,16 @@ class JinaClipV2Embedding(EmbeddingPort):
             tokenizer = self._tokenizer
             image_processor = self._image_processor
 
-            if (
-                session is not None
-                and tokenizer is not None
-            ):
+            if session is not None and tokenizer is not None:
                 return session, tokenizer, image_processor
 
             try:
-                session, tokenizer, image_processor = (
-                    self._load_resources()
-                )
+                session, tokenizer, image_processor = self._load_resources()
 
                 # 所有资源成功以后再一次性提交状态。
                 self._session = session
                 self._tokenizer = tokenizer
                 self._image_processor = image_processor
-
-                return session, tokenizer, image_processor
 
             except ModelLoadError:
                 raise
@@ -358,9 +265,9 @@ class JinaClipV2Embedding(EmbeddingPort):
                     self._model_name,
                 )
 
-                raise ModelLoadError(
-                    f"加载模型 {self._model_name} 失败: {exc}"
-                ) from exc
+                raise ModelLoadError(f"加载模型 {self._model_name} 失败: {exc}") from exc
+            else:
+                return session, tokenizer, image_processor
 
     def _load_resources(
         self,
@@ -444,23 +351,15 @@ class JinaClipV2Embedding(EmbeddingPort):
 
         if self._intra_op_num_threads is not None:
             if self._intra_op_num_threads <= 0:
-                raise ValueError(
-                    "intra_op_num_threads 必须大于 0"
-                )
+                raise ValueError("intra_op_num_threads 必须大于 0")
 
-            options.intra_op_num_threads = (
-                self._intra_op_num_threads
-            )
+            options.intra_op_num_threads = self._intra_op_num_threads
 
         if self._inter_op_num_threads is not None:
             if self._inter_op_num_threads <= 0:
-                raise ValueError(
-                    "inter_op_num_threads 必须大于 0"
-                )
+                raise ValueError("inter_op_num_threads 必须大于 0")
 
-            options.inter_op_num_threads = (
-                self._inter_op_num_threads
-            )
+            options.inter_op_num_threads = self._inter_op_num_threads
 
         return options
 
@@ -532,15 +431,10 @@ class JinaClipV2Embedding(EmbeddingPort):
         这里不直接硬编码 input name，
         而是根据 ONNX graph 的输入名称进行检查。
         """
-        input_names = {
-            item.name
-            for item in session.get_inputs()
-        }
+        input_names = {item.name for item in session.get_inputs()}
 
         if "input_ids" not in input_names:
-            raise InferenceError(
-                "ONNX 模型缺少 input_ids 输入"
-            )
+            raise InferenceError("ONNX 模型缺少 input_ids 输入")
 
         inputs: dict[str, np.ndarray] = {
             "input_ids": input_ids.astype(
@@ -569,15 +463,10 @@ class JinaClipV2Embedding(EmbeddingPort):
         pixel_values: np.ndarray,
     ) -> dict[str, np.ndarray]:
         """构建图片推理输入。"""
-        input_names = {
-            item.name
-            for item in session.get_inputs()
-        }
+        input_names = {item.name for item in session.get_inputs()}
 
         if "pixel_values" not in input_names:
-            raise InferenceError(
-                "ONNX 模型缺少 pixel_values 输入"
-            )
+            raise InferenceError("ONNX 模型缺少 pixel_values 输入")
 
         inputs: dict[str, np.ndarray] = {
             "pixel_values": pixel_values.astype(
@@ -606,10 +495,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         outputs: list[np.ndarray],
     ) -> np.ndarray:
         """从 ONNX 输出中提取文本 embedding。"""
-        output_names = [
-            output.name
-            for output in session.get_outputs()
-        ]
+        output_names = [output.name for output in session.get_outputs()]
 
         # 优先寻找明确命名的归一化 embedding。
         preferred_names = (
@@ -639,9 +525,7 @@ class JinaClipV2Embedding(EmbeddingPort):
                 outputs[2],
             )
 
-        raise InferenceError(
-            "无法从 ONNX 输出中找到文本 embedding"
-        )
+        raise InferenceError("无法从 ONNX 输出中找到文本 embedding")
 
     @staticmethod
     def _extract_image_embedding(
@@ -650,10 +534,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         outputs: list[np.ndarray],
     ) -> np.ndarray:
         """从 ONNX 输出中提取图片 embedding。"""
-        output_names = [
-            output.name
-            for output in session.get_outputs()
-        ]
+        output_names = [output.name for output in session.get_outputs()]
 
         preferred_names = (
             "l2norm_image_embeddings",
@@ -680,9 +561,7 @@ class JinaClipV2Embedding(EmbeddingPort):
                 outputs[3],
             )
 
-        raise InferenceError(
-            "无法从 ONNX 输出中找到图片 embedding"
-        )
+        raise InferenceError("无法从 ONNX 输出中找到图片 embedding")
 
     @staticmethod
     def _to_embedding_list(
@@ -690,14 +569,10 @@ class JinaClipV2Embedding(EmbeddingPort):
     ) -> list[list[float]]:
         """将 NumPy embedding 转换成纯 Python 数据。"""
         if embeddings.ndim != 2:
-            raise InferenceError(
-                f"embedding 输出维度异常: {embeddings.shape}"
-            )
+            raise InferenceError(f"embedding 输出维度异常: {embeddings.shape}")
 
         if embeddings.shape[1] <= 0:
-            raise InferenceError(
-                f"embedding 维度异常: {embeddings.shape}"
-            )
+            raise InferenceError(f"embedding 维度异常: {embeddings.shape}")
 
         return embeddings.astype(
             "float32",
@@ -719,10 +594,7 @@ class JinaClipV2Embedding(EmbeddingPort):
         if not query:
             return texts
 
-        return [
-            cls.QUERY_INSTRUCTION + text
-            for text in texts
-        ]
+        return [cls.QUERY_INSTRUCTION + text for text in texts]
 
     @staticmethod
     def _validate_texts(
@@ -730,25 +602,17 @@ class JinaClipV2Embedding(EmbeddingPort):
     ) -> None:
         """校验文本输入。"""
         if not isinstance(texts, list):
-            raise TypeError(
-                "texts 必须是 list[str]"
-            )
+            raise TypeError("texts 必须是 list[str]")
 
         if not texts:
-            raise ValueError(
-                "texts 不能为空"
-            )
+            raise ValueError("texts 不能为空")
 
         for index, text in enumerate(texts):
             if not isinstance(text, str):
-                raise TypeError(
-                    f"texts[{index}] 必须是 str"
-                )
+                raise TypeError(f"texts[{index}] 必须是 str")
 
             if not text.strip():
-                raise ValueError(
-                    f"texts[{index}] 不能为空字符串"
-                )
+                raise ValueError(f"texts[{index}] 不能为空字符串")
 
     # ------------------------------------------------------------------
     # Image
@@ -770,9 +634,7 @@ class JinaClipV2Embedding(EmbeddingPort):
             ValueError,
             UnidentifiedImageError,
         ) as exc:
-            raise InferenceError(
-                f"无法解析图片: {exc}"
-            ) from exc
+            raise InferenceError(f"无法解析图片: {exc}") from exc
 
     @staticmethod
     def _validate_images(
@@ -780,25 +642,17 @@ class JinaClipV2Embedding(EmbeddingPort):
     ) -> None:
         """校验图片输入。"""
         if not isinstance(images, list):
-            raise TypeError(
-                "images 必须是 list[bytes]"
-            )
+            raise TypeError("images 必须是 list[bytes]")
 
         if not images:
-            raise ValueError(
-                "images 不能为空"
-            )
+            raise ValueError("images 不能为空")
 
         for index, image in enumerate(images):
             if not isinstance(image, bytes):
-                raise TypeError(
-                    f"images[{index}] 必须是 bytes"
-                )
+                raise TypeError(f"images[{index}] 必须是 bytes")
 
             if not image:
-                raise ValueError(
-                    f"images[{index}] 不能为空"
-                )
+                raise ValueError(f"images[{index}] 不能为空")
 
     # ------------------------------------------------------------------
     # Model validation
@@ -814,15 +668,10 @@ class JinaClipV2Embedding(EmbeddingPort):
 
         text_only 模式可能加载的是文本塔子图：只有 input_ids 输入、只有文本 embedding 输出。
         """
-        input_names = {
-            item.name
-            for item in session.get_inputs()
-        }
+        input_names = {item.name for item in session.get_inputs()}
 
         if "input_ids" not in input_names:
-            raise ModelLoadError(
-                "Jina CLIP ONNX 模型缺少 input_ids 输入"
-            )
+            raise ModelLoadError("Jina CLIP ONNX 模型缺少 input_ids 输入")
 
         if text_only:
             output_names = {item.name for item in session.get_outputs()}
@@ -831,11 +680,7 @@ class JinaClipV2Embedding(EmbeddingPort):
             return
 
         if "pixel_values" not in input_names:
-            raise ModelLoadError(
-                "Jina CLIP ONNX 模型缺少 pixel_values 输入"
-            )
+            raise ModelLoadError("Jina CLIP ONNX 模型缺少 pixel_values 输入")
 
         if len(session.get_outputs()) < 3:
-            raise ModelLoadError(
-                "Jina CLIP ONNX 模型输出数量异常"
-            )
+            raise ModelLoadError("Jina CLIP ONNX 模型输出数量异常")

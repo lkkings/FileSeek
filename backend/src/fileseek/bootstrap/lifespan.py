@@ -60,6 +60,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     scheduler.start()
     container.scheduler = scheduler
     logger.info("任务调度器已启动（轮询间隔 %.1fs）", settings.task_poll_interval)
+    folder_source_watcher = getattr(app.state, "dependencies", {}).get(
+        "folder_source_watcher_service"
+    )
+    if folder_source_watcher is not None:
+        await folder_source_watcher.start()
+        container.folder_source_watcher = folder_source_watcher
+        logger.info("文件夹来源监听服务已启动")
     port: int | None = getattr(app.state, "port", None)
     if getattr(app.state, "publish_connection", False) and port is not None:
         connection.publish(app_paths.connection_file, port, app.state.auth_token)
@@ -76,6 +83,14 @@ async def _shutdown(app: FastAPI, container: Container, app_paths: AppPaths) -> 
     一步失败不该让后面的步骤不执行：连接文件留在原地会让客户端一直连一个没人
     监听的端口，比任何一个单步的错误都更难排查。
     """
+    if container.folder_source_watcher is not None:
+        try:
+            await container.folder_source_watcher.stop()
+        except Exception:
+            logger.exception("文件夹来源监听服务关闭失败")
+        finally:
+            container.folder_source_watcher = None
+
     if container.scheduler is not None:
         try:
             released = await container.scheduler.shutdown(settings_timeout(container))
@@ -98,7 +113,6 @@ async def _shutdown(app: FastAPI, container: Container, app_paths: AppPaths) -> 
             connection.revoke(app_paths.connection_file)
         except Exception:
             logger.exception("连接文件清理失败")
-
 
     try:
         await close_db()

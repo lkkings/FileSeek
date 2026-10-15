@@ -19,8 +19,9 @@ def get_embedding_service() -> EmbeddingPort:
         model_name=settings.embedding_model_name,
         cache_dir=settings.embedding_model_cache_dir,
         intra_op_num_threads=settings.intra_op_num_threads,
-        inter_op_num_threads=settings.inter_op_num_threads
+        inter_op_num_threads=settings.inter_op_num_threads,
     )
+
 
 class EmbeddingFactory:
     """Embedding 实现工厂。
@@ -88,6 +89,4 @@ class EmbeddingFactory:
                 text_only=text_only,
             )
 
-        raise ValueError(
-            f"不支持的 Embedding provider: {provider}"
-        )
+        raise ValueError(f"不支持的 Embedding provider: {provider}")

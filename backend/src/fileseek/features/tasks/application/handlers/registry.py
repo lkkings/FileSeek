@@ -22,21 +22,11 @@ class FileHandlerRegistry:
         file_type: FileType,
     ) -> FileHandler:
         """获取指定文件类型对应的 Handler。"""
-        matched = [
-            handler
-            for handler in self._handlers
-            if handler.supports(file_type)
-        ]
+        matched = [handler for handler in self._handlers if handler.supports(file_type)]
 
         if not matched:
-            raise ValueError(
-                f"没有找到对应的文件 Handler: "
-                f"{file_type}"
-            )
+            raise ValueError(f"没有找到对应的文件 Handler: {file_type}")
 
         if len(matched) > 1:
-            raise RuntimeError(
-                f"存在多个文件 Handler 支持 "
-                f"{file_type}: {matched}"
-            )
+            raise RuntimeError(f"存在多个文件 Handler 支持 {file_type}: {matched}")
         return matched[0]

@@ -1,6 +1,9 @@
 import { createContext } from "react";
 
 import type {
+  AgentSettings,
+  AgentConnectionResult,
+  AgentSettingsInput,
   StorageConnectionResult,
   StorageLocationInput,
   LocalePreference,
@@ -9,6 +12,7 @@ import type {
 
 export interface SettingsPreferencesContextValue {
   preferences: SettingsPreferences;
+  agentSettings: AgentSettings;
   loading: boolean;
   loadError: string | null;
   setLocale: (locale: LocalePreference) => void;
@@ -17,6 +21,8 @@ export interface SettingsPreferencesContextValue {
   addStorageDrive: (drive: StorageLocationInput) => Promise<boolean>;
   removeStorageDrive: (driveId: string) => Promise<void>;
   testStorageDrive: (driveId: string) => Promise<StorageConnectionResult>;
+  saveAgentSettings: (input: AgentSettingsInput) => Promise<boolean>;
+  testAgentSettings: (input: AgentSettingsInput) => Promise<AgentConnectionResult>;
 }
 
 export const SettingsPreferencesContext = createContext<SettingsPreferencesContextValue | null>(null);

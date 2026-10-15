@@ -18,6 +18,9 @@ from fileseek.features.settings.application.dto import (
     StorageLocationDTO,
 )
 from fileseek.features.settings.application.mappers import storage_location_to_dto
+from fileseek.features.settings.application.ports.storage_change import (
+    StorageChangeCoordinator,
+)
 from fileseek.features.settings.application.queries import ListStorageLocationsQuery
 from fileseek.features.settings.domain.entities import StorageLocation, StorageProtocol
 from fileseek.features.settings.domain.exceptions import StorageConnectionError
@@ -87,8 +90,13 @@ class CreateStorageLocationUseCase:
 
 
 class UpdateStorageLocationUseCase:
-    def __init__(self, repository: StorageLocationRepository) -> None:
+    def __init__(
+        self,
+        repository: StorageLocationRepository,
+        change_coordinator: StorageChangeCoordinator | None = None,
+    ) -> None:
         self.repository = repository
+        self.change_coordinator = change_coordinator
 
     async def execute(
         self,
@@ -131,12 +139,19 @@ class UpdateStorageLocationUseCase:
                 is_system=current.is_system,
             )
         )
+        if self.change_coordinator is not None:
+            await self.change_coordinator.reconcile()
         return storage_location_to_dto(location)
 
 
 class DeleteStorageLocationUseCase:
-    def __init__(self, repository: StorageLocationRepository) -> None:
+    def __init__(
+        self,
+        repository: StorageLocationRepository,
+        change_coordinator: StorageChangeCoordinator | None = None,
+    ) -> None:
         self.repository = repository
+        self.change_coordinator = change_coordinator
 
     async def execute(
         self,
@@ -155,6 +170,8 @@ class DeleteStorageLocationUseCase:
         if not deleted:
             raise ValidationError(f"存储位置已删除: {location.id}")
 
+        if self.change_coordinator is not None:
+            await self.change_coordinator.reconcile()
         return StorageLocationDeletionDTO(
             id=location.id,
             status="deleted",
@@ -197,8 +214,6 @@ class TestStorageConnectionUseCase:
             ):
                 pass
         except OSError as exc:
-            raise StorageConnectionError(
-                f"无法连接到 {parsed.hostname}:{port}"
-            ) from exc
+            raise StorageConnectionError(f"无法连接到 {parsed.hostname}:{port}") from exc
 
         return ConnectionTestResultDTO(success=True, message="连接成功")

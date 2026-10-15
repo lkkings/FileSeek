@@ -45,15 +45,9 @@ class GetFileThumbnailUseCase:
         if file is None:
             raise FileNotFoundError(f"文件不存在: {query.file_id}")
 
-        is_supported_thumbnail = (
-            file.file_type.is_support
-            and (
-                file.category in (FileCategory.IMAGE, FileCategory.VIDEO)
-                or (
-                    file.category is FileCategory.DOCUMENT
-                    and file.file_type is FileType.PDF
-                )
-            )
+        is_supported_thumbnail = file.file_type.is_support and (
+            file.category in (FileCategory.IMAGE, FileCategory.VIDEO)
+            or (file.category is FileCategory.DOCUMENT and file.file_type is FileType.PDF)
         )
         if not is_supported_thumbnail:
             raise ValidationError("仅支持图片、视频和 PDF 生成缩略图")

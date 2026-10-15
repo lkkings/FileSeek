@@ -14,10 +14,22 @@ interface FolderSectionProps {
   onEditFolder: (folder: FolderRecord) => void;
   onRequestDeleteFolder: (folder: FolderRecord) => void;
   onImportFiles: (folder: FolderRecord) => void;
+  onManageSources: (folder: FolderRecord) => void;
   onRetry: () => void;
 }
 
-export function FolderSection({ folders, loading, error, onCreateFolder, onEditFolder, onRequestDeleteFolder, onImportFiles, onRetry, onEnterFolder }: FolderSectionProps) {
+export function FolderSection({
+  folders,
+  loading,
+  error,
+  onCreateFolder,
+  onEditFolder,
+  onRequestDeleteFolder,
+  onImportFiles,
+  onManageSources,
+  onRetry,
+  onEnterFolder,
+}: FolderSectionProps) {
   const t = useTranslate();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +73,7 @@ export function FolderSection({ folders, loading, error, onCreateFolder, onEditF
                     <button type="button" aria-label={t("folder.more", "更多")} title={t("folder.more", "更多")} onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : folder.id); }}><Icon name="more" size={21} /></button>
                     {isMenuOpen && (
                       <div className="folder-more-dropdown">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); onManageSources(folder); setActiveMenuId(null); }}><Icon name="folder" size={14} /><span>{t("folder.manageSources", "监听")}</span></button>
                         <button type="button" onClick={(e) => { e.stopPropagation(); onEditFolder(folder); setActiveMenuId(null); }}><Icon name="edit" size={14} /><span>{t("folder.edit", "编辑")}</span></button>
                         <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDeleteFolder(folder); setActiveMenuId(null); }}><Icon name="trash" size={14} /><span>{t("folder.delete", "删除")}</span></button>
                       </div>

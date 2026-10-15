@@ -39,9 +39,7 @@ class FileChunkRepositoryImpl(FileChunkRepository):
             for chunk in chunks
         ]
 
-        await FileChunkModel.bulk_create(
-            models
-        )
+        await FileChunkModel.bulk_create(models)
 
     async def get_chunks_by_range(
         self,

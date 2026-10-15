@@ -6,10 +6,12 @@ from fileseek.features.tasks.application.commands import (
     RetryTaskCommand,
 )
 from fileseek.features.tasks.application.dto import (
+    TaskBulkOperationDTO,
     TaskDTO,
     TaskListDTO,
 )
 from fileseek.features.tasks.interfaces.http.schemas import (
+    TaskBulkOperationResponse,
     TaskListResponse,
     TaskResponse,
 )
@@ -41,12 +43,15 @@ def cancel_task_to_command(task_id: str) -> CancelTaskCommand:
     return CancelTaskCommand(task_id=task_id)
 
 
-
 def task_list_to_schema(value: TaskListDTO, page: int, page_size: int) -> TaskListResponse:
     return TaskListResponse(
         tasks=[task_to_schema(task) for task in value.tasks],
         counts=value.counts,
         page=page,
         page_size=page_size,
-        total=value.total
+        total=value.total,
     )
+
+
+def task_bulk_operation_to_schema(value: TaskBulkOperationDTO) -> TaskBulkOperationResponse:
+    return TaskBulkOperationResponse(count=value.count)
