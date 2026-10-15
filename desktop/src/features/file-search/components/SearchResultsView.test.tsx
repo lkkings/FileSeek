@@ -360,7 +360,12 @@ describe("SearchResultsView", () => {
     );
 
     const pagination = screen.getByRole("group", { name: "分页" });
-    expect(document.querySelector(".pagination-total-items")).toBeNull();
+    expect(
+      within(pagination)
+        .getAllByRole("button")
+        .map((button) => button.textContent)
+        .filter((label) => label !== ""),
+    ).toEqual(["1", "2"]);
     fireEvent.click(within(pagination).getByRole("button", { name: "2" }));
 
     expect(onPageChange).toHaveBeenCalledWith(2);

@@ -673,7 +673,6 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  justify-self: center;
 }
 
 .btn-pagination-action,
