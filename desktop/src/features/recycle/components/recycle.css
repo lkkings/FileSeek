@@ -388,6 +388,16 @@
   cursor: not-allowed;
 }
 
+.recycle-page .pagination .pagination-ellipsis {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 36px;
+  color: #a7b7d9;
+  font-size: 14px;
+  user-select: none;
+}
+
 .recycle-page .pagination button:first-child svg {
   transform: rotate(90deg);
 }

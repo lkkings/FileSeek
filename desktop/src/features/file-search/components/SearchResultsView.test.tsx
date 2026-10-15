@@ -360,7 +360,7 @@ describe("SearchResultsView", () => {
     );
 
     const pagination = screen.getByRole("group", { name: "分页" });
-    expect(document.querySelector(".pagination-total-items")).toHaveTextContent("共 21 条 / 2 页");
+    expect(document.querySelector(".pagination-total-items")).toBeNull();
     fireEvent.click(within(pagination).getByRole("button", { name: "2" }));
 
     expect(onPageChange).toHaveBeenCalledWith(2);

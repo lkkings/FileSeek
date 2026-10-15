@@ -296,7 +296,7 @@ describe("FolderDetailsView", () => {
     expect(screen.queryByRole("columnheader", { name: "路径" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "操作" })).not.toBeInTheDocument();
     expect(screen.queryByText("共 24 个文件")).not.toBeInTheDocument();
-    expect(screen.getByText("共 24 条 / 2 页")).toBeInTheDocument();
+    expect(screen.queryByText("共 24 条 / 2 页")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "分页" })).toHaveClass("pagination-controls-group");
 
     fireEvent.click(screen.getByRole("button", { name: /网格/ }));

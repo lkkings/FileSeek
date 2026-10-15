@@ -779,6 +779,16 @@
   color: #a7b7d9;
 }
 
+.pagination .pagination-ellipsis {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 36px;
+  color: #a7b7d9;
+  font-size: 14px;
+  user-select: none;
+}
+
 .total-count {
   flex: 0 0 82px;
   text-align: right;
